@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pt
+*.pth
+.env
+experiments/**/checkpoints/*
+experiments/**/results/*
+experiments/**/plots/*
+experiments/**/logs/*
+!experiments/**/.gitkeep
+!experiments/**/README.md
+
+# Ignore the virtual environment directory
+CSMFII-ENV/
