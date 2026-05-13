@@ -12,3 +12,20 @@ experiments/**/logs/*
 
 # Ignore the virtual environment directory
 CSMFII-ENV/
+
+# Ignore specific subdirectories in step_1_1
+experiments/step_1_1/nice_improved/
+experiments/step_1_1/logs/
+experiments/step_1_1/plots/
+experiments/step_1_1/results/
+
+# Ignore log files
+*.log
+
+# Ignore compressed files
+.gz
+
+# ignore specific subdirectories in step_1_1
+experiments/step_1_1/glow_improved_x
+experiments/step_1_1/nice_improved_x
+experiments/step_1_1/realnvp_improved_x
