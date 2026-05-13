@@ -19,13 +19,17 @@ experiments/step_1_1/logs/
 experiments/step_1_1/plots/
 experiments/step_1_1/results/
 
-# Ignore log files
+# Ignore files
 *.log
-
-# Ignore compressed files
-.gz
+*.gz
+*.log
+*.sh
+.gitignore
 
 # ignore specific subdirectories in step_1_1
 experiments/step_1_1/glow_improved_x
 experiments/step_1_1/nice_improved_x
 experiments/step_1_1/realnvp_improved_x
+
+# Ignore all checkpoints in any subdirectory of experiments
+/experiments/**/checkpoints/
