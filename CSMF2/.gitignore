@@ -33,3 +33,7 @@ experiments/step_1_1/realnvp_improved_x
 
 # Ignore all checkpoints in any subdirectory of experiments
 /experiments/**/checkpoints/
+
+
+mnist_data/
+sweep_logs/

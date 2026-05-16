@@ -1,0 +1,880 @@
+2026-05-15 10:40:30,804 INFO CSMF2.step_1_1_1.run :: STEP-1_1 run | tag=nsf_s2_n0.00_seed0_add67dddb13f | cfg=StepCfg(data_root='./mnist_data', scale=2, blur_sigma=1.0, noise_sigma=0.0, batch_size=128, expert='nsf', dim=784, cond_width=128, h_dim=256, flow_hidden=256, use_film=True, cache_h=True, use_v2_conditioner=False, film_depth=2, film_hidden=128, film_use_gelu=True, realnvp_n_couplings=6, realnvp_s_max=2.0, glow_n_steps=8, glow_coupling_hidden=256, glow_s_max=2.0, glow_squeeze=True, glow_n_levels=1, glow_image_c=1, glow_image_h=28, glow_image_w=28, glow_film_gain_init=0.3, lr=0.001, epochs=30, weight_decay=0.0, grad_clip=5.0, shuffle_loss_lambda=0.0, shuffle_loss_margin=0.5, h_std_penalty_mu=0.0, h_std_target=0.05, cond_y_residual_alpha_init=0.0, latent_moment_lambda=10.0, latent_ks_target=0.1, fwd_rel_target=0.5, resume_from=None, seed=0, out_root='./CSMF2/experiments/step_1_1_1/results', log_every=50, sanity_every_epoch=True)
+2026-05-15 10:40:30,877 INFO CSMF2.step_1_1_1.run :: [run] data sizes: train=55000  val=5000 (per-epoch)  test=10000 (final-only)
+2026-05-15 10:40:30,934 INFO CSMF2.step_1_1_1.run :: [y_sanity] y.std(dim=0).mean() = 0.1294  shape=(128, 1, 14, 14)
+2026-05-15 10:40:43,687 INFO CSMF2.step_1_1_1.run :: [h] epoch=0 step=50 total=0.06188 batch=0.00191
+2026-05-15 10:40:43,688 INFO CSMF2.step_1_1_1.run :: [lat] epoch=0 step=50 mean_l2=0.13441 std_l2=0.12819
+2026-05-15 10:40:43,817 INFO CSMF2.step_1_1_1.run :: epoch=0 step=50/429 train_nll=-2036.650
+2026-05-15 10:40:56,607 INFO CSMF2.step_1_1_1.run :: [h] epoch=0 step=100 total=0.06219 batch=0.00012
+2026-05-15 10:40:56,607 INFO CSMF2.step_1_1_1.run :: [lat] epoch=0 step=100 mean_l2=0.10583 std_l2=0.05652
+2026-05-15 10:40:56,736 INFO CSMF2.step_1_1_1.run :: epoch=0 step=100/429 train_nll=-2590.511
+2026-05-15 10:41:09,496 INFO CSMF2.step_1_1_1.run :: [h] epoch=0 step=150 total=0.03882 batch=0.00008
+2026-05-15 10:41:09,497 INFO CSMF2.step_1_1_1.run :: [lat] epoch=0 step=150 mean_l2=0.05824 std_l2=0.04975
+2026-05-15 10:41:09,653 INFO CSMF2.step_1_1_1.run :: epoch=0 step=150/429 train_nll=-2820.384
+2026-05-15 10:41:22,480 INFO CSMF2.step_1_1_1.run :: [h] epoch=0 step=200 total=0.07045 batch=0.00098
+2026-05-15 10:41:22,481 INFO CSMF2.step_1_1_1.run :: [lat] epoch=0 step=200 mean_l2=0.04589 std_l2=0.04666
+2026-05-15 10:41:22,613 INFO CSMF2.step_1_1_1.run :: epoch=0 step=200/429 train_nll=-2955.917
+2026-05-15 10:41:35,349 INFO CSMF2.step_1_1_1.run :: [h] epoch=0 step=250 total=0.07165 batch=0.00006
+2026-05-15 10:41:35,350 INFO CSMF2.step_1_1_1.run :: [lat] epoch=0 step=250 mean_l2=0.04626 std_l2=0.03636
+2026-05-15 10:41:35,483 INFO CSMF2.step_1_1_1.run :: epoch=0 step=250/429 train_nll=-3042.601
+2026-05-15 10:41:48,267 INFO CSMF2.step_1_1_1.run :: [h] epoch=0 step=300 total=0.06370 batch=0.00009
+2026-05-15 10:41:48,268 INFO CSMF2.step_1_1_1.run :: [lat] epoch=0 step=300 mean_l2=0.03390 std_l2=0.03373
+2026-05-15 10:41:48,424 INFO CSMF2.step_1_1_1.run :: epoch=0 step=300/429 train_nll=-3102.206
+2026-05-15 10:42:01,222 INFO CSMF2.step_1_1_1.run :: [h] epoch=0 step=350 total=0.08717 batch=0.00003
+2026-05-15 10:42:01,223 INFO CSMF2.step_1_1_1.run :: [lat] epoch=0 step=350 mean_l2=0.04235 std_l2=0.02630
+2026-05-15 10:42:01,352 INFO CSMF2.step_1_1_1.run :: epoch=0 step=350/429 train_nll=-3149.831
+2026-05-15 10:42:14,065 INFO CSMF2.step_1_1_1.run :: [h] epoch=0 step=400 total=0.09383 batch=0.00004
+2026-05-15 10:42:14,066 INFO CSMF2.step_1_1_1.run :: [lat] epoch=0 step=400 mean_l2=0.04085 std_l2=0.02892
+2026-05-15 10:42:14,199 INFO CSMF2.step_1_1_1.run :: epoch=0 step=400/429 train_nll=-3184.427
+2026-05-15 10:42:26,313 INFO CSMF2.step_1_1_1.run :: epoch=0  train_nll=-3200.943  val_nll=-3430.966  t=115.3s
+2026-05-15 10:42:26,313 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.06126 batch=0.00026 (no penalty)
+2026-05-15 10:42:26,313 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.17617 std_l2=0.12243 lambda=10.000
+2026-05-15 10:42:26,313 INFO CSMF2.step_1_1_1.run :: [grad] cond=2.6065 film_gain=0.0000
+2026-05-15 10:42:42,143 INFO CSMF2.step_1_1_1.run :: [h] epoch=1 step=50 total=0.13078 batch=0.00001
+2026-05-15 10:42:42,143 INFO CSMF2.step_1_1_1.run :: [lat] epoch=1 step=50 mean_l2=0.04175 std_l2=0.02626
+2026-05-15 10:42:42,275 INFO CSMF2.step_1_1_1.run :: epoch=1 step=50/429 train_nll=-3446.847
+2026-05-15 10:42:55,204 INFO CSMF2.step_1_1_1.run :: [h] epoch=1 step=100 total=0.10937 batch=0.00001
+2026-05-15 10:42:55,204 INFO CSMF2.step_1_1_1.run :: [lat] epoch=1 step=100 mean_l2=0.02903 std_l2=0.02818
+2026-05-15 10:42:55,340 INFO CSMF2.step_1_1_1.run :: epoch=1 step=100/429 train_nll=-3448.993
+2026-05-15 10:43:08,216 INFO CSMF2.step_1_1_1.run :: [h] epoch=1 step=150 total=0.16557 batch=0.00000
+2026-05-15 10:43:08,216 INFO CSMF2.step_1_1_1.run :: [lat] epoch=1 step=150 mean_l2=0.03871 std_l2=0.02378
+2026-05-15 10:43:08,350 INFO CSMF2.step_1_1_1.run :: epoch=1 step=150/429 train_nll=-3456.229
+2026-05-15 10:43:21,261 INFO CSMF2.step_1_1_1.run :: [h] epoch=1 step=200 total=0.14534 batch=0.00000
+2026-05-15 10:43:21,262 INFO CSMF2.step_1_1_1.run :: [lat] epoch=1 step=200 mean_l2=0.03897 std_l2=0.02531
+2026-05-15 10:43:21,428 INFO CSMF2.step_1_1_1.run :: epoch=1 step=200/429 train_nll=-3459.922
+2026-05-15 10:43:35,003 INFO CSMF2.step_1_1_1.run :: [h] epoch=1 step=250 total=0.12844 batch=0.00000
+2026-05-15 10:43:35,003 INFO CSMF2.step_1_1_1.run :: [lat] epoch=1 step=250 mean_l2=0.03991 std_l2=0.03238
+2026-05-15 10:43:35,151 INFO CSMF2.step_1_1_1.run :: epoch=1 step=250/429 train_nll=-3462.857
+2026-05-15 10:43:49,364 INFO CSMF2.step_1_1_1.run :: [h] epoch=1 step=300 total=0.16784 batch=0.00000
+2026-05-15 10:43:49,365 INFO CSMF2.step_1_1_1.run :: [lat] epoch=1 step=300 mean_l2=0.03545 std_l2=0.02541
+2026-05-15 10:43:49,523 INFO CSMF2.step_1_1_1.run :: epoch=1 step=300/429 train_nll=-3464.519
+2026-05-15 10:44:03,970 INFO CSMF2.step_1_1_1.run :: [h] epoch=1 step=350 total=0.15272 batch=0.00000
+2026-05-15 10:44:03,970 INFO CSMF2.step_1_1_1.run :: [lat] epoch=1 step=350 mean_l2=0.03302 std_l2=0.03322
+2026-05-15 10:44:04,128 INFO CSMF2.step_1_1_1.run :: epoch=1 step=350/429 train_nll=-3466.262
+2026-05-15 10:44:18,782 INFO CSMF2.step_1_1_1.run :: [h] epoch=1 step=400 total=0.15278 batch=0.00000
+2026-05-15 10:44:18,782 INFO CSMF2.step_1_1_1.run :: [lat] epoch=1 step=400 mean_l2=0.06539 std_l2=0.03233
+2026-05-15 10:44:18,939 INFO CSMF2.step_1_1_1.run :: epoch=1 step=400/429 train_nll=-3467.314
+2026-05-15 10:44:32,124 INFO CSMF2.step_1_1_1.run :: epoch=1  train_nll=-3467.203  val_nll=-3483.812  t=122.6s
+2026-05-15 10:44:32,124 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.14186 batch=0.00001 (no penalty)
+2026-05-15 10:44:32,124 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.03911 std_l2=0.02913 lambda=10.000
+2026-05-15 10:44:32,124 INFO CSMF2.step_1_1_1.run :: [grad] cond=6.9184 film_gain=0.0000
+2026-05-15 10:44:49,282 INFO CSMF2.step_1_1_1.run :: [h] epoch=2 step=50 total=0.18647 batch=0.00000
+2026-05-15 10:44:49,282 INFO CSMF2.step_1_1_1.run :: [lat] epoch=2 step=50 mean_l2=0.02218 std_l2=0.01990
+2026-05-15 10:44:49,485 INFO CSMF2.step_1_1_1.run :: epoch=2 step=50/429 train_nll=-3504.102
+2026-05-15 10:45:03,957 INFO CSMF2.step_1_1_1.run :: [h] epoch=2 step=100 total=0.17895 batch=0.00000
+2026-05-15 10:45:03,957 INFO CSMF2.step_1_1_1.run :: [lat] epoch=2 step=100 mean_l2=0.02757 std_l2=0.02392
+2026-05-15 10:45:04,114 INFO CSMF2.step_1_1_1.run :: epoch=2 step=100/429 train_nll=-3505.678
+2026-05-15 10:45:18,486 INFO CSMF2.step_1_1_1.run :: [h] epoch=2 step=150 total=0.18562 batch=0.00000
+2026-05-15 10:45:18,487 INFO CSMF2.step_1_1_1.run :: [lat] epoch=2 step=150 mean_l2=0.02534 std_l2=0.02591
+2026-05-15 10:45:18,645 INFO CSMF2.step_1_1_1.run :: epoch=2 step=150/429 train_nll=-3505.300
+2026-05-15 10:45:32,611 INFO CSMF2.step_1_1_1.run :: [h] epoch=2 step=200 total=0.19432 batch=0.00000
+2026-05-15 10:45:32,612 INFO CSMF2.step_1_1_1.run :: [lat] epoch=2 step=200 mean_l2=0.02144 std_l2=0.02455
+2026-05-15 10:45:32,766 INFO CSMF2.step_1_1_1.run :: epoch=2 step=200/429 train_nll=-3505.979
+2026-05-15 10:45:47,251 INFO CSMF2.step_1_1_1.run :: [h] epoch=2 step=250 total=0.18558 batch=0.00000
+2026-05-15 10:45:47,251 INFO CSMF2.step_1_1_1.run :: [lat] epoch=2 step=250 mean_l2=0.01698 std_l2=0.02534
+2026-05-15 10:45:47,409 INFO CSMF2.step_1_1_1.run :: epoch=2 step=250/429 train_nll=-3506.295
+2026-05-15 10:46:01,852 INFO CSMF2.step_1_1_1.run :: [h] epoch=2 step=300 total=0.17435 batch=0.00000
+2026-05-15 10:46:01,853 INFO CSMF2.step_1_1_1.run :: [lat] epoch=2 step=300 mean_l2=0.03667 std_l2=0.03703
+2026-05-15 10:46:02,010 INFO CSMF2.step_1_1_1.run :: epoch=2 step=300/429 train_nll=-3504.391
+2026-05-15 10:46:16,037 INFO CSMF2.step_1_1_1.run :: [h] epoch=2 step=350 total=0.19310 batch=0.00000
+2026-05-15 10:46:16,037 INFO CSMF2.step_1_1_1.run :: [lat] epoch=2 step=350 mean_l2=0.02198 std_l2=0.02623
+2026-05-15 10:46:16,197 INFO CSMF2.step_1_1_1.run :: epoch=2 step=350/429 train_nll=-3505.053
+2026-05-15 10:46:30,541 INFO CSMF2.step_1_1_1.run :: [h] epoch=2 step=400 total=0.20700 batch=0.00000
+2026-05-15 10:46:30,542 INFO CSMF2.step_1_1_1.run :: [lat] epoch=2 step=400 mean_l2=0.02513 std_l2=0.02415
+2026-05-15 10:46:30,746 INFO CSMF2.step_1_1_1.run :: epoch=2 step=400/429 train_nll=-3509.003
+2026-05-15 10:46:43,927 INFO CSMF2.step_1_1_1.run :: epoch=2  train_nll=-3510.101  val_nll=-3537.932  t=128.6s
+2026-05-15 10:46:43,927 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.18874 batch=0.00000 (no penalty)
+2026-05-15 10:46:43,927 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.02922 std_l2=0.02563 lambda=10.000
+2026-05-15 10:46:43,927 INFO CSMF2.step_1_1_1.run :: [grad] cond=15.2469 film_gain=0.0000
+2026-05-15 10:47:01,506 INFO CSMF2.step_1_1_1.run :: [h] epoch=3 step=50 total=0.21040 batch=0.00000
+2026-05-15 10:47:01,507 INFO CSMF2.step_1_1_1.run :: [lat] epoch=3 step=50 mean_l2=0.01811 std_l2=0.02453
+2026-05-15 10:47:01,713 INFO CSMF2.step_1_1_1.run :: epoch=3 step=50/429 train_nll=-3542.449
+2026-05-15 10:47:16,125 INFO CSMF2.step_1_1_1.run :: [h] epoch=3 step=100 total=0.22478 batch=0.00000
+2026-05-15 10:47:16,126 INFO CSMF2.step_1_1_1.run :: [lat] epoch=3 step=100 mean_l2=0.05919 std_l2=0.03511
+2026-05-15 10:47:16,286 INFO CSMF2.step_1_1_1.run :: epoch=3 step=100/429 train_nll=-3541.954
+2026-05-15 10:47:30,764 INFO CSMF2.step_1_1_1.run :: [h] epoch=3 step=150 total=0.21982 batch=0.00000
+2026-05-15 10:47:30,764 INFO CSMF2.step_1_1_1.run :: [lat] epoch=3 step=150 mean_l2=0.02077 std_l2=0.02583
+2026-05-15 10:47:30,924 INFO CSMF2.step_1_1_1.run :: epoch=3 step=150/429 train_nll=-3534.755
+2026-05-15 10:47:45,477 INFO CSMF2.step_1_1_1.run :: [h] epoch=3 step=200 total=0.22282 batch=0.00000
+2026-05-15 10:47:45,478 INFO CSMF2.step_1_1_1.run :: [lat] epoch=3 step=200 mean_l2=0.03977 std_l2=0.03174
+2026-05-15 10:47:45,684 INFO CSMF2.step_1_1_1.run :: epoch=3 step=200/429 train_nll=-3534.644
+2026-05-15 10:48:00,462 INFO CSMF2.step_1_1_1.run :: [h] epoch=3 step=250 total=0.22956 batch=0.00000
+2026-05-15 10:48:00,463 INFO CSMF2.step_1_1_1.run :: [lat] epoch=3 step=250 mean_l2=0.01983 std_l2=0.01699
+2026-05-15 10:48:00,669 INFO CSMF2.step_1_1_1.run :: epoch=3 step=250/429 train_nll=-3536.056
+2026-05-15 10:48:15,503 INFO CSMF2.step_1_1_1.run :: [h] epoch=3 step=300 total=0.24351 batch=0.00000
+2026-05-15 10:48:15,504 INFO CSMF2.step_1_1_1.run :: [lat] epoch=3 step=300 mean_l2=0.04496 std_l2=0.02643
+2026-05-15 10:48:15,711 INFO CSMF2.step_1_1_1.run :: epoch=3 step=300/429 train_nll=-3537.826
+2026-05-15 10:48:30,206 INFO CSMF2.step_1_1_1.run :: [h] epoch=3 step=350 total=0.22716 batch=0.00000
+2026-05-15 10:48:30,207 INFO CSMF2.step_1_1_1.run :: [lat] epoch=3 step=350 mean_l2=0.02180 std_l2=0.02299
+2026-05-15 10:48:30,416 INFO CSMF2.step_1_1_1.run :: epoch=3 step=350/429 train_nll=-3537.264
+2026-05-15 10:48:44,902 INFO CSMF2.step_1_1_1.run :: [h] epoch=3 step=400 total=0.24131 batch=0.00000
+2026-05-15 10:48:44,902 INFO CSMF2.step_1_1_1.run :: [lat] epoch=3 step=400 mean_l2=0.01638 std_l2=0.01985
+2026-05-15 10:48:45,064 INFO CSMF2.step_1_1_1.run :: epoch=3 step=400/429 train_nll=-3540.230
+2026-05-15 10:48:58,061 INFO CSMF2.step_1_1_1.run :: epoch=3  train_nll=-3541.134  val_nll=-3549.322  t=130.9s
+2026-05-15 10:48:58,061 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.22619 batch=0.00000 (no penalty)
+2026-05-15 10:48:58,061 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.02408 std_l2=0.02341 lambda=10.000
+2026-05-15 10:48:58,061 INFO CSMF2.step_1_1_1.run :: [grad] cond=145.5492 film_gain=0.0000
+2026-05-15 10:49:15,789 INFO CSMF2.step_1_1_1.run :: [h] epoch=4 step=50 total=0.22418 batch=0.00000
+2026-05-15 10:49:15,790 INFO CSMF2.step_1_1_1.run :: [lat] epoch=4 step=50 mean_l2=0.02250 std_l2=0.02229
+2026-05-15 10:49:15,994 INFO CSMF2.step_1_1_1.run :: epoch=4 step=50/429 train_nll=-3532.778
+2026-05-15 10:49:30,657 INFO CSMF2.step_1_1_1.run :: [h] epoch=4 step=100 total=0.23778 batch=0.00000
+2026-05-15 10:49:30,658 INFO CSMF2.step_1_1_1.run :: [lat] epoch=4 step=100 mean_l2=0.02713 std_l2=0.02103
+2026-05-15 10:49:30,863 INFO CSMF2.step_1_1_1.run :: epoch=4 step=100/429 train_nll=-3544.887
+2026-05-15 10:49:45,163 INFO CSMF2.step_1_1_1.run :: [h] epoch=4 step=150 total=0.23863 batch=0.00000
+2026-05-15 10:49:45,164 INFO CSMF2.step_1_1_1.run :: [lat] epoch=4 step=150 mean_l2=0.05066 std_l2=0.02440
+2026-05-15 10:49:45,325 INFO CSMF2.step_1_1_1.run :: epoch=4 step=150/429 train_nll=-3544.640
+2026-05-15 10:49:59,827 INFO CSMF2.step_1_1_1.run :: [h] epoch=4 step=200 total=0.24167 batch=0.00000
+2026-05-15 10:49:59,827 INFO CSMF2.step_1_1_1.run :: [lat] epoch=4 step=200 mean_l2=0.01527 std_l2=0.01792
+2026-05-15 10:49:59,987 INFO CSMF2.step_1_1_1.run :: epoch=4 step=200/429 train_nll=-3544.823
+2026-05-15 10:50:14,204 INFO CSMF2.step_1_1_1.run :: [h] epoch=4 step=250 total=0.24726 batch=0.00000
+2026-05-15 10:50:14,205 INFO CSMF2.step_1_1_1.run :: [lat] epoch=4 step=250 mean_l2=0.04027 std_l2=0.02882
+2026-05-15 10:50:14,411 INFO CSMF2.step_1_1_1.run :: epoch=4 step=250/429 train_nll=-3546.506
+2026-05-15 10:50:28,944 INFO CSMF2.step_1_1_1.run :: [h] epoch=4 step=300 total=0.24781 batch=0.00000
+2026-05-15 10:50:28,945 INFO CSMF2.step_1_1_1.run :: [lat] epoch=4 step=300 mean_l2=0.02798 std_l2=0.02466
+2026-05-15 10:50:29,103 INFO CSMF2.step_1_1_1.run :: epoch=4 step=300/429 train_nll=-3545.370
+2026-05-15 10:50:43,495 INFO CSMF2.step_1_1_1.run :: [h] epoch=4 step=350 total=0.25071 batch=0.00000
+2026-05-15 10:50:43,495 INFO CSMF2.step_1_1_1.run :: [lat] epoch=4 step=350 mean_l2=0.01819 std_l2=0.02141
+2026-05-15 10:50:43,656 INFO CSMF2.step_1_1_1.run :: epoch=4 step=350/429 train_nll=-3547.162
+2026-05-15 10:50:57,883 INFO CSMF2.step_1_1_1.run :: [h] epoch=4 step=400 total=0.25751 batch=0.00000
+2026-05-15 10:50:57,884 INFO CSMF2.step_1_1_1.run :: [lat] epoch=4 step=400 mean_l2=0.01653 std_l2=0.01796
+2026-05-15 10:50:58,042 INFO CSMF2.step_1_1_1.run :: epoch=4 step=400/429 train_nll=-3550.930
+2026-05-15 10:51:10,961 INFO CSMF2.step_1_1_1.run :: epoch=4  train_nll=-3551.907  val_nll=-3566.293  t=129.7s
+2026-05-15 10:51:10,961 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.24531 batch=0.00000 (no penalty)
+2026-05-15 10:51:10,961 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.02476 std_l2=0.02384 lambda=10.000
+2026-05-15 10:51:10,961 INFO CSMF2.step_1_1_1.run :: [grad] cond=23.8650 film_gain=0.0000
+2026-05-15 10:51:28,459 INFO CSMF2.step_1_1_1.run :: [h] epoch=5 step=50 total=0.25007 batch=0.00000
+2026-05-15 10:51:28,460 INFO CSMF2.step_1_1_1.run :: [lat] epoch=5 step=50 mean_l2=0.01331 std_l2=0.01779
+2026-05-15 10:51:28,623 INFO CSMF2.step_1_1_1.run :: epoch=5 step=50/429 train_nll=-3567.533
+2026-05-15 10:51:43,503 INFO CSMF2.step_1_1_1.run :: [h] epoch=5 step=100 total=0.25823 batch=0.00000
+2026-05-15 10:51:43,504 INFO CSMF2.step_1_1_1.run :: [lat] epoch=5 step=100 mean_l2=0.02148 std_l2=0.01955
+2026-05-15 10:51:43,662 INFO CSMF2.step_1_1_1.run :: epoch=5 step=100/429 train_nll=-3566.486
+2026-05-15 10:51:58,161 INFO CSMF2.step_1_1_1.run :: [h] epoch=5 step=150 total=0.25349 batch=0.00000
+2026-05-15 10:51:58,162 INFO CSMF2.step_1_1_1.run :: [lat] epoch=5 step=150 mean_l2=0.02440 std_l2=0.02174
+2026-05-15 10:51:58,375 INFO CSMF2.step_1_1_1.run :: epoch=5 step=150/429 train_nll=-3557.591
+2026-05-15 10:52:12,892 INFO CSMF2.step_1_1_1.run :: [h] epoch=5 step=200 total=0.25638 batch=0.00000
+2026-05-15 10:52:12,893 INFO CSMF2.step_1_1_1.run :: [lat] epoch=5 step=200 mean_l2=0.01408 std_l2=0.01867
+2026-05-15 10:52:13,055 INFO CSMF2.step_1_1_1.run :: epoch=5 step=200/429 train_nll=-3558.871
+2026-05-15 10:52:27,351 INFO CSMF2.step_1_1_1.run :: [h] epoch=5 step=250 total=0.26484 batch=0.00000
+2026-05-15 10:52:27,352 INFO CSMF2.step_1_1_1.run :: [lat] epoch=5 step=250 mean_l2=0.03128 std_l2=0.02183
+2026-05-15 10:52:27,517 INFO CSMF2.step_1_1_1.run :: epoch=5 step=250/429 train_nll=-3562.704
+2026-05-15 10:52:41,941 INFO CSMF2.step_1_1_1.run :: [h] epoch=5 step=300 total=0.25582 batch=0.00000
+2026-05-15 10:52:41,942 INFO CSMF2.step_1_1_1.run :: [lat] epoch=5 step=300 mean_l2=0.02742 std_l2=0.02141
+2026-05-15 10:52:42,147 INFO CSMF2.step_1_1_1.run :: epoch=5 step=300/429 train_nll=-3561.930
+2026-05-15 10:52:56,706 INFO CSMF2.step_1_1_1.run :: [h] epoch=5 step=350 total=0.26061 batch=0.00000
+2026-05-15 10:52:56,706 INFO CSMF2.step_1_1_1.run :: [lat] epoch=5 step=350 mean_l2=0.02107 std_l2=0.02284
+2026-05-15 10:52:56,873 INFO CSMF2.step_1_1_1.run :: epoch=5 step=350/429 train_nll=-3562.775
+2026-05-15 10:53:11,750 INFO CSMF2.step_1_1_1.run :: [h] epoch=5 step=400 total=0.26613 batch=0.00000
+2026-05-15 10:53:11,750 INFO CSMF2.step_1_1_1.run :: [lat] epoch=5 step=400 mean_l2=0.02958 std_l2=0.02457
+2026-05-15 10:53:11,917 INFO CSMF2.step_1_1_1.run :: epoch=5 step=400/429 train_nll=-3563.958
+2026-05-15 10:53:24,992 INFO CSMF2.step_1_1_1.run :: epoch=5  train_nll=-3564.847  val_nll=-3576.475  t=130.8s
+2026-05-15 10:53:24,992 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.25885 batch=0.00000 (no penalty)
+2026-05-15 10:53:24,992 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.02319 std_l2=0.02326 lambda=10.000
+2026-05-15 10:53:24,992 INFO CSMF2.step_1_1_1.run :: [grad] cond=338.5979 film_gain=0.0000
+2026-05-15 10:53:42,895 INFO CSMF2.step_1_1_1.run :: [h] epoch=6 step=50 total=0.26530 batch=0.00000
+2026-05-15 10:53:42,895 INFO CSMF2.step_1_1_1.run :: [lat] epoch=6 step=50 mean_l2=0.01599 std_l2=0.01934
+2026-05-15 10:53:43,058 INFO CSMF2.step_1_1_1.run :: epoch=6 step=50/429 train_nll=-3575.497
+2026-05-15 10:53:57,665 INFO CSMF2.step_1_1_1.run :: [h] epoch=6 step=100 total=0.27180 batch=0.00000
+2026-05-15 10:53:57,666 INFO CSMF2.step_1_1_1.run :: [lat] epoch=6 step=100 mean_l2=0.01327 std_l2=0.01704
+2026-05-15 10:53:57,828 INFO CSMF2.step_1_1_1.run :: epoch=6 step=100/429 train_nll=-3581.304
+2026-05-15 10:54:12,207 INFO CSMF2.step_1_1_1.run :: [h] epoch=6 step=150 total=0.27474 batch=0.00000
+2026-05-15 10:54:12,207 INFO CSMF2.step_1_1_1.run :: [lat] epoch=6 step=150 mean_l2=0.01971 std_l2=0.02414
+2026-05-15 10:54:12,368 INFO CSMF2.step_1_1_1.run :: epoch=6 step=150/429 train_nll=-3581.012
+2026-05-15 10:54:26,924 INFO CSMF2.step_1_1_1.run :: [h] epoch=6 step=200 total=0.27540 batch=0.00000
+2026-05-15 10:54:26,925 INFO CSMF2.step_1_1_1.run :: [lat] epoch=6 step=200 mean_l2=0.04186 std_l2=0.02718
+2026-05-15 10:54:27,132 INFO CSMF2.step_1_1_1.run :: epoch=6 step=200/429 train_nll=-3579.807
+2026-05-15 10:54:41,620 INFO CSMF2.step_1_1_1.run :: [h] epoch=6 step=250 total=0.26590 batch=0.00000
+2026-05-15 10:54:41,621 INFO CSMF2.step_1_1_1.run :: [lat] epoch=6 step=250 mean_l2=0.01428 std_l2=0.02305
+2026-05-15 10:54:41,827 INFO CSMF2.step_1_1_1.run :: epoch=6 step=250/429 train_nll=-3575.970
+2026-05-15 10:54:56,436 INFO CSMF2.step_1_1_1.run :: [h] epoch=6 step=300 total=0.26845 batch=0.00000
+2026-05-15 10:54:56,437 INFO CSMF2.step_1_1_1.run :: [lat] epoch=6 step=300 mean_l2=0.01924 std_l2=0.02552
+2026-05-15 10:54:56,601 INFO CSMF2.step_1_1_1.run :: epoch=6 step=300/429 train_nll=-3574.772
+2026-05-15 10:55:11,161 INFO CSMF2.step_1_1_1.run :: [h] epoch=6 step=350 total=0.26934 batch=0.00000
+2026-05-15 10:55:11,161 INFO CSMF2.step_1_1_1.run :: [lat] epoch=6 step=350 mean_l2=0.01593 std_l2=0.02028
+2026-05-15 10:55:11,323 INFO CSMF2.step_1_1_1.run :: epoch=6 step=350/429 train_nll=-3574.417
+2026-05-15 10:55:25,487 INFO CSMF2.step_1_1_1.run :: [h] epoch=6 step=400 total=0.27540 batch=0.00000
+2026-05-15 10:55:25,488 INFO CSMF2.step_1_1_1.run :: [lat] epoch=6 step=400 mean_l2=0.02255 std_l2=0.01987
+2026-05-15 10:55:25,650 INFO CSMF2.step_1_1_1.run :: epoch=6 step=400/429 train_nll=-3576.704
+2026-05-15 10:55:38,817 INFO CSMF2.step_1_1_1.run :: epoch=6  train_nll=-3576.634  val_nll=-3540.825  t=130.7s
+2026-05-15 10:55:38,817 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.26958 batch=0.00000 (no penalty)
+2026-05-15 10:55:38,817 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.02198 std_l2=0.02270 lambda=10.000
+2026-05-15 10:55:38,817 INFO CSMF2.step_1_1_1.run :: [grad] cond=14.9392 film_gain=0.0000
+2026-05-15 10:55:56,560 INFO CSMF2.step_1_1_1.run :: [h] epoch=7 step=50 total=0.27268 batch=0.00000
+2026-05-15 10:55:56,561 INFO CSMF2.step_1_1_1.run :: [lat] epoch=7 step=50 mean_l2=0.01751 std_l2=0.01792
+2026-05-15 10:55:56,769 INFO CSMF2.step_1_1_1.run :: epoch=7 step=50/429 train_nll=-3569.373
+2026-05-15 10:56:11,808 INFO CSMF2.step_1_1_1.run :: [h] epoch=7 step=100 total=0.27471 batch=0.00000
+2026-05-15 10:56:11,809 INFO CSMF2.step_1_1_1.run :: [lat] epoch=7 step=100 mean_l2=0.01827 std_l2=0.02813
+2026-05-15 10:56:11,970 INFO CSMF2.step_1_1_1.run :: epoch=7 step=100/429 train_nll=-3571.362
+2026-05-15 10:56:26,503 INFO CSMF2.step_1_1_1.run :: [h] epoch=7 step=150 total=0.27313 batch=0.00000
+2026-05-15 10:56:26,504 INFO CSMF2.step_1_1_1.run :: [lat] epoch=7 step=150 mean_l2=0.02474 std_l2=0.02236
+2026-05-15 10:56:26,666 INFO CSMF2.step_1_1_1.run :: epoch=7 step=150/429 train_nll=-3569.428
+2026-05-15 10:56:41,260 INFO CSMF2.step_1_1_1.run :: [h] epoch=7 step=200 total=0.27194 batch=0.00000
+2026-05-15 10:56:41,261 INFO CSMF2.step_1_1_1.run :: [lat] epoch=7 step=200 mean_l2=0.03739 std_l2=0.02837
+2026-05-15 10:56:41,423 INFO CSMF2.step_1_1_1.run :: epoch=7 step=200/429 train_nll=-3572.040
+2026-05-15 10:56:55,938 INFO CSMF2.step_1_1_1.run :: [h] epoch=7 step=250 total=0.27181 batch=0.00000
+2026-05-15 10:56:55,939 INFO CSMF2.step_1_1_1.run :: [lat] epoch=7 step=250 mean_l2=0.02713 std_l2=0.02338
+2026-05-15 10:56:56,100 INFO CSMF2.step_1_1_1.run :: epoch=7 step=250/429 train_nll=-3571.825
+2026-05-15 10:57:10,519 INFO CSMF2.step_1_1_1.run :: [h] epoch=7 step=300 total=0.28025 batch=0.00000
+2026-05-15 10:57:10,519 INFO CSMF2.step_1_1_1.run :: [lat] epoch=7 step=300 mean_l2=0.03283 std_l2=0.02087
+2026-05-15 10:57:10,683 INFO CSMF2.step_1_1_1.run :: epoch=7 step=300/429 train_nll=-3575.066
+2026-05-15 10:57:25,036 INFO CSMF2.step_1_1_1.run :: [h] epoch=7 step=350 total=0.27316 batch=0.00000
+2026-05-15 10:57:25,037 INFO CSMF2.step_1_1_1.run :: [lat] epoch=7 step=350 mean_l2=0.01757 std_l2=0.01919
+2026-05-15 10:57:25,246 INFO CSMF2.step_1_1_1.run :: epoch=7 step=350/429 train_nll=-3574.716
+2026-05-15 10:57:39,712 INFO CSMF2.step_1_1_1.run :: [h] epoch=7 step=400 total=0.27532 batch=0.00000
+2026-05-15 10:57:39,713 INFO CSMF2.step_1_1_1.run :: [lat] epoch=7 step=400 mean_l2=0.01412 std_l2=0.02050
+2026-05-15 10:57:39,876 INFO CSMF2.step_1_1_1.run :: epoch=7 step=400/429 train_nll=-3578.082
+2026-05-15 10:57:53,111 INFO CSMF2.step_1_1_1.run :: epoch=7  train_nll=-3579.660  val_nll=-3596.168  t=131.2s
+2026-05-15 10:57:53,111 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.27311 batch=0.00000 (no penalty)
+2026-05-15 10:57:53,111 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.02265 std_l2=0.02311 lambda=10.000
+2026-05-15 10:57:53,111 INFO CSMF2.step_1_1_1.run :: [grad] cond=328.2697 film_gain=0.0000
+2026-05-15 10:58:11,331 INFO CSMF2.step_1_1_1.run :: [h] epoch=8 step=50 total=0.27509 batch=0.00000
+2026-05-15 10:58:11,332 INFO CSMF2.step_1_1_1.run :: [lat] epoch=8 step=50 mean_l2=0.01785 std_l2=0.02346
+2026-05-15 10:58:11,546 INFO CSMF2.step_1_1_1.run :: epoch=8 step=50/429 train_nll=-3591.455
+2026-05-15 10:58:26,485 INFO CSMF2.step_1_1_1.run :: [h] epoch=8 step=100 total=0.27222 batch=0.00000
+2026-05-15 10:58:26,486 INFO CSMF2.step_1_1_1.run :: [lat] epoch=8 step=100 mean_l2=0.03062 std_l2=0.02155
+2026-05-15 10:58:26,654 INFO CSMF2.step_1_1_1.run :: epoch=8 step=100/429 train_nll=-3581.416
+2026-05-15 10:58:41,531 INFO CSMF2.step_1_1_1.run :: [h] epoch=8 step=150 total=0.27131 batch=0.00000
+2026-05-15 10:58:41,532 INFO CSMF2.step_1_1_1.run :: [lat] epoch=8 step=150 mean_l2=0.02607 std_l2=0.02353
+2026-05-15 10:58:41,746 INFO CSMF2.step_1_1_1.run :: epoch=8 step=150/429 train_nll=-3577.141
+2026-05-15 10:58:56,958 INFO CSMF2.step_1_1_1.run :: [h] epoch=8 step=200 total=0.27578 batch=0.00000
+2026-05-15 10:58:56,958 INFO CSMF2.step_1_1_1.run :: [lat] epoch=8 step=200 mean_l2=0.01830 std_l2=0.02074
+2026-05-15 10:58:57,122 INFO CSMF2.step_1_1_1.run :: epoch=8 step=200/429 train_nll=-3580.176
+2026-05-15 10:59:11,786 INFO CSMF2.step_1_1_1.run :: [h] epoch=8 step=250 total=0.27700 batch=0.00000
+2026-05-15 10:59:11,790 INFO CSMF2.step_1_1_1.run :: [lat] epoch=8 step=250 mean_l2=0.01418 std_l2=0.02062
+2026-05-15 10:59:12,005 INFO CSMF2.step_1_1_1.run :: epoch=8 step=250/429 train_nll=-3584.843
+2026-05-15 10:59:27,003 INFO CSMF2.step_1_1_1.run :: [h] epoch=8 step=300 total=0.27739 batch=0.00000
+2026-05-15 10:59:27,004 INFO CSMF2.step_1_1_1.run :: [lat] epoch=8 step=300 mean_l2=0.02853 std_l2=0.02069
+2026-05-15 10:59:27,171 INFO CSMF2.step_1_1_1.run :: epoch=8 step=300/429 train_nll=-3586.440
+2026-05-15 10:59:42,338 INFO CSMF2.step_1_1_1.run :: [h] epoch=8 step=350 total=0.27864 batch=0.00000
+2026-05-15 10:59:42,339 INFO CSMF2.step_1_1_1.run :: [lat] epoch=8 step=350 mean_l2=0.02408 std_l2=0.02189
+2026-05-15 10:59:42,554 INFO CSMF2.step_1_1_1.run :: epoch=8 step=350/429 train_nll=-3586.935
+2026-05-15 10:59:57,629 INFO CSMF2.step_1_1_1.run :: [h] epoch=8 step=400 total=0.27967 batch=0.00000
+2026-05-15 10:59:57,630 INFO CSMF2.step_1_1_1.run :: [lat] epoch=8 step=400 mean_l2=0.01615 std_l2=0.01964
+2026-05-15 10:59:57,844 INFO CSMF2.step_1_1_1.run :: epoch=8 step=400/429 train_nll=-3588.199
+2026-05-15 11:00:11,367 INFO CSMF2.step_1_1_1.run :: epoch=8  train_nll=-3589.360  val_nll=-3605.308  t=135.2s
+2026-05-15 11:00:11,367 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.27635 batch=0.00000 (no penalty)
+2026-05-15 11:00:11,367 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.02164 std_l2=0.02238 lambda=10.000
+2026-05-15 11:00:11,367 INFO CSMF2.step_1_1_1.run :: [grad] cond=50.5858 film_gain=0.0000
+2026-05-15 11:00:29,434 INFO CSMF2.step_1_1_1.run :: [h] epoch=9 step=50 total=0.28240 batch=0.00000
+2026-05-15 11:00:29,435 INFO CSMF2.step_1_1_1.run :: [lat] epoch=9 step=50 mean_l2=0.01965 std_l2=0.01951
+2026-05-15 11:00:29,601 INFO CSMF2.step_1_1_1.run :: epoch=9 step=50/429 train_nll=-3605.399
+2026-05-15 11:00:44,207 INFO CSMF2.step_1_1_1.run :: [h] epoch=9 step=100 total=0.27810 batch=0.00000
+2026-05-15 11:00:44,208 INFO CSMF2.step_1_1_1.run :: [lat] epoch=9 step=100 mean_l2=0.02271 std_l2=0.02243
+2026-05-15 11:00:44,374 INFO CSMF2.step_1_1_1.run :: epoch=9 step=100/429 train_nll=-3600.028
+2026-05-15 11:00:59,438 INFO CSMF2.step_1_1_1.run :: [h] epoch=9 step=150 total=0.28246 batch=0.00000
+2026-05-15 11:00:59,439 INFO CSMF2.step_1_1_1.run :: [lat] epoch=9 step=150 mean_l2=0.01650 std_l2=0.02185
+2026-05-15 11:00:59,657 INFO CSMF2.step_1_1_1.run :: epoch=9 step=150/429 train_nll=-3600.107
+2026-05-15 11:01:14,412 INFO CSMF2.step_1_1_1.run :: [h] epoch=9 step=200 total=0.28362 batch=0.00000
+2026-05-15 11:01:14,413 INFO CSMF2.step_1_1_1.run :: [lat] epoch=9 step=200 mean_l2=0.02050 std_l2=0.02296
+2026-05-15 11:01:14,631 INFO CSMF2.step_1_1_1.run :: epoch=9 step=200/429 train_nll=-3601.077
+2026-05-15 11:01:29,515 INFO CSMF2.step_1_1_1.run :: [h] epoch=9 step=250 total=0.28096 batch=0.00000
+2026-05-15 11:01:29,516 INFO CSMF2.step_1_1_1.run :: [lat] epoch=9 step=250 mean_l2=0.01789 std_l2=0.02000
+2026-05-15 11:01:29,678 INFO CSMF2.step_1_1_1.run :: epoch=9 step=250/429 train_nll=-3599.417
+2026-05-15 11:01:44,650 INFO CSMF2.step_1_1_1.run :: [h] epoch=9 step=300 total=0.28108 batch=0.00002
+2026-05-15 11:01:44,651 INFO CSMF2.step_1_1_1.run :: [lat] epoch=9 step=300 mean_l2=0.02593 std_l2=0.02225
+2026-05-15 11:01:44,870 INFO CSMF2.step_1_1_1.run :: epoch=9 step=300/429 train_nll=-3598.761
+2026-05-15 11:01:59,906 INFO CSMF2.step_1_1_1.run :: [h] epoch=9 step=350 total=0.28190 batch=0.00000
+2026-05-15 11:01:59,907 INFO CSMF2.step_1_1_1.run :: [lat] epoch=9 step=350 mean_l2=0.02259 std_l2=0.02600
+2026-05-15 11:02:00,078 INFO CSMF2.step_1_1_1.run :: epoch=9 step=350/429 train_nll=-3597.999
+2026-05-15 11:02:14,742 INFO CSMF2.step_1_1_1.run :: [h] epoch=9 step=400 total=0.27636 batch=0.00000
+2026-05-15 11:02:14,743 INFO CSMF2.step_1_1_1.run :: [lat] epoch=9 step=400 mean_l2=0.02274 std_l2=0.02538
+2026-05-15 11:02:14,957 INFO CSMF2.step_1_1_1.run :: epoch=9 step=400/429 train_nll=-3596.714
+2026-05-15 11:02:28,465 INFO CSMF2.step_1_1_1.run :: epoch=9  train_nll=-3596.870  val_nll=-3594.597  t=134.1s
+2026-05-15 11:02:28,465 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.28028 batch=0.00001 (no penalty)
+2026-05-15 11:02:28,465 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.02111 std_l2=0.02219 lambda=10.000
+2026-05-15 11:02:28,465 INFO CSMF2.step_1_1_1.run :: [grad] cond=498.5438 film_gain=0.0000
+2026-05-15 11:02:46,032 INFO CSMF2.step_1_1_1.run :: [h] epoch=10 step=50 total=0.28182 batch=0.00000
+2026-05-15 11:02:46,033 INFO CSMF2.step_1_1_1.run :: [lat] epoch=10 step=50 mean_l2=0.01464 std_l2=0.01841
+2026-05-15 11:02:46,202 INFO CSMF2.step_1_1_1.run :: epoch=10 step=50/429 train_nll=-3602.146
+2026-05-15 11:03:00,981 INFO CSMF2.step_1_1_1.run :: [h] epoch=10 step=100 total=0.28256 batch=0.00000
+2026-05-15 11:03:00,981 INFO CSMF2.step_1_1_1.run :: [lat] epoch=10 step=100 mean_l2=0.03122 std_l2=0.02228
+2026-05-15 11:03:01,147 INFO CSMF2.step_1_1_1.run :: epoch=10 step=100/429 train_nll=-3596.310
+2026-05-15 11:03:16,105 INFO CSMF2.step_1_1_1.run :: [h] epoch=10 step=150 total=0.28323 batch=0.00000
+2026-05-15 11:03:16,105 INFO CSMF2.step_1_1_1.run :: [lat] epoch=10 step=150 mean_l2=0.02098 std_l2=0.02069
+2026-05-15 11:03:16,273 INFO CSMF2.step_1_1_1.run :: epoch=10 step=150/429 train_nll=-3593.018
+2026-05-15 11:03:31,217 INFO CSMF2.step_1_1_1.run :: [h] epoch=10 step=200 total=0.28024 batch=0.00000
+2026-05-15 11:03:31,217 INFO CSMF2.step_1_1_1.run :: [lat] epoch=10 step=200 mean_l2=0.01377 std_l2=0.01758
+2026-05-15 11:03:31,383 INFO CSMF2.step_1_1_1.run :: epoch=10 step=200/429 train_nll=-3594.586
+2026-05-15 11:03:46,081 INFO CSMF2.step_1_1_1.run :: [h] epoch=10 step=250 total=0.27719 batch=0.00000
+2026-05-15 11:03:46,082 INFO CSMF2.step_1_1_1.run :: [lat] epoch=10 step=250 mean_l2=0.01475 std_l2=0.01820
+2026-05-15 11:03:46,295 INFO CSMF2.step_1_1_1.run :: epoch=10 step=250/429 train_nll=-3598.121
+2026-05-15 11:04:00,999 INFO CSMF2.step_1_1_1.run :: [h] epoch=10 step=300 total=0.28191 batch=0.00000
+2026-05-15 11:04:00,999 INFO CSMF2.step_1_1_1.run :: [lat] epoch=10 step=300 mean_l2=0.02531 std_l2=0.02067
+2026-05-15 11:04:01,165 INFO CSMF2.step_1_1_1.run :: epoch=10 step=300/429 train_nll=-3598.225
+2026-05-15 11:04:15,998 INFO CSMF2.step_1_1_1.run :: [h] epoch=10 step=350 total=0.27717 batch=0.00000
+2026-05-15 11:04:15,999 INFO CSMF2.step_1_1_1.run :: [lat] epoch=10 step=350 mean_l2=0.02776 std_l2=0.02334
+2026-05-15 11:04:16,212 INFO CSMF2.step_1_1_1.run :: epoch=10 step=350/429 train_nll=-3596.050
+2026-05-15 11:04:30,788 INFO CSMF2.step_1_1_1.run :: [h] epoch=10 step=400 total=0.27923 batch=0.00000
+2026-05-15 11:04:30,789 INFO CSMF2.step_1_1_1.run :: [lat] epoch=10 step=400 mean_l2=0.01522 std_l2=0.01960
+2026-05-15 11:04:31,004 INFO CSMF2.step_1_1_1.run :: epoch=10 step=400/429 train_nll=-3596.866
+2026-05-15 11:04:44,586 INFO CSMF2.step_1_1_1.run :: epoch=10  train_nll=-3598.063  val_nll=-3617.133  t=133.1s
+2026-05-15 11:04:44,586 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.28055 batch=0.00000 (no penalty)
+2026-05-15 11:04:44,586 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.02123 std_l2=0.02222 lambda=10.000
+2026-05-15 11:04:44,586 INFO CSMF2.step_1_1_1.run :: [grad] cond=4.9084 film_gain=0.0000
+2026-05-15 11:05:02,588 INFO CSMF2.step_1_1_1.run :: [h] epoch=11 step=50 total=0.28399 batch=0.00000
+2026-05-15 11:05:02,589 INFO CSMF2.step_1_1_1.run :: [lat] epoch=11 step=50 mean_l2=0.04282 std_l2=0.02483
+2026-05-15 11:05:02,756 INFO CSMF2.step_1_1_1.run :: epoch=11 step=50/429 train_nll=-3609.139
+2026-05-15 11:05:17,647 INFO CSMF2.step_1_1_1.run :: [h] epoch=11 step=100 total=0.28299 batch=0.00000
+2026-05-15 11:05:17,647 INFO CSMF2.step_1_1_1.run :: [lat] epoch=11 step=100 mean_l2=0.02998 std_l2=0.02766
+2026-05-15 11:05:17,867 INFO CSMF2.step_1_1_1.run :: epoch=11 step=100/429 train_nll=-3594.886
+2026-05-15 11:05:33,074 INFO CSMF2.step_1_1_1.run :: [h] epoch=11 step=150 total=0.28035 batch=0.00000
+2026-05-15 11:05:33,075 INFO CSMF2.step_1_1_1.run :: [lat] epoch=11 step=150 mean_l2=0.01518 std_l2=0.02173
+2026-05-15 11:05:33,246 INFO CSMF2.step_1_1_1.run :: epoch=11 step=150/429 train_nll=-3596.202
+2026-05-15 11:05:48,146 INFO CSMF2.step_1_1_1.run :: [h] epoch=11 step=200 total=0.28424 batch=0.00000
+2026-05-15 11:05:48,146 INFO CSMF2.step_1_1_1.run :: [lat] epoch=11 step=200 mean_l2=0.01487 std_l2=0.02087
+2026-05-15 11:05:48,315 INFO CSMF2.step_1_1_1.run :: epoch=11 step=200/429 train_nll=-3599.552
+2026-05-15 11:06:03,529 INFO CSMF2.step_1_1_1.run :: [h] epoch=11 step=250 total=0.28158 batch=0.00000
+2026-05-15 11:06:03,529 INFO CSMF2.step_1_1_1.run :: [lat] epoch=11 step=250 mean_l2=0.01453 std_l2=0.02124
+2026-05-15 11:06:03,698 INFO CSMF2.step_1_1_1.run :: epoch=11 step=250/429 train_nll=-3601.252
+2026-05-15 11:06:18,872 INFO CSMF2.step_1_1_1.run :: [h] epoch=11 step=300 total=0.28104 batch=0.00000
+2026-05-15 11:06:18,873 INFO CSMF2.step_1_1_1.run :: [lat] epoch=11 step=300 mean_l2=0.02320 std_l2=0.03257
+2026-05-15 11:06:19,042 INFO CSMF2.step_1_1_1.run :: epoch=11 step=300/429 train_nll=-3601.876
+2026-05-15 11:06:34,156 INFO CSMF2.step_1_1_1.run :: [h] epoch=11 step=350 total=0.28051 batch=0.00000
+2026-05-15 11:06:34,157 INFO CSMF2.step_1_1_1.run :: [lat] epoch=11 step=350 mean_l2=0.04839 std_l2=0.02405
+2026-05-15 11:06:34,376 INFO CSMF2.step_1_1_1.run :: epoch=11 step=350/429 train_nll=-3602.100
+2026-05-15 11:06:49,309 INFO CSMF2.step_1_1_1.run :: [h] epoch=11 step=400 total=0.27922 batch=0.00000
+2026-05-15 11:06:49,310 INFO CSMF2.step_1_1_1.run :: [lat] epoch=11 step=400 mean_l2=0.02007 std_l2=0.02230
+2026-05-15 11:06:49,482 INFO CSMF2.step_1_1_1.run :: epoch=11 step=400/429 train_nll=-3600.619
+2026-05-15 11:07:02,997 INFO CSMF2.step_1_1_1.run :: epoch=11  train_nll=-3600.477  val_nll=-3607.791  t=135.4s
+2026-05-15 11:07:02,997 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.28134 batch=0.00000 (no penalty)
+2026-05-15 11:07:02,997 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.02156 std_l2=0.02252 lambda=10.000
+2026-05-15 11:07:02,997 INFO CSMF2.step_1_1_1.run :: [grad] cond=9.8558 film_gain=0.0000
+2026-05-15 11:07:20,867 INFO CSMF2.step_1_1_1.run :: [h] epoch=12 step=50 total=0.28086 batch=0.00000
+2026-05-15 11:07:20,867 INFO CSMF2.step_1_1_1.run :: [lat] epoch=12 step=50 mean_l2=0.02856 std_l2=0.02474
+2026-05-15 11:07:21,035 INFO CSMF2.step_1_1_1.run :: epoch=12 step=50/429 train_nll=-3614.883
+2026-05-15 11:07:36,089 INFO CSMF2.step_1_1_1.run :: [h] epoch=12 step=100 total=0.27862 batch=0.00000
+2026-05-15 11:07:36,090 INFO CSMF2.step_1_1_1.run :: [lat] epoch=12 step=100 mean_l2=0.03508 std_l2=0.01976
+2026-05-15 11:07:36,261 INFO CSMF2.step_1_1_1.run :: epoch=12 step=100/429 train_nll=-3609.519
+2026-05-15 11:07:51,087 INFO CSMF2.step_1_1_1.run :: [h] epoch=12 step=150 total=0.27944 batch=0.00000
+2026-05-15 11:07:51,088 INFO CSMF2.step_1_1_1.run :: [lat] epoch=12 step=150 mean_l2=0.02170 std_l2=0.02390
+2026-05-15 11:07:51,259 INFO CSMF2.step_1_1_1.run :: epoch=12 step=150/429 train_nll=-3607.812
+2026-05-15 11:08:06,049 INFO CSMF2.step_1_1_1.run :: [h] epoch=12 step=200 total=0.27833 batch=0.00000
+2026-05-15 11:08:06,049 INFO CSMF2.step_1_1_1.run :: [lat] epoch=12 step=200 mean_l2=0.02086 std_l2=0.02378
+2026-05-15 11:08:06,219 INFO CSMF2.step_1_1_1.run :: epoch=12 step=200/429 train_nll=-3605.789
+2026-05-15 11:08:21,299 INFO CSMF2.step_1_1_1.run :: [h] epoch=12 step=250 total=0.27812 batch=0.00000
+2026-05-15 11:08:21,300 INFO CSMF2.step_1_1_1.run :: [lat] epoch=12 step=250 mean_l2=0.05802 std_l2=0.02643
+2026-05-15 11:08:21,522 INFO CSMF2.step_1_1_1.run :: epoch=12 step=250/429 train_nll=-3606.115
+2026-05-15 11:08:36,370 INFO CSMF2.step_1_1_1.run :: [h] epoch=12 step=300 total=0.27535 batch=0.00000
+2026-05-15 11:08:36,370 INFO CSMF2.step_1_1_1.run :: [lat] epoch=12 step=300 mean_l2=0.01902 std_l2=0.02127
+2026-05-15 11:08:36,541 INFO CSMF2.step_1_1_1.run :: epoch=12 step=300/429 train_nll=-3604.168
+2026-05-15 11:08:51,589 INFO CSMF2.step_1_1_1.run :: [h] epoch=12 step=350 total=0.27682 batch=0.00000
+2026-05-15 11:08:51,590 INFO CSMF2.step_1_1_1.run :: [lat] epoch=12 step=350 mean_l2=0.02281 std_l2=0.02751
+2026-05-15 11:08:51,760 INFO CSMF2.step_1_1_1.run :: epoch=12 step=350/429 train_nll=-3604.914
+2026-05-15 11:09:06,488 INFO CSMF2.step_1_1_1.run :: [h] epoch=12 step=400 total=0.27599 batch=0.00000
+2026-05-15 11:09:06,489 INFO CSMF2.step_1_1_1.run :: [lat] epoch=12 step=400 mean_l2=0.01801 std_l2=0.02748
+2026-05-15 11:09:06,657 INFO CSMF2.step_1_1_1.run :: epoch=12 step=400/429 train_nll=-3604.122
+2026-05-15 11:09:20,440 INFO CSMF2.step_1_1_1.run :: epoch=12  train_nll=-3604.108  val_nll=-3600.730  t=134.3s
+2026-05-15 11:09:20,440 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.27818 batch=0.00000 (no penalty)
+2026-05-15 11:09:20,440 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.02217 std_l2=0.02252 lambda=10.000
+2026-05-15 11:09:20,440 INFO CSMF2.step_1_1_1.run :: [grad] cond=193.0532 film_gain=0.0000
+2026-05-15 11:09:37,951 INFO CSMF2.step_1_1_1.run :: [h] epoch=13 step=50 total=0.27736 batch=0.00000
+2026-05-15 11:09:37,952 INFO CSMF2.step_1_1_1.run :: [lat] epoch=13 step=50 mean_l2=0.02004 std_l2=0.02395
+2026-05-15 11:09:38,171 INFO CSMF2.step_1_1_1.run :: epoch=13 step=50/429 train_nll=-3601.041
+2026-05-15 11:09:53,346 INFO CSMF2.step_1_1_1.run :: [h] epoch=13 step=100 total=0.27458 batch=0.00000
+2026-05-15 11:09:53,347 INFO CSMF2.step_1_1_1.run :: [lat] epoch=13 step=100 mean_l2=0.01687 std_l2=0.01912
+2026-05-15 11:09:53,564 INFO CSMF2.step_1_1_1.run :: epoch=13 step=100/429 train_nll=-3605.157
+2026-05-15 11:10:08,486 INFO CSMF2.step_1_1_1.run :: [h] epoch=13 step=150 total=0.27296 batch=0.00000
+2026-05-15 11:10:08,486 INFO CSMF2.step_1_1_1.run :: [lat] epoch=13 step=150 mean_l2=0.03192 std_l2=0.02458
+2026-05-15 11:10:08,656 INFO CSMF2.step_1_1_1.run :: epoch=13 step=150/429 train_nll=-3608.501
+2026-05-15 11:10:23,782 INFO CSMF2.step_1_1_1.run :: [h] epoch=13 step=200 total=0.27262 batch=0.00000
+2026-05-15 11:10:23,783 INFO CSMF2.step_1_1_1.run :: [lat] epoch=13 step=200 mean_l2=0.03676 std_l2=0.02716
+2026-05-15 11:10:23,949 INFO CSMF2.step_1_1_1.run :: epoch=13 step=200/429 train_nll=-3601.908
+2026-05-15 11:10:38,637 INFO CSMF2.step_1_1_1.run :: [h] epoch=13 step=250 total=0.27113 batch=0.00000
+2026-05-15 11:10:38,638 INFO CSMF2.step_1_1_1.run :: [lat] epoch=13 step=250 mean_l2=0.01580 std_l2=0.02052
+2026-05-15 11:10:38,808 INFO CSMF2.step_1_1_1.run :: epoch=13 step=250/429 train_nll=-3602.785
+2026-05-15 11:10:53,248 INFO CSMF2.step_1_1_1.run :: [h] epoch=13 step=300 total=0.27412 batch=0.00000
+2026-05-15 11:10:53,248 INFO CSMF2.step_1_1_1.run :: [lat] epoch=13 step=300 mean_l2=0.01375 std_l2=0.01963
+2026-05-15 11:10:53,418 INFO CSMF2.step_1_1_1.run :: epoch=13 step=300/429 train_nll=-3606.197
+2026-05-15 11:11:08,545 INFO CSMF2.step_1_1_1.run :: [h] epoch=13 step=350 total=0.27502 batch=0.00000
+2026-05-15 11:11:08,545 INFO CSMF2.step_1_1_1.run :: [lat] epoch=13 step=350 mean_l2=0.01659 std_l2=0.01921
+2026-05-15 11:11:08,717 INFO CSMF2.step_1_1_1.run :: epoch=13 step=350/429 train_nll=-3609.328
+2026-05-15 11:11:23,706 INFO CSMF2.step_1_1_1.run :: [h] epoch=13 step=400 total=0.27564 batch=0.00000
+2026-05-15 11:11:23,706 INFO CSMF2.step_1_1_1.run :: [lat] epoch=13 step=400 mean_l2=0.01218 std_l2=0.01751
+2026-05-15 11:11:23,877 INFO CSMF2.step_1_1_1.run :: epoch=13 step=400/429 train_nll=-3610.899
+2026-05-15 11:11:37,313 INFO CSMF2.step_1_1_1.run :: epoch=13  train_nll=-3611.459  val_nll=-3616.531  t=133.8s
+2026-05-15 11:11:37,313 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.27508 batch=0.00000 (no penalty)
+2026-05-15 11:11:37,313 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.01976 std_l2=0.02183 lambda=10.000
+2026-05-15 11:11:37,313 INFO CSMF2.step_1_1_1.run :: [grad] cond=30.3810 film_gain=0.0000
+2026-05-15 11:11:55,614 INFO CSMF2.step_1_1_1.run :: [h] epoch=14 step=50 total=0.27522 batch=0.00000
+2026-05-15 11:11:55,615 INFO CSMF2.step_1_1_1.run :: [lat] epoch=14 step=50 mean_l2=0.01525 std_l2=0.01926
+2026-05-15 11:11:55,788 INFO CSMF2.step_1_1_1.run :: epoch=14 step=50/429 train_nll=-3623.768
+2026-05-15 11:12:11,031 INFO CSMF2.step_1_1_1.run :: [h] epoch=14 step=100 total=0.27593 batch=0.00000
+2026-05-15 11:12:11,031 INFO CSMF2.step_1_1_1.run :: [lat] epoch=14 step=100 mean_l2=0.01568 std_l2=0.01947
+2026-05-15 11:12:11,202 INFO CSMF2.step_1_1_1.run :: epoch=14 step=100/429 train_nll=-3623.509
+2026-05-15 11:12:26,704 INFO CSMF2.step_1_1_1.run :: [h] epoch=14 step=150 total=0.27550 batch=0.00000
+2026-05-15 11:12:26,705 INFO CSMF2.step_1_1_1.run :: [lat] epoch=14 step=150 mean_l2=0.02269 std_l2=0.02365
+2026-05-15 11:12:26,924 INFO CSMF2.step_1_1_1.run :: epoch=14 step=150/429 train_nll=-3618.336
+2026-05-15 11:12:42,060 INFO CSMF2.step_1_1_1.run :: [h] epoch=14 step=200 total=0.27554 batch=0.00000
+2026-05-15 11:12:42,060 INFO CSMF2.step_1_1_1.run :: [lat] epoch=14 step=200 mean_l2=0.08341 std_l2=0.02916
+2026-05-15 11:12:42,231 INFO CSMF2.step_1_1_1.run :: epoch=14 step=200/429 train_nll=-3611.602
+2026-05-15 11:12:57,451 INFO CSMF2.step_1_1_1.run :: [h] epoch=14 step=250 total=0.27393 batch=0.00000
+2026-05-15 11:12:57,451 INFO CSMF2.step_1_1_1.run :: [lat] epoch=14 step=250 mean_l2=0.01502 std_l2=0.01960
+2026-05-15 11:12:57,625 INFO CSMF2.step_1_1_1.run :: epoch=14 step=250/429 train_nll=-3608.713
+2026-05-15 11:13:13,145 INFO CSMF2.step_1_1_1.run :: [h] epoch=14 step=300 total=0.27308 batch=0.00000
+2026-05-15 11:13:13,146 INFO CSMF2.step_1_1_1.run :: [lat] epoch=14 step=300 mean_l2=0.01987 std_l2=0.01947
+2026-05-15 11:13:13,318 INFO CSMF2.step_1_1_1.run :: epoch=14 step=300/429 train_nll=-3609.599
+2026-05-15 11:13:28,649 INFO CSMF2.step_1_1_1.run :: [h] epoch=14 step=350 total=0.27314 batch=0.00000
+2026-05-15 11:13:28,650 INFO CSMF2.step_1_1_1.run :: [lat] epoch=14 step=350 mean_l2=0.01632 std_l2=0.02161
+2026-05-15 11:13:28,822 INFO CSMF2.step_1_1_1.run :: epoch=14 step=350/429 train_nll=-3610.524
+2026-05-15 11:13:44,192 INFO CSMF2.step_1_1_1.run :: [h] epoch=14 step=400 total=0.27349 batch=0.00000
+2026-05-15 11:13:44,193 INFO CSMF2.step_1_1_1.run :: [lat] epoch=14 step=400 mean_l2=0.01643 std_l2=0.01781
+2026-05-15 11:13:44,417 INFO CSMF2.step_1_1_1.run :: epoch=14 step=400/429 train_nll=-3612.981
+2026-05-15 11:13:57,973 INFO CSMF2.step_1_1_1.run :: epoch=14  train_nll=-3613.855  val_nll=-3630.390  t=137.5s
+2026-05-15 11:13:57,973 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.27484 batch=0.00000 (no penalty)
+2026-05-15 11:13:57,973 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.01984 std_l2=0.02172 lambda=10.000
+2026-05-15 11:13:57,973 INFO CSMF2.step_1_1_1.run :: [grad] cond=5.2184 film_gain=0.0000
+2026-05-15 11:14:16,210 INFO CSMF2.step_1_1_1.run :: [h] epoch=15 step=50 total=0.27424 batch=0.00000
+2026-05-15 11:14:16,211 INFO CSMF2.step_1_1_1.run :: [lat] epoch=15 step=50 mean_l2=0.01548 std_l2=0.02084
+2026-05-15 11:14:16,383 INFO CSMF2.step_1_1_1.run :: epoch=15 step=50/429 train_nll=-3613.785
+2026-05-15 11:14:31,561 INFO CSMF2.step_1_1_1.run :: [h] epoch=15 step=100 total=0.26955 batch=0.00000
+2026-05-15 11:14:31,562 INFO CSMF2.step_1_1_1.run :: [lat] epoch=15 step=100 mean_l2=0.04477 std_l2=0.02539
+2026-05-15 11:14:31,730 INFO CSMF2.step_1_1_1.run :: epoch=15 step=100/429 train_nll=-3613.138
+2026-05-15 11:14:46,594 INFO CSMF2.step_1_1_1.run :: [h] epoch=15 step=150 total=0.27153 batch=0.00000
+2026-05-15 11:14:46,595 INFO CSMF2.step_1_1_1.run :: [lat] epoch=15 step=150 mean_l2=0.03656 std_l2=0.03401
+2026-05-15 11:14:46,769 INFO CSMF2.step_1_1_1.run :: epoch=15 step=150/429 train_nll=-3605.566
+2026-05-15 11:15:01,827 INFO CSMF2.step_1_1_1.run :: [h] epoch=15 step=200 total=0.26967 batch=0.00000
+2026-05-15 11:15:01,828 INFO CSMF2.step_1_1_1.run :: [lat] epoch=15 step=200 mean_l2=0.02316 std_l2=0.02486
+2026-05-15 11:15:02,003 INFO CSMF2.step_1_1_1.run :: epoch=15 step=200/429 train_nll=-3605.421
+2026-05-15 11:15:17,380 INFO CSMF2.step_1_1_1.run :: [h] epoch=15 step=250 total=0.26877 batch=0.00000
+2026-05-15 11:15:17,381 INFO CSMF2.step_1_1_1.run :: [lat] epoch=15 step=250 mean_l2=0.01319 std_l2=0.02009
+2026-05-15 11:15:17,556 INFO CSMF2.step_1_1_1.run :: epoch=15 step=250/429 train_nll=-3608.082
+2026-05-15 11:15:32,571 INFO CSMF2.step_1_1_1.run :: [h] epoch=15 step=300 total=0.27165 batch=0.00000
+2026-05-15 11:15:32,571 INFO CSMF2.step_1_1_1.run :: [lat] epoch=15 step=300 mean_l2=0.02237 std_l2=0.02122
+2026-05-15 11:15:32,746 INFO CSMF2.step_1_1_1.run :: epoch=15 step=300/429 train_nll=-3609.824
+2026-05-15 11:15:47,900 INFO CSMF2.step_1_1_1.run :: [h] epoch=15 step=350 total=0.27022 batch=0.00000
+2026-05-15 11:15:47,901 INFO CSMF2.step_1_1_1.run :: [lat] epoch=15 step=350 mean_l2=0.01840 std_l2=0.02219
+2026-05-15 11:15:48,073 INFO CSMF2.step_1_1_1.run :: epoch=15 step=350/429 train_nll=-3610.454
+2026-05-15 11:16:02,958 INFO CSMF2.step_1_1_1.run :: [h] epoch=15 step=400 total=0.26980 batch=0.00000
+2026-05-15 11:16:02,959 INFO CSMF2.step_1_1_1.run :: [lat] epoch=15 step=400 mean_l2=0.04493 std_l2=0.02290
+2026-05-15 11:16:03,131 INFO CSMF2.step_1_1_1.run :: epoch=15 step=400/429 train_nll=-3612.018
+2026-05-15 11:16:16,502 INFO CSMF2.step_1_1_1.run :: epoch=15  train_nll=-3611.159  val_nll=-3599.359  t=135.4s
+2026-05-15 11:16:16,502 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.27051 batch=0.00000 (no penalty)
+2026-05-15 11:16:16,502 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.02275 std_l2=0.02249 lambda=10.000
+2026-05-15 11:16:16,502 INFO CSMF2.step_1_1_1.run :: [grad] cond=327.9579 film_gain=0.0000
+2026-05-15 11:16:34,392 INFO CSMF2.step_1_1_1.run :: [h] epoch=16 step=50 total=0.26636 batch=0.00000
+2026-05-15 11:16:34,392 INFO CSMF2.step_1_1_1.run :: [lat] epoch=16 step=50 mean_l2=0.01328 std_l2=0.01849
+2026-05-15 11:16:34,566 INFO CSMF2.step_1_1_1.run :: epoch=16 step=50/429 train_nll=-3605.405
+2026-05-15 11:16:49,827 INFO CSMF2.step_1_1_1.run :: [h] epoch=16 step=100 total=0.26604 batch=0.00000
+2026-05-15 11:16:49,828 INFO CSMF2.step_1_1_1.run :: [lat] epoch=16 step=100 mean_l2=0.01266 std_l2=0.01805
+2026-05-15 11:16:50,049 INFO CSMF2.step_1_1_1.run :: epoch=16 step=100/429 train_nll=-3617.085
+2026-05-15 11:17:04,891 INFO CSMF2.step_1_1_1.run :: [h] epoch=16 step=150 total=0.26532 batch=0.00000
+2026-05-15 11:17:04,892 INFO CSMF2.step_1_1_1.run :: [lat] epoch=16 step=150 mean_l2=0.05160 std_l2=0.02383
+2026-05-15 11:17:05,111 INFO CSMF2.step_1_1_1.run :: epoch=16 step=150/429 train_nll=-3617.932
+2026-05-15 11:17:20,004 INFO CSMF2.step_1_1_1.run :: [h] epoch=16 step=200 total=0.26220 batch=0.00000
+2026-05-15 11:17:20,004 INFO CSMF2.step_1_1_1.run :: [lat] epoch=16 step=200 mean_l2=0.01727 std_l2=0.02285
+2026-05-15 11:17:20,178 INFO CSMF2.step_1_1_1.run :: epoch=16 step=200/429 train_nll=-3615.420
+2026-05-15 11:17:35,227 INFO CSMF2.step_1_1_1.run :: [h] epoch=16 step=250 total=0.26384 batch=0.00000
+2026-05-15 11:17:35,228 INFO CSMF2.step_1_1_1.run :: [lat] epoch=16 step=250 mean_l2=0.01538 std_l2=0.01917
+2026-05-15 11:17:35,404 INFO CSMF2.step_1_1_1.run :: epoch=16 step=250/429 train_nll=-3615.854
+2026-05-15 11:17:50,277 INFO CSMF2.step_1_1_1.run :: [h] epoch=16 step=300 total=0.26572 batch=0.00000
+2026-05-15 11:17:50,278 INFO CSMF2.step_1_1_1.run :: [lat] epoch=16 step=300 mean_l2=0.01316 std_l2=0.01916
+2026-05-15 11:17:50,450 INFO CSMF2.step_1_1_1.run :: epoch=16 step=300/429 train_nll=-3618.773
+2026-05-15 11:18:05,439 INFO CSMF2.step_1_1_1.run :: [h] epoch=16 step=350 total=0.26695 batch=0.00000
+2026-05-15 11:18:05,440 INFO CSMF2.step_1_1_1.run :: [lat] epoch=16 step=350 mean_l2=0.03282 std_l2=0.02903
+2026-05-15 11:18:05,664 INFO CSMF2.step_1_1_1.run :: epoch=16 step=350/429 train_nll=-3621.211
+2026-05-15 11:18:20,990 INFO CSMF2.step_1_1_1.run :: [h] epoch=16 step=400 total=0.26332 batch=0.00000
+2026-05-15 11:18:20,990 INFO CSMF2.step_1_1_1.run :: [lat] epoch=16 step=400 mean_l2=0.02482 std_l2=0.02044
+2026-05-15 11:18:21,212 INFO CSMF2.step_1_1_1.run :: epoch=16 step=400/429 train_nll=-3622.164
+2026-05-15 11:18:34,904 INFO CSMF2.step_1_1_1.run :: epoch=16  train_nll=-3621.986  val_nll=-3618.150  t=135.3s
+2026-05-15 11:18:34,904 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.26584 batch=0.00000 (no penalty)
+2026-05-15 11:18:34,904 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.01894 std_l2=0.02126 lambda=10.000
+2026-05-15 11:18:34,904 INFO CSMF2.step_1_1_1.run :: [grad] cond=402.2185 film_gain=0.0000
+2026-05-15 11:18:52,954 INFO CSMF2.step_1_1_1.run :: [h] epoch=17 step=50 total=0.26585 batch=0.00000
+2026-05-15 11:18:52,955 INFO CSMF2.step_1_1_1.run :: [lat] epoch=17 step=50 mean_l2=0.01481 std_l2=0.02029
+2026-05-15 11:18:53,180 INFO CSMF2.step_1_1_1.run :: epoch=17 step=50/429 train_nll=-3626.108
+2026-05-15 11:19:08,367 INFO CSMF2.step_1_1_1.run :: [h] epoch=17 step=100 total=0.26108 batch=0.00000
+2026-05-15 11:19:08,367 INFO CSMF2.step_1_1_1.run :: [lat] epoch=17 step=100 mean_l2=0.02907 std_l2=0.02803
+2026-05-15 11:19:08,543 INFO CSMF2.step_1_1_1.run :: epoch=17 step=100/429 train_nll=-3617.737
+2026-05-15 11:19:23,701 INFO CSMF2.step_1_1_1.run :: [h] epoch=17 step=150 total=0.26432 batch=0.00000
+2026-05-15 11:19:23,702 INFO CSMF2.step_1_1_1.run :: [lat] epoch=17 step=150 mean_l2=0.02524 std_l2=0.02662
+2026-05-15 11:19:23,927 INFO CSMF2.step_1_1_1.run :: epoch=17 step=150/429 train_nll=-3616.228
+2026-05-15 11:19:39,295 INFO CSMF2.step_1_1_1.run :: [h] epoch=17 step=200 total=0.26056 batch=0.00000
+2026-05-15 11:19:39,296 INFO CSMF2.step_1_1_1.run :: [lat] epoch=17 step=200 mean_l2=0.01235 std_l2=0.02111
+2026-05-15 11:19:39,521 INFO CSMF2.step_1_1_1.run :: epoch=17 step=200/429 train_nll=-3613.760
+2026-05-15 11:19:54,804 INFO CSMF2.step_1_1_1.run :: [h] epoch=17 step=250 total=0.26238 batch=0.00000
+2026-05-15 11:19:54,805 INFO CSMF2.step_1_1_1.run :: [lat] epoch=17 step=250 mean_l2=0.02174 std_l2=0.02251
+2026-05-15 11:19:54,980 INFO CSMF2.step_1_1_1.run :: epoch=17 step=250/429 train_nll=-3616.064
+2026-05-15 11:20:10,561 INFO CSMF2.step_1_1_1.run :: [h] epoch=17 step=300 total=0.26380 batch=0.00000
+2026-05-15 11:20:10,561 INFO CSMF2.step_1_1_1.run :: [lat] epoch=17 step=300 mean_l2=0.01322 std_l2=0.01816
+2026-05-15 11:20:10,787 INFO CSMF2.step_1_1_1.run :: epoch=17 step=300/429 train_nll=-3618.271
+2026-05-15 11:20:26,303 INFO CSMF2.step_1_1_1.run :: [h] epoch=17 step=350 total=0.26215 batch=0.00000
+2026-05-15 11:20:26,303 INFO CSMF2.step_1_1_1.run :: [lat] epoch=17 step=350 mean_l2=0.02220 std_l2=0.02561
+2026-05-15 11:20:26,480 INFO CSMF2.step_1_1_1.run :: epoch=17 step=350/429 train_nll=-3618.725
+2026-05-15 11:20:41,813 INFO CSMF2.step_1_1_1.run :: [h] epoch=17 step=400 total=0.26119 batch=0.00000
+2026-05-15 11:20:41,813 INFO CSMF2.step_1_1_1.run :: [lat] epoch=17 step=400 mean_l2=0.01706 std_l2=0.01836
+2026-05-15 11:20:41,990 INFO CSMF2.step_1_1_1.run :: epoch=17 step=400/429 train_nll=-3620.249
+2026-05-15 11:20:55,651 INFO CSMF2.step_1_1_1.run :: epoch=17  train_nll=-3619.599  val_nll=-3592.646  t=137.7s
+2026-05-15 11:20:55,651 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.26352 batch=0.00000 (no penalty)
+2026-05-15 11:20:55,651 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.02114 std_l2=0.02191 lambda=10.000
+2026-05-15 11:20:55,651 INFO CSMF2.step_1_1_1.run :: [grad] cond=212.8394 film_gain=0.0000
+2026-05-15 11:21:13,810 INFO CSMF2.step_1_1_1.run :: [h] epoch=18 step=50 total=0.26244 batch=0.00000
+2026-05-15 11:21:13,810 INFO CSMF2.step_1_1_1.run :: [lat] epoch=18 step=50 mean_l2=0.02211 std_l2=0.02024
+2026-05-15 11:21:13,983 INFO CSMF2.step_1_1_1.run :: epoch=18 step=50/429 train_nll=-3608.693
+2026-05-15 11:21:29,644 INFO CSMF2.step_1_1_1.run :: [h] epoch=18 step=100 total=0.26120 batch=0.00000
+2026-05-15 11:21:29,645 INFO CSMF2.step_1_1_1.run :: [lat] epoch=18 step=100 mean_l2=0.01423 std_l2=0.01845
+2026-05-15 11:21:29,867 INFO CSMF2.step_1_1_1.run :: epoch=18 step=100/429 train_nll=-3617.178
+2026-05-15 11:21:45,086 INFO CSMF2.step_1_1_1.run :: [h] epoch=18 step=150 total=0.25978 batch=0.00000
+2026-05-15 11:21:45,087 INFO CSMF2.step_1_1_1.run :: [lat] epoch=18 step=150 mean_l2=0.01545 std_l2=0.01900
+2026-05-15 11:21:45,261 INFO CSMF2.step_1_1_1.run :: epoch=18 step=150/429 train_nll=-3622.051
+2026-05-15 11:22:00,332 INFO CSMF2.step_1_1_1.run :: [h] epoch=18 step=200 total=0.26097 batch=0.00000
+2026-05-15 11:22:00,333 INFO CSMF2.step_1_1_1.run :: [lat] epoch=18 step=200 mean_l2=0.01402 std_l2=0.02203
+2026-05-15 11:22:00,555 INFO CSMF2.step_1_1_1.run :: epoch=18 step=200/429 train_nll=-3626.531
+2026-05-15 11:22:15,868 INFO CSMF2.step_1_1_1.run :: [h] epoch=18 step=250 total=0.26041 batch=0.00000
+2026-05-15 11:22:15,868 INFO CSMF2.step_1_1_1.run :: [lat] epoch=18 step=250 mean_l2=0.01217 std_l2=0.02027
+2026-05-15 11:22:16,042 INFO CSMF2.step_1_1_1.run :: epoch=18 step=250/429 train_nll=-3628.871
+2026-05-15 11:22:31,313 INFO CSMF2.step_1_1_1.run :: [h] epoch=18 step=300 total=0.26282 batch=0.00000
+2026-05-15 11:22:31,314 INFO CSMF2.step_1_1_1.run :: [lat] epoch=18 step=300 mean_l2=0.01213 std_l2=0.01926
+2026-05-15 11:22:31,537 INFO CSMF2.step_1_1_1.run :: epoch=18 step=300/429 train_nll=-3630.974
+2026-05-15 11:22:46,719 INFO CSMF2.step_1_1_1.run :: [h] epoch=18 step=350 total=0.26203 batch=0.00000
+2026-05-15 11:22:46,720 INFO CSMF2.step_1_1_1.run :: [lat] epoch=18 step=350 mean_l2=0.01831 std_l2=0.01969
+2026-05-15 11:22:46,893 INFO CSMF2.step_1_1_1.run :: epoch=18 step=350/429 train_nll=-3632.634
+2026-05-15 11:23:01,830 INFO CSMF2.step_1_1_1.run :: [h] epoch=18 step=400 total=0.25813 batch=0.00000
+2026-05-15 11:23:01,831 INFO CSMF2.step_1_1_1.run :: [lat] epoch=18 step=400 mean_l2=0.02941 std_l2=0.02615
+2026-05-15 11:23:02,054 INFO CSMF2.step_1_1_1.run :: epoch=18 step=400/429 train_nll=-3631.394
+2026-05-15 11:23:15,876 INFO CSMF2.step_1_1_1.run :: epoch=18  train_nll=-3630.763  val_nll=-3631.377  t=137.0s
+2026-05-15 11:23:15,877 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.26086 batch=0.00000 (no penalty)
+2026-05-15 11:23:15,877 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.01725 std_l2=0.02071 lambda=10.000
+2026-05-15 11:23:15,877 INFO CSMF2.step_1_1_1.run :: [grad] cond=369.2481 film_gain=0.0000
+2026-05-15 11:23:34,134 INFO CSMF2.step_1_1_1.run :: [h] epoch=19 step=50 total=0.25765 batch=0.00000
+2026-05-15 11:23:34,135 INFO CSMF2.step_1_1_1.run :: [lat] epoch=19 step=50 mean_l2=0.02514 std_l2=0.02557
+2026-05-15 11:23:34,359 INFO CSMF2.step_1_1_1.run :: epoch=19 step=50/429 train_nll=-3627.794
+2026-05-15 11:23:49,307 INFO CSMF2.step_1_1_1.run :: [h] epoch=19 step=100 total=0.25466 batch=0.00000
+2026-05-15 11:23:49,308 INFO CSMF2.step_1_1_1.run :: [lat] epoch=19 step=100 mean_l2=0.02829 std_l2=0.02503
+2026-05-15 11:23:49,485 INFO CSMF2.step_1_1_1.run :: epoch=19 step=100/429 train_nll=-3620.427
+2026-05-15 11:24:04,724 INFO CSMF2.step_1_1_1.run :: [h] epoch=19 step=150 total=0.25795 batch=0.00000
+2026-05-15 11:24:04,724 INFO CSMF2.step_1_1_1.run :: [lat] epoch=19 step=150 mean_l2=0.01790 std_l2=0.02218
+2026-05-15 11:24:04,895 INFO CSMF2.step_1_1_1.run :: epoch=19 step=150/429 train_nll=-3620.261
+2026-05-15 11:24:20,127 INFO CSMF2.step_1_1_1.run :: [h] epoch=19 step=200 total=0.25634 batch=0.00000
+2026-05-15 11:24:20,127 INFO CSMF2.step_1_1_1.run :: [lat] epoch=19 step=200 mean_l2=0.01241 std_l2=0.01947
+2026-05-15 11:24:20,304 INFO CSMF2.step_1_1_1.run :: epoch=19 step=200/429 train_nll=-3624.588
+2026-05-15 11:24:35,183 INFO CSMF2.step_1_1_1.run :: [h] epoch=19 step=250 total=0.25864 batch=0.00000
+2026-05-15 11:24:35,183 INFO CSMF2.step_1_1_1.run :: [lat] epoch=19 step=250 mean_l2=0.03660 std_l2=0.02995
+2026-05-15 11:24:35,360 INFO CSMF2.step_1_1_1.run :: epoch=19 step=250/429 train_nll=-3623.518
+2026-05-15 11:24:50,768 INFO CSMF2.step_1_1_1.run :: [h] epoch=19 step=300 total=0.25654 batch=0.00000
+2026-05-15 11:24:50,769 INFO CSMF2.step_1_1_1.run :: [lat] epoch=19 step=300 mean_l2=0.01460 std_l2=0.02180
+2026-05-15 11:24:50,944 INFO CSMF2.step_1_1_1.run :: epoch=19 step=300/429 train_nll=-3621.809
+2026-05-15 11:25:06,216 INFO CSMF2.step_1_1_1.run :: [h] epoch=19 step=350 total=0.25509 batch=0.00000
+2026-05-15 11:25:06,216 INFO CSMF2.step_1_1_1.run :: [lat] epoch=19 step=350 mean_l2=0.02254 std_l2=0.02092
+2026-05-15 11:25:06,394 INFO CSMF2.step_1_1_1.run :: epoch=19 step=350/429 train_nll=-3622.391
+2026-05-15 11:25:21,472 INFO CSMF2.step_1_1_1.run :: [h] epoch=19 step=400 total=0.25590 batch=0.00000
+2026-05-15 11:25:21,473 INFO CSMF2.step_1_1_1.run :: [lat] epoch=19 step=400 mean_l2=0.01721 std_l2=0.01790
+2026-05-15 11:25:21,697 INFO CSMF2.step_1_1_1.run :: epoch=19 step=400/429 train_nll=-3624.360
+2026-05-15 11:25:35,323 INFO CSMF2.step_1_1_1.run :: epoch=19  train_nll=-3625.537  val_nll=-3641.485  t=136.3s
+2026-05-15 11:25:35,323 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.25715 batch=0.00000 (no penalty)
+2026-05-15 11:25:35,323 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.01937 std_l2=0.02151 lambda=10.000
+2026-05-15 11:25:35,323 INFO CSMF2.step_1_1_1.run :: [grad] cond=563.6301 film_gain=0.0000
+2026-05-15 11:25:53,308 INFO CSMF2.step_1_1_1.run :: [h] epoch=20 step=50 total=0.25767 batch=0.00000
+2026-05-15 11:25:53,309 INFO CSMF2.step_1_1_1.run :: [lat] epoch=20 step=50 mean_l2=0.01716 std_l2=0.02272
+2026-05-15 11:25:53,534 INFO CSMF2.step_1_1_1.run :: epoch=20 step=50/429 train_nll=-3639.457
+2026-05-15 11:26:09,111 INFO CSMF2.step_1_1_1.run :: [h] epoch=20 step=100 total=0.25658 batch=0.00000
+2026-05-15 11:26:09,111 INFO CSMF2.step_1_1_1.run :: [lat] epoch=20 step=100 mean_l2=0.01449 std_l2=0.01776
+2026-05-15 11:26:09,287 INFO CSMF2.step_1_1_1.run :: epoch=20 step=100/429 train_nll=-3637.752
+2026-05-15 11:26:24,578 INFO CSMF2.step_1_1_1.run :: [h] epoch=20 step=150 total=0.25523 batch=0.00000
+2026-05-15 11:26:24,579 INFO CSMF2.step_1_1_1.run :: [lat] epoch=20 step=150 mean_l2=0.02145 std_l2=0.02411
+2026-05-15 11:26:24,760 INFO CSMF2.step_1_1_1.run :: epoch=20 step=150/429 train_nll=-3635.593
+2026-05-15 11:26:40,053 INFO CSMF2.step_1_1_1.run :: [h] epoch=20 step=200 total=0.25715 batch=0.00000
+2026-05-15 11:26:40,053 INFO CSMF2.step_1_1_1.run :: [lat] epoch=20 step=200 mean_l2=0.02372 std_l2=0.02667
+2026-05-15 11:26:40,231 INFO CSMF2.step_1_1_1.run :: epoch=20 step=200/429 train_nll=-3631.439
+2026-05-15 11:26:55,495 INFO CSMF2.step_1_1_1.run :: [h] epoch=20 step=250 total=0.25462 batch=0.00000
+2026-05-15 11:26:55,496 INFO CSMF2.step_1_1_1.run :: [lat] epoch=20 step=250 mean_l2=0.01411 std_l2=0.01967
+2026-05-15 11:26:55,676 INFO CSMF2.step_1_1_1.run :: epoch=20 step=250/429 train_nll=-3631.463
+2026-05-15 11:27:10,844 INFO CSMF2.step_1_1_1.run :: [h] epoch=20 step=300 total=0.25704 batch=0.00000
+2026-05-15 11:27:10,844 INFO CSMF2.step_1_1_1.run :: [lat] epoch=20 step=300 mean_l2=0.01958 std_l2=0.02133
+2026-05-15 11:27:11,019 INFO CSMF2.step_1_1_1.run :: epoch=20 step=300/429 train_nll=-3631.366
+2026-05-15 11:27:26,328 INFO CSMF2.step_1_1_1.run :: [h] epoch=20 step=350 total=0.25443 batch=0.00000
+2026-05-15 11:27:26,329 INFO CSMF2.step_1_1_1.run :: [lat] epoch=20 step=350 mean_l2=0.01307 std_l2=0.02201
+2026-05-15 11:27:26,507 INFO CSMF2.step_1_1_1.run :: epoch=20 step=350/429 train_nll=-3629.823
+2026-05-15 11:27:41,796 INFO CSMF2.step_1_1_1.run :: [h] epoch=20 step=400 total=0.25224 batch=0.00000
+2026-05-15 11:27:41,796 INFO CSMF2.step_1_1_1.run :: [lat] epoch=20 step=400 mean_l2=0.01890 std_l2=0.02053
+2026-05-15 11:27:41,971 INFO CSMF2.step_1_1_1.run :: epoch=20 step=400/429 train_nll=-3630.530
+2026-05-15 11:27:55,805 INFO CSMF2.step_1_1_1.run :: epoch=20  train_nll=-3629.759  val_nll=-3603.452  t=137.4s
+2026-05-15 11:27:55,805 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.25565 batch=0.00000 (no penalty)
+2026-05-15 11:27:55,805 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.01855 std_l2=0.02135 lambda=10.000
+2026-05-15 11:27:55,805 INFO CSMF2.step_1_1_1.run :: [grad] cond=268.8218 film_gain=0.0000
+2026-05-15 11:28:14,452 INFO CSMF2.step_1_1_1.run :: [h] epoch=21 step=50 total=0.25362 batch=0.00000
+2026-05-15 11:28:14,453 INFO CSMF2.step_1_1_1.run :: [lat] epoch=21 step=50 mean_l2=0.02280 std_l2=0.02143
+2026-05-15 11:28:14,633 INFO CSMF2.step_1_1_1.run :: epoch=21 step=50/429 train_nll=-3625.544
+2026-05-15 11:28:30,320 INFO CSMF2.step_1_1_1.run :: [h] epoch=21 step=100 total=0.25002 batch=0.00000
+2026-05-15 11:28:30,321 INFO CSMF2.step_1_1_1.run :: [lat] epoch=21 step=100 mean_l2=0.02791 std_l2=0.02207
+2026-05-15 11:28:30,497 INFO CSMF2.step_1_1_1.run :: epoch=21 step=100/429 train_nll=-3627.794
+2026-05-15 11:28:45,496 INFO CSMF2.step_1_1_1.run :: [h] epoch=21 step=150 total=0.25096 batch=0.00000
+2026-05-15 11:28:45,496 INFO CSMF2.step_1_1_1.run :: [lat] epoch=21 step=150 mean_l2=0.01801 std_l2=0.02035
+2026-05-15 11:28:45,673 INFO CSMF2.step_1_1_1.run :: epoch=21 step=150/429 train_nll=-3629.798
+2026-05-15 11:29:00,646 INFO CSMF2.step_1_1_1.run :: [h] epoch=21 step=200 total=0.25075 batch=0.00000
+2026-05-15 11:29:00,647 INFO CSMF2.step_1_1_1.run :: [lat] epoch=21 step=200 mean_l2=0.01504 std_l2=0.01619
+2026-05-15 11:29:00,822 INFO CSMF2.step_1_1_1.run :: epoch=21 step=200/429 train_nll=-3630.887
+2026-05-15 11:29:16,109 INFO CSMF2.step_1_1_1.run :: [h] epoch=21 step=250 total=0.24979 batch=0.00000
+2026-05-15 11:29:16,110 INFO CSMF2.step_1_1_1.run :: [lat] epoch=21 step=250 mean_l2=0.01479 std_l2=0.02213
+2026-05-15 11:29:16,284 INFO CSMF2.step_1_1_1.run :: epoch=21 step=250/429 train_nll=-3632.937
+2026-05-15 11:29:31,535 INFO CSMF2.step_1_1_1.run :: [h] epoch=21 step=300 total=0.24872 batch=0.00000
+2026-05-15 11:29:31,536 INFO CSMF2.step_1_1_1.run :: [lat] epoch=21 step=300 mean_l2=0.02174 std_l2=0.02979
+2026-05-15 11:29:31,712 INFO CSMF2.step_1_1_1.run :: epoch=21 step=300/429 train_nll=-3633.369
+2026-05-15 11:29:46,883 INFO CSMF2.step_1_1_1.run :: [h] epoch=21 step=350 total=0.25026 batch=0.00000
+2026-05-15 11:29:46,884 INFO CSMF2.step_1_1_1.run :: [lat] epoch=21 step=350 mean_l2=0.01694 std_l2=0.01825
+2026-05-15 11:29:47,109 INFO CSMF2.step_1_1_1.run :: epoch=21 step=350/429 train_nll=-3631.785
+2026-05-15 11:30:02,503 INFO CSMF2.step_1_1_1.run :: [h] epoch=21 step=400 total=0.24953 batch=0.00000
+2026-05-15 11:30:02,504 INFO CSMF2.step_1_1_1.run :: [lat] epoch=21 step=400 mean_l2=0.01468 std_l2=0.01971
+2026-05-15 11:30:02,680 INFO CSMF2.step_1_1_1.run :: epoch=21 step=400/429 train_nll=-3632.519
+2026-05-15 11:30:16,353 INFO CSMF2.step_1_1_1.run :: epoch=21  train_nll=-3632.688  val_nll=-3599.775  t=137.4s
+2026-05-15 11:30:16,353 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.25049 batch=0.00000 (no penalty)
+2026-05-15 11:30:16,353 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.01846 std_l2=0.02098 lambda=10.000
+2026-05-15 11:30:16,353 INFO CSMF2.step_1_1_1.run :: [grad] cond=398.6358 film_gain=0.0000
+2026-05-15 11:30:34,682 INFO CSMF2.step_1_1_1.run :: [h] epoch=22 step=50 total=0.24804 batch=0.00000
+2026-05-15 11:30:34,683 INFO CSMF2.step_1_1_1.run :: [lat] epoch=22 step=50 mean_l2=0.01474 std_l2=0.01840
+2026-05-15 11:30:34,858 INFO CSMF2.step_1_1_1.run :: epoch=22 step=50/429 train_nll=-3630.420
+2026-05-15 11:30:50,538 INFO CSMF2.step_1_1_1.run :: [h] epoch=22 step=100 total=0.24843 batch=0.00000
+2026-05-15 11:30:50,539 INFO CSMF2.step_1_1_1.run :: [lat] epoch=22 step=100 mean_l2=0.02178 std_l2=0.01939
+2026-05-15 11:30:50,769 INFO CSMF2.step_1_1_1.run :: epoch=22 step=100/429 train_nll=-3627.617
+2026-05-15 11:31:06,331 INFO CSMF2.step_1_1_1.run :: [h] epoch=22 step=150 total=0.24791 batch=0.00000
+2026-05-15 11:31:06,332 INFO CSMF2.step_1_1_1.run :: [lat] epoch=22 step=150 mean_l2=0.01776 std_l2=0.02097
+2026-05-15 11:31:06,510 INFO CSMF2.step_1_1_1.run :: epoch=22 step=150/429 train_nll=-3629.715
+2026-05-15 11:31:21,962 INFO CSMF2.step_1_1_1.run :: [h] epoch=22 step=200 total=0.24447 batch=0.00000
+2026-05-15 11:31:21,962 INFO CSMF2.step_1_1_1.run :: [lat] epoch=22 step=200 mean_l2=0.01158 std_l2=0.01788
+2026-05-15 11:31:22,192 INFO CSMF2.step_1_1_1.run :: epoch=22 step=200/429 train_nll=-3629.724
+2026-05-15 11:31:37,524 INFO CSMF2.step_1_1_1.run :: [h] epoch=22 step=250 total=0.24613 batch=0.00000
+2026-05-15 11:31:37,524 INFO CSMF2.step_1_1_1.run :: [lat] epoch=22 step=250 mean_l2=0.01340 std_l2=0.01821
+2026-05-15 11:31:37,703 INFO CSMF2.step_1_1_1.run :: epoch=22 step=250/429 train_nll=-3633.207
+2026-05-15 11:31:53,580 INFO CSMF2.step_1_1_1.run :: [h] epoch=22 step=300 total=0.24701 batch=0.00000
+2026-05-15 11:31:53,580 INFO CSMF2.step_1_1_1.run :: [lat] epoch=22 step=300 mean_l2=0.01238 std_l2=0.01991
+2026-05-15 11:31:53,761 INFO CSMF2.step_1_1_1.run :: epoch=22 step=300/429 train_nll=-3636.098
+2026-05-15 11:32:09,381 INFO CSMF2.step_1_1_1.run :: [h] epoch=22 step=350 total=0.24557 batch=0.00000
+2026-05-15 11:32:09,381 INFO CSMF2.step_1_1_1.run :: [lat] epoch=22 step=350 mean_l2=0.01768 std_l2=0.02010
+2026-05-15 11:32:09,561 INFO CSMF2.step_1_1_1.run :: epoch=22 step=350/429 train_nll=-3635.570
+2026-05-15 11:32:25,118 INFO CSMF2.step_1_1_1.run :: [h] epoch=22 step=400 total=0.24617 batch=0.00000
+2026-05-15 11:32:25,119 INFO CSMF2.step_1_1_1.run :: [lat] epoch=22 step=400 mean_l2=0.02609 std_l2=0.02319
+2026-05-15 11:32:25,296 INFO CSMF2.step_1_1_1.run :: epoch=22 step=400/429 train_nll=-3635.414
+2026-05-15 11:32:39,366 INFO CSMF2.step_1_1_1.run :: epoch=22  train_nll=-3635.360  val_nll=-3636.167  t=139.9s
+2026-05-15 11:32:39,366 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.24680 batch=0.00000 (no penalty)
+2026-05-15 11:32:39,366 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.01878 std_l2=0.02101 lambda=10.000
+2026-05-15 11:32:39,366 INFO CSMF2.step_1_1_1.run :: [grad] cond=56.3161 film_gain=0.0000
+2026-05-15 11:32:57,798 INFO CSMF2.step_1_1_1.run :: [h] epoch=23 step=50 total=0.24555 batch=0.00000
+2026-05-15 11:32:57,799 INFO CSMF2.step_1_1_1.run :: [lat] epoch=23 step=50 mean_l2=0.01301 std_l2=0.01962
+2026-05-15 11:32:57,981 INFO CSMF2.step_1_1_1.run :: epoch=23 step=50/429 train_nll=-3647.003
+2026-05-15 11:33:13,168 INFO CSMF2.step_1_1_1.run :: [h] epoch=23 step=100 total=0.24315 batch=0.00000
+2026-05-15 11:33:13,168 INFO CSMF2.step_1_1_1.run :: [lat] epoch=23 step=100 mean_l2=0.01982 std_l2=0.01982
+2026-05-15 11:33:13,351 INFO CSMF2.step_1_1_1.run :: epoch=23 step=100/429 train_nll=-3642.928
+2026-05-15 11:33:28,696 INFO CSMF2.step_1_1_1.run :: [h] epoch=23 step=150 total=0.24300 batch=0.00000
+2026-05-15 11:33:28,697 INFO CSMF2.step_1_1_1.run :: [lat] epoch=23 step=150 mean_l2=0.01323 std_l2=0.02167
+2026-05-15 11:33:28,878 INFO CSMF2.step_1_1_1.run :: epoch=23 step=150/429 train_nll=-3638.930
+2026-05-15 11:33:44,503 INFO CSMF2.step_1_1_1.run :: [h] epoch=23 step=200 total=0.24123 batch=0.00000
+2026-05-15 11:33:44,504 INFO CSMF2.step_1_1_1.run :: [lat] epoch=23 step=200 mean_l2=0.01595 std_l2=0.02227
+2026-05-15 11:33:44,732 INFO CSMF2.step_1_1_1.run :: epoch=23 step=200/429 train_nll=-3637.943
+2026-05-15 11:34:00,243 INFO CSMF2.step_1_1_1.run :: [h] epoch=23 step=250 total=0.24239 batch=0.00000
+2026-05-15 11:34:00,244 INFO CSMF2.step_1_1_1.run :: [lat] epoch=23 step=250 mean_l2=0.01683 std_l2=0.02045
+2026-05-15 11:34:00,471 INFO CSMF2.step_1_1_1.run :: epoch=23 step=250/429 train_nll=-3636.223
+2026-05-15 11:34:15,653 INFO CSMF2.step_1_1_1.run :: [h] epoch=23 step=300 total=0.24178 batch=0.00000
+2026-05-15 11:34:15,653 INFO CSMF2.step_1_1_1.run :: [lat] epoch=23 step=300 mean_l2=0.01414 std_l2=0.01819
+2026-05-15 11:34:15,836 INFO CSMF2.step_1_1_1.run :: epoch=23 step=300/429 train_nll=-3636.849
+2026-05-15 11:34:31,325 INFO CSMF2.step_1_1_1.run :: [h] epoch=23 step=350 total=0.24126 batch=0.00000
+2026-05-15 11:34:31,326 INFO CSMF2.step_1_1_1.run :: [lat] epoch=23 step=350 mean_l2=0.01262 std_l2=0.01875
+2026-05-15 11:34:31,554 INFO CSMF2.step_1_1_1.run :: epoch=23 step=350/429 train_nll=-3638.802
+2026-05-15 11:34:47,535 INFO CSMF2.step_1_1_1.run :: [h] epoch=23 step=400 total=0.24215 batch=0.00000
+2026-05-15 11:34:47,536 INFO CSMF2.step_1_1_1.run :: [lat] epoch=23 step=400 mean_l2=0.01322 std_l2=0.01958
+2026-05-15 11:34:47,716 INFO CSMF2.step_1_1_1.run :: epoch=23 step=400/429 train_nll=-3640.707
+2026-05-15 11:35:01,459 INFO CSMF2.step_1_1_1.run :: epoch=23  train_nll=-3641.588  val_nll=-3648.800  t=139.1s
+2026-05-15 11:35:01,459 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.24287 batch=0.00000 (no penalty)
+2026-05-15 11:35:01,459 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.01678 std_l2=0.02031 lambda=10.000
+2026-05-15 11:35:01,459 INFO CSMF2.step_1_1_1.run :: [grad] cond=588.9213 film_gain=0.0000
+2026-05-15 11:35:19,678 INFO CSMF2.step_1_1_1.run :: [h] epoch=24 step=50 total=0.24320 batch=0.00000
+2026-05-15 11:35:19,679 INFO CSMF2.step_1_1_1.run :: [lat] epoch=24 step=50 mean_l2=0.01668 std_l2=0.01890
+2026-05-15 11:35:19,856 INFO CSMF2.step_1_1_1.run :: epoch=24 step=50/429 train_nll=-3646.766
+2026-05-15 11:35:35,246 INFO CSMF2.step_1_1_1.run :: [h] epoch=24 step=100 total=0.23903 batch=0.00000
+2026-05-15 11:35:35,246 INFO CSMF2.step_1_1_1.run :: [lat] epoch=24 step=100 mean_l2=0.01773 std_l2=0.01996
+2026-05-15 11:35:35,425 INFO CSMF2.step_1_1_1.run :: epoch=24 step=100/429 train_nll=-3635.303
+2026-05-15 11:35:51,040 INFO CSMF2.step_1_1_1.run :: [h] epoch=24 step=150 total=0.23965 batch=0.00000
+2026-05-15 11:35:51,041 INFO CSMF2.step_1_1_1.run :: [lat] epoch=24 step=150 mean_l2=0.01454 std_l2=0.02253
+2026-05-15 11:35:51,218 INFO CSMF2.step_1_1_1.run :: epoch=24 step=150/429 train_nll=-3635.601
+2026-05-15 11:36:06,639 INFO CSMF2.step_1_1_1.run :: [h] epoch=24 step=200 total=0.23919 batch=0.00000
+2026-05-15 11:36:06,639 INFO CSMF2.step_1_1_1.run :: [lat] epoch=24 step=200 mean_l2=0.01398 std_l2=0.01902
+2026-05-15 11:36:06,816 INFO CSMF2.step_1_1_1.run :: epoch=24 step=200/429 train_nll=-3635.423
+2026-05-15 11:36:22,312 INFO CSMF2.step_1_1_1.run :: [h] epoch=24 step=250 total=0.23774 batch=0.00000
+2026-05-15 11:36:22,312 INFO CSMF2.step_1_1_1.run :: [lat] epoch=24 step=250 mean_l2=0.01970 std_l2=0.02115
+2026-05-15 11:36:22,490 INFO CSMF2.step_1_1_1.run :: epoch=24 step=250/429 train_nll=-3636.183
+2026-05-15 11:36:38,193 INFO CSMF2.step_1_1_1.run :: [h] epoch=24 step=300 total=0.23811 batch=0.00000
+2026-05-15 11:36:38,194 INFO CSMF2.step_1_1_1.run :: [lat] epoch=24 step=300 mean_l2=0.02165 std_l2=0.02315
+2026-05-15 11:36:38,420 INFO CSMF2.step_1_1_1.run :: epoch=24 step=300/429 train_nll=-3635.171
+2026-05-15 11:36:53,926 INFO CSMF2.step_1_1_1.run :: [h] epoch=24 step=350 total=0.23657 batch=0.00000
+2026-05-15 11:36:53,927 INFO CSMF2.step_1_1_1.run :: [lat] epoch=24 step=350 mean_l2=0.01234 std_l2=0.01687
+2026-05-15 11:36:54,153 INFO CSMF2.step_1_1_1.run :: epoch=24 step=350/429 train_nll=-3635.884
+2026-05-15 11:37:09,445 INFO CSMF2.step_1_1_1.run :: [h] epoch=24 step=400 total=0.23681 batch=0.00000
+2026-05-15 11:37:09,445 INFO CSMF2.step_1_1_1.run :: [lat] epoch=24 step=400 mean_l2=0.02150 std_l2=0.01910
+2026-05-15 11:37:09,622 INFO CSMF2.step_1_1_1.run :: epoch=24 step=400/429 train_nll=-3638.205
+2026-05-15 11:37:23,212 INFO CSMF2.step_1_1_1.run :: epoch=24  train_nll=-3637.964  val_nll=-3628.726  t=138.7s
+2026-05-15 11:37:23,213 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.23891 batch=0.00000 (no penalty)
+2026-05-15 11:37:23,213 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.01821 std_l2=0.02091 lambda=10.000
+2026-05-15 11:37:23,213 INFO CSMF2.step_1_1_1.run :: [grad] cond=858.6450 film_gain=0.0000
+2026-05-15 11:37:41,509 INFO CSMF2.step_1_1_1.run :: [h] epoch=25 step=50 total=0.23754 batch=0.00000
+2026-05-15 11:37:41,510 INFO CSMF2.step_1_1_1.run :: [lat] epoch=25 step=50 mean_l2=0.01520 std_l2=0.01824
+2026-05-15 11:37:41,687 INFO CSMF2.step_1_1_1.run :: epoch=25 step=50/429 train_nll=-3645.851
+2026-05-15 11:37:57,466 INFO CSMF2.step_1_1_1.run :: [h] epoch=25 step=100 total=0.23662 batch=0.00000
+2026-05-15 11:37:57,467 INFO CSMF2.step_1_1_1.run :: [lat] epoch=25 step=100 mean_l2=0.01166 std_l2=0.01675
+2026-05-15 11:37:57,645 INFO CSMF2.step_1_1_1.run :: epoch=25 step=100/429 train_nll=-3648.692
+2026-05-15 11:38:12,877 INFO CSMF2.step_1_1_1.run :: [h] epoch=25 step=150 total=0.23898 batch=0.00000
+2026-05-15 11:38:12,878 INFO CSMF2.step_1_1_1.run :: [lat] epoch=25 step=150 mean_l2=0.01336 std_l2=0.02126
+2026-05-15 11:38:13,056 INFO CSMF2.step_1_1_1.run :: epoch=25 step=150/429 train_nll=-3649.095
+2026-05-15 11:38:28,297 INFO CSMF2.step_1_1_1.run :: [h] epoch=25 step=200 total=0.23491 batch=0.00000
+2026-05-15 11:38:28,298 INFO CSMF2.step_1_1_1.run :: [lat] epoch=25 step=200 mean_l2=0.01963 std_l2=0.02404
+2026-05-15 11:38:28,473 INFO CSMF2.step_1_1_1.run :: epoch=25 step=200/429 train_nll=-3646.191
+2026-05-15 11:38:43,661 INFO CSMF2.step_1_1_1.run :: [h] epoch=25 step=250 total=0.23470 batch=0.00000
+2026-05-15 11:38:43,661 INFO CSMF2.step_1_1_1.run :: [lat] epoch=25 step=250 mean_l2=0.02746 std_l2=0.02796
+2026-05-15 11:38:43,838 INFO CSMF2.step_1_1_1.run :: epoch=25 step=250/429 train_nll=-3643.116
+2026-05-15 11:38:59,198 INFO CSMF2.step_1_1_1.run :: [h] epoch=25 step=300 total=0.23337 batch=0.00000
+2026-05-15 11:38:59,198 INFO CSMF2.step_1_1_1.run :: [lat] epoch=25 step=300 mean_l2=0.01606 std_l2=0.01947
+2026-05-15 11:38:59,375 INFO CSMF2.step_1_1_1.run :: epoch=25 step=300/429 train_nll=-3641.749
+2026-05-15 11:39:14,449 INFO CSMF2.step_1_1_1.run :: [h] epoch=25 step=350 total=0.23221 batch=0.00000
+2026-05-15 11:39:14,450 INFO CSMF2.step_1_1_1.run :: [lat] epoch=25 step=350 mean_l2=0.01492 std_l2=0.01788
+2026-05-15 11:39:14,627 INFO CSMF2.step_1_1_1.run :: epoch=25 step=350/429 train_nll=-3640.745
+2026-05-15 11:39:30,283 INFO CSMF2.step_1_1_1.run :: [h] epoch=25 step=400 total=0.23311 batch=0.00000
+2026-05-15 11:39:30,283 INFO CSMF2.step_1_1_1.run :: [lat] epoch=25 step=400 mean_l2=0.01141 std_l2=0.01898
+2026-05-15 11:39:30,463 INFO CSMF2.step_1_1_1.run :: epoch=25 step=400/429 train_nll=-3641.280
+2026-05-15 11:39:44,134 INFO CSMF2.step_1_1_1.run :: epoch=25  train_nll=-3641.012  val_nll=-3632.355  t=137.8s
+2026-05-15 11:39:44,134 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.23564 batch=0.00000 (no penalty)
+2026-05-15 11:39:44,134 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.01776 std_l2=0.02069 lambda=10.000
+2026-05-15 11:39:44,134 INFO CSMF2.step_1_1_1.run :: [grad] cond=722.8777 film_gain=0.0000
+2026-05-15 11:40:02,610 INFO CSMF2.step_1_1_1.run :: [h] epoch=26 step=50 total=0.23256 batch=0.00000
+2026-05-15 11:40:02,611 INFO CSMF2.step_1_1_1.run :: [lat] epoch=26 step=50 mean_l2=0.01403 std_l2=0.01990
+2026-05-15 11:40:02,793 INFO CSMF2.step_1_1_1.run :: epoch=26 step=50/429 train_nll=-3631.450
+2026-05-15 11:40:18,801 INFO CSMF2.step_1_1_1.run :: [h] epoch=26 step=100 total=0.23364 batch=0.00000
+2026-05-15 11:40:18,802 INFO CSMF2.step_1_1_1.run :: [lat] epoch=26 step=100 mean_l2=0.01390 std_l2=0.01800
+2026-05-15 11:40:19,031 INFO CSMF2.step_1_1_1.run :: epoch=26 step=100/429 train_nll=-3639.657
+2026-05-15 11:40:34,371 INFO CSMF2.step_1_1_1.run :: [h] epoch=26 step=150 total=0.23360 batch=0.00000
+2026-05-15 11:40:34,372 INFO CSMF2.step_1_1_1.run :: [lat] epoch=26 step=150 mean_l2=0.01156 std_l2=0.02061
+2026-05-15 11:40:34,604 INFO CSMF2.step_1_1_1.run :: epoch=26 step=150/429 train_nll=-3643.565
+2026-05-15 11:40:50,122 INFO CSMF2.step_1_1_1.run :: [h] epoch=26 step=200 total=0.23195 batch=0.00000
+2026-05-15 11:40:50,123 INFO CSMF2.step_1_1_1.run :: [lat] epoch=26 step=200 mean_l2=0.01318 std_l2=0.01779
+2026-05-15 11:40:50,352 INFO CSMF2.step_1_1_1.run :: epoch=26 step=200/429 train_nll=-3646.372
+2026-05-15 11:41:06,110 INFO CSMF2.step_1_1_1.run :: [h] epoch=26 step=250 total=0.23238 batch=0.00000
+2026-05-15 11:41:06,111 INFO CSMF2.step_1_1_1.run :: [lat] epoch=26 step=250 mean_l2=0.01538 std_l2=0.01922
+2026-05-15 11:41:06,290 INFO CSMF2.step_1_1_1.run :: epoch=26 step=250/429 train_nll=-3648.525
+2026-05-15 11:41:21,668 INFO CSMF2.step_1_1_1.run :: [h] epoch=26 step=300 total=0.22942 batch=0.00000
+2026-05-15 11:41:21,669 INFO CSMF2.step_1_1_1.run :: [lat] epoch=26 step=300 mean_l2=0.01401 std_l2=0.01881
+2026-05-15 11:41:21,848 INFO CSMF2.step_1_1_1.run :: epoch=26 step=300/429 train_nll=-3648.129
+2026-05-15 11:41:37,109 INFO CSMF2.step_1_1_1.run :: [h] epoch=26 step=350 total=0.23035 batch=0.00000
+2026-05-15 11:41:37,110 INFO CSMF2.step_1_1_1.run :: [lat] epoch=26 step=350 mean_l2=0.01405 std_l2=0.01955
+2026-05-15 11:41:37,286 INFO CSMF2.step_1_1_1.run :: epoch=26 step=350/429 train_nll=-3648.610
+2026-05-15 11:41:52,409 INFO CSMF2.step_1_1_1.run :: [h] epoch=26 step=400 total=0.23072 batch=0.00000
+2026-05-15 11:41:52,409 INFO CSMF2.step_1_1_1.run :: [lat] epoch=26 step=400 mean_l2=0.01239 std_l2=0.01712
+2026-05-15 11:41:52,590 INFO CSMF2.step_1_1_1.run :: epoch=26 step=400/429 train_nll=-3650.111
+2026-05-15 11:42:05,927 INFO CSMF2.step_1_1_1.run :: epoch=26  train_nll=-3650.531  val_nll=-3647.735  t=138.8s
+2026-05-15 11:42:05,927 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.23215 batch=0.00000 (no penalty)
+2026-05-15 11:42:05,927 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.01510 std_l2=0.01946 lambda=10.000
+2026-05-15 11:42:05,927 INFO CSMF2.step_1_1_1.run :: [grad] cond=180.6839 film_gain=0.0000
+2026-05-15 11:42:24,146 INFO CSMF2.step_1_1_1.run :: [h] epoch=27 step=50 total=0.23186 batch=0.00000
+2026-05-15 11:42:24,147 INFO CSMF2.step_1_1_1.run :: [lat] epoch=27 step=50 mean_l2=0.01898 std_l2=0.01874
+2026-05-15 11:42:24,323 INFO CSMF2.step_1_1_1.run :: epoch=27 step=50/429 train_nll=-3654.191
+2026-05-15 11:42:39,460 INFO CSMF2.step_1_1_1.run :: [h] epoch=27 step=100 total=0.23098 batch=0.00000
+2026-05-15 11:42:39,461 INFO CSMF2.step_1_1_1.run :: [lat] epoch=27 step=100 mean_l2=0.03051 std_l2=0.02615
+2026-05-15 11:42:39,637 INFO CSMF2.step_1_1_1.run :: epoch=27 step=100/429 train_nll=-3639.498
+2026-05-15 11:42:55,062 INFO CSMF2.step_1_1_1.run :: [h] epoch=27 step=150 total=0.22999 batch=0.00000
+2026-05-15 11:42:55,062 INFO CSMF2.step_1_1_1.run :: [lat] epoch=27 step=150 mean_l2=0.02280 std_l2=0.01754
+2026-05-15 11:42:55,238 INFO CSMF2.step_1_1_1.run :: epoch=27 step=150/429 train_nll=-3636.617
+2026-05-15 11:43:10,737 INFO CSMF2.step_1_1_1.run :: [h] epoch=27 step=200 total=0.22875 batch=0.00000
+2026-05-15 11:43:10,738 INFO CSMF2.step_1_1_1.run :: [lat] epoch=27 step=200 mean_l2=0.01881 std_l2=0.02665
+2026-05-15 11:43:10,914 INFO CSMF2.step_1_1_1.run :: epoch=27 step=200/429 train_nll=-3637.256
+2026-05-15 11:43:26,469 INFO CSMF2.step_1_1_1.run :: [h] epoch=27 step=250 total=0.22815 batch=0.00000
+2026-05-15 11:43:26,469 INFO CSMF2.step_1_1_1.run :: [lat] epoch=27 step=250 mean_l2=0.02022 std_l2=0.01948
+2026-05-15 11:43:26,647 INFO CSMF2.step_1_1_1.run :: epoch=27 step=250/429 train_nll=-3636.751
+2026-05-15 11:43:42,030 INFO CSMF2.step_1_1_1.run :: [h] epoch=27 step=300 total=0.22640 batch=0.00000
+2026-05-15 11:43:42,030 INFO CSMF2.step_1_1_1.run :: [lat] epoch=27 step=300 mean_l2=0.01186 std_l2=0.01768
+2026-05-15 11:43:42,257 INFO CSMF2.step_1_1_1.run :: epoch=27 step=300/429 train_nll=-3637.798
+2026-05-15 11:43:57,644 INFO CSMF2.step_1_1_1.run :: [h] epoch=27 step=350 total=0.22793 batch=0.00000
+2026-05-15 11:43:57,645 INFO CSMF2.step_1_1_1.run :: [lat] epoch=27 step=350 mean_l2=0.01458 std_l2=0.01864
+2026-05-15 11:43:57,872 INFO CSMF2.step_1_1_1.run :: epoch=27 step=350/429 train_nll=-3639.878
+2026-05-15 11:44:13,254 INFO CSMF2.step_1_1_1.run :: [h] epoch=27 step=400 total=0.22886 batch=0.00000
+2026-05-15 11:44:13,254 INFO CSMF2.step_1_1_1.run :: [lat] epoch=27 step=400 mean_l2=0.01536 std_l2=0.01987
+2026-05-15 11:44:13,482 INFO CSMF2.step_1_1_1.run :: epoch=27 step=400/429 train_nll=-3639.918
+2026-05-15 11:44:27,075 INFO CSMF2.step_1_1_1.run :: epoch=27  train_nll=-3640.044  val_nll=-3639.354  t=138.1s
+2026-05-15 11:44:27,075 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.22902 batch=0.00000 (no penalty)
+2026-05-15 11:44:27,075 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.01914 std_l2=0.02114 lambda=10.000
+2026-05-15 11:44:27,075 INFO CSMF2.step_1_1_1.run :: [grad] cond=61.2267 film_gain=0.0000
+2026-05-15 11:44:45,634 INFO CSMF2.step_1_1_1.run :: [h] epoch=28 step=50 total=0.22733 batch=0.00000
+2026-05-15 11:44:45,634 INFO CSMF2.step_1_1_1.run :: [lat] epoch=28 step=50 mean_l2=0.02202 std_l2=0.02282
+2026-05-15 11:44:45,814 INFO CSMF2.step_1_1_1.run :: epoch=28 step=50/429 train_nll=-3633.812
+2026-05-15 11:45:01,185 INFO CSMF2.step_1_1_1.run :: [h] epoch=28 step=100 total=0.22584 batch=0.00000
+2026-05-15 11:45:01,186 INFO CSMF2.step_1_1_1.run :: [lat] epoch=28 step=100 mean_l2=0.01349 std_l2=0.01849
+2026-05-15 11:45:01,364 INFO CSMF2.step_1_1_1.run :: epoch=28 step=100/429 train_nll=-3634.520
+2026-05-15 11:45:16,669 INFO CSMF2.step_1_1_1.run :: [h] epoch=28 step=150 total=0.22658 batch=0.00000
+2026-05-15 11:45:16,670 INFO CSMF2.step_1_1_1.run :: [lat] epoch=28 step=150 mean_l2=0.01228 std_l2=0.01910
+2026-05-15 11:45:16,849 INFO CSMF2.step_1_1_1.run :: epoch=28 step=150/429 train_nll=-3640.402
+2026-05-15 11:45:32,173 INFO CSMF2.step_1_1_1.run :: [h] epoch=28 step=200 total=0.22588 batch=0.00000
+2026-05-15 11:45:32,173 INFO CSMF2.step_1_1_1.run :: [lat] epoch=28 step=200 mean_l2=0.01524 std_l2=0.01903
+2026-05-15 11:45:32,353 INFO CSMF2.step_1_1_1.run :: epoch=28 step=200/429 train_nll=-3642.923
+2026-05-15 11:45:47,930 INFO CSMF2.step_1_1_1.run :: [h] epoch=28 step=250 total=0.22643 batch=0.00000
+2026-05-15 11:45:47,930 INFO CSMF2.step_1_1_1.run :: [lat] epoch=28 step=250 mean_l2=0.01140 std_l2=0.01860
+2026-05-15 11:45:48,106 INFO CSMF2.step_1_1_1.run :: epoch=28 step=250/429 train_nll=-3645.438
+2026-05-15 11:46:03,787 INFO CSMF2.step_1_1_1.run :: [h] epoch=28 step=300 total=0.22535 batch=0.00000
+2026-05-15 11:46:03,787 INFO CSMF2.step_1_1_1.run :: [lat] epoch=28 step=300 mean_l2=0.01202 std_l2=0.01693
+2026-05-15 11:46:03,962 INFO CSMF2.step_1_1_1.run :: epoch=28 step=300/429 train_nll=-3647.685
+2026-05-15 11:46:19,212 INFO CSMF2.step_1_1_1.run :: [h] epoch=28 step=350 total=0.22502 batch=0.00000
+2026-05-15 11:46:19,213 INFO CSMF2.step_1_1_1.run :: [lat] epoch=28 step=350 mean_l2=0.01254 std_l2=0.02077
+2026-05-15 11:46:19,392 INFO CSMF2.step_1_1_1.run :: epoch=28 step=350/429 train_nll=-3649.509
+2026-05-15 11:46:35,094 INFO CSMF2.step_1_1_1.run :: [h] epoch=28 step=400 total=0.22475 batch=0.00000
+2026-05-15 11:46:35,094 INFO CSMF2.step_1_1_1.run :: [lat] epoch=28 step=400 mean_l2=0.01704 std_l2=0.02111
+2026-05-15 11:46:35,324 INFO CSMF2.step_1_1_1.run :: epoch=28 step=400/429 train_nll=-3649.991
+2026-05-15 11:46:48,999 INFO CSMF2.step_1_1_1.run :: epoch=28  train_nll=-3649.115  val_nll=-3623.244  t=138.8s
+2026-05-15 11:46:48,999 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.22601 batch=0.00000 (no penalty)
+2026-05-15 11:46:48,999 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.01627 std_l2=0.02009 lambda=10.000
+2026-05-15 11:46:48,999 INFO CSMF2.step_1_1_1.run :: [grad] cond=911.5001 film_gain=0.0000
+2026-05-15 11:47:07,072 INFO CSMF2.step_1_1_1.run :: [h] epoch=29 step=50 total=0.22622 batch=0.00000
+2026-05-15 11:47:07,072 INFO CSMF2.step_1_1_1.run :: [lat] epoch=29 step=50 mean_l2=0.01517 std_l2=0.01831
+2026-05-15 11:47:07,250 INFO CSMF2.step_1_1_1.run :: epoch=29 step=50/429 train_nll=-3644.060
+2026-05-15 11:47:22,550 INFO CSMF2.step_1_1_1.run :: [h] epoch=29 step=100 total=0.22380 batch=0.00000
+2026-05-15 11:47:22,550 INFO CSMF2.step_1_1_1.run :: [lat] epoch=29 step=100 mean_l2=0.02588 std_l2=0.01822
+2026-05-15 11:47:22,776 INFO CSMF2.step_1_1_1.run :: epoch=29 step=100/429 train_nll=-3644.651
+2026-05-15 11:47:37,733 INFO CSMF2.step_1_1_1.run :: [h] epoch=29 step=150 total=0.22283 batch=0.00000
+2026-05-15 11:47:37,734 INFO CSMF2.step_1_1_1.run :: [lat] epoch=29 step=150 mean_l2=0.01346 std_l2=0.01931
+2026-05-15 11:47:37,959 INFO CSMF2.step_1_1_1.run :: epoch=29 step=150/429 train_nll=-3645.368
+2026-05-15 11:47:53,001 INFO CSMF2.step_1_1_1.run :: [h] epoch=29 step=200 total=0.22131 batch=0.00000
+2026-05-15 11:47:53,002 INFO CSMF2.step_1_1_1.run :: [lat] epoch=29 step=200 mean_l2=0.01951 std_l2=0.02254
+2026-05-15 11:47:53,228 INFO CSMF2.step_1_1_1.run :: epoch=29 step=200/429 train_nll=-3646.024
+2026-05-15 11:48:08,308 INFO CSMF2.step_1_1_1.run :: [h] epoch=29 step=250 total=0.22264 batch=0.00000
+2026-05-15 11:48:08,309 INFO CSMF2.step_1_1_1.run :: [lat] epoch=29 step=250 mean_l2=0.01271 std_l2=0.01876
+2026-05-15 11:48:08,486 INFO CSMF2.step_1_1_1.run :: epoch=29 step=250/429 train_nll=-3647.603
+2026-05-15 11:48:23,905 INFO CSMF2.step_1_1_1.run :: [h] epoch=29 step=300 total=0.22218 batch=0.00000
+2026-05-15 11:48:23,905 INFO CSMF2.step_1_1_1.run :: [lat] epoch=29 step=300 mean_l2=0.01377 std_l2=0.02020
+2026-05-15 11:48:24,083 INFO CSMF2.step_1_1_1.run :: epoch=29 step=300/429 train_nll=-3646.010
+2026-05-15 11:48:39,447 INFO CSMF2.step_1_1_1.run :: [h] epoch=29 step=350 total=0.22181 batch=0.00000
+2026-05-15 11:48:39,448 INFO CSMF2.step_1_1_1.run :: [lat] epoch=29 step=350 mean_l2=0.01577 std_l2=0.02165
+2026-05-15 11:48:39,627 INFO CSMF2.step_1_1_1.run :: epoch=29 step=350/429 train_nll=-3647.097
+2026-05-15 11:48:54,951 INFO CSMF2.step_1_1_1.run :: [h] epoch=29 step=400 total=0.22164 batch=0.00000
+2026-05-15 11:48:54,952 INFO CSMF2.step_1_1_1.run :: [lat] epoch=29 step=400 mean_l2=0.02025 std_l2=0.02087
+2026-05-15 11:48:55,129 INFO CSMF2.step_1_1_1.run :: epoch=29 step=400/429 train_nll=-3648.919
+2026-05-15 11:49:08,673 INFO CSMF2.step_1_1_1.run :: epoch=29  train_nll=-3649.021  val_nll=-3647.208  t=136.6s
+2026-05-15 11:49:08,674 INFO CSMF2.step_1_1_1.run :: [h_std] total=0.22281 batch=0.00000 (no penalty)
+2026-05-15 11:49:08,674 INFO CSMF2.step_1_1_1.run :: [lat_epoch] mean_l2=0.01643 std_l2=0.02009 lambda=10.000
+2026-05-15 11:49:08,674 INFO CSMF2.step_1_1_1.run :: [grad] cond=761.9536 film_gain=0.0000
+2026-05-15 11:49:11,699 WARNING CSMF2.step_1_1_1.run :: [exit_gate] fwd_rel=0.881 > target 0.500 (informational; no resume baseline available)
+2026-05-15 11:49:21,009 INFO CSMF2.step_1_1_1.run :: [run] FINAL test_nll (sealed 10k) = -3648.890
+2026-05-15 11:49:21,772 INFO CSMF2.experiments.step_1_1_1.density_plots :: [plot_latent_density] saved -> CSMF2/experiments/step_1_1_1/results/nsf_s2_n0.00_seed0_add67dddb13f/plots/latent_density.png  (ks=0.0086, mean=-0.024, std=0.985)
+2026-05-15 11:49:22,000 INFO CSMF2.experiments.step_1_1_1.density_plots :: [plot_cycle_density] saved -> CSMF2/experiments/step_1_1_1/results/nsf_s2_n0.00_seed0_add67dddb13f/plots/cycle_density.png  (max|err|=4.678e-04 rms=2.109e-06)
+2026-05-15 11:49:22,293 INFO CSMF2.experiments.step_1_1_1.density_plots :: [plot_reconstruction_panel] saved -> CSMF2/experiments/step_1_1_1/results/nsf_s2_n0.00_seed0_add67dddb13f/plots/reconstruction_panel.png  rms(enc-prior)=1.882
+==============================================================
+[1mSTEP-1_1_1 RUN SUMMARY[0m
+==============================================================
+expert: nsf   scale: 2   noise: 0.0   seed: 0   epochs: 30
+train NLL:    -3200.94  ->    -3649.02  (Δ = -448.08)
+test  NLL:    -3430.97  ->    -3647.21
+
+[1mHARD GATES (halt on fail)[0m
+  [32m 30/30  ✓[0m  invertibility FP64 <1e-5
+  [33m 29/30  ✗[0m  latent KS vs N(0,1) <0.05
+  [33m 29/30  ✗[0m  cycle_max < 1e-12
+  [32m 30/30  ✓[0m  h std > 1e-3
+  [32m 30/30  ✓[0m  FiLM γ,β std > 1e-3 aggregate
+  [32m 30/30  ✓[0m  (y,seed) max|Δh| < 1e-6
+  [32m 30/30  ✓[0m  no NaN/Inf this epoch
+  [32m  1/1   ✓[0m  numeric log-det (FP64, once)
+
+[1mINFORMATIONAL (logged, non-blocking)[0m
+  [33m 28/30  ✗[0m  null-control gap ≥ 0.10
+  [33m  2/30  ✗[0m  h_st Δlogp slope > 1e-3
+  [32m 30/30  ✓[0m  grad norm > 1e-6
+  [32m 30/30  ✓[0m  fwd residual reported
+--------------------------------------------------------------
+[1mHARD TOTAL: 209/211[0m  (99.1%)
+[1mEXIT_CRITERIA_MET:[0m [31mNO[0m
+[1mREMEDY HINTS:[0m
+  - hard gate failed: latent_ks (latent KS vs N(0,1) <0.05) -- check epochs [0]
+  - hard gate failed: cycle_max (cycle_max < 1e-12) -- check epochs [13]
+[33mSTEP-1_1_1 SOFT WARNINGS (non-blocking):[0m
+  ! fwd_rel=0.881 > target 0.500 (informational; no resume baseline available)
+==============================================================
+2026-05-15 11:49:22,448 INFO CSMF2.step_1_1_1.run :: STEP-1_1 run DONE  exit_ok=False  out=CSMF2/experiments/step_1_1_1/results/nsf_s2_n0.00_seed0_add67dddb13f
