@@ -37,3 +37,10 @@ experiments/step_1_1/realnvp_improved_x
 
 mnist_data/
 sweep_logs/
+
+# Ignore results directories in any subdirectory of experiments
+experiments/**/results/
+
+
+# Ignore logs directories in any subdirectory of experiments
+experiments/**/logs/

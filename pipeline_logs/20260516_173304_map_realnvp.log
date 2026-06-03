@@ -1,0 +1,16 @@
+2026-05-16 19:56:59,588 INFO CSMF2.step_1_1_1_1.run :: MAP-refine run | tag=map_ckpt_init-random_steps50_lr1e-02_lp1e-03_seed0_91552e4ccc2b | cfg=MAPCfg(ckpt_dir='CSMF2/experiments/step_1_1_1/results/realnvp_s2_n0.00_seed0_93ed0b97ef88/', best_params=None, best_params_expert=None, train_results_root=None, steps=50, lr=0.01, lambda_prior=0.001, init='random', n_test=256, batch_size=64, seed=0, out_root='./CSMF2/experiments/step_1_1_1_1/results')
+2026-05-16 19:56:59,629 INFO CSMF2.step_1_1_1_1.run :: [ckpt] loading from CSMF2/experiments/step_1_1_1/results/realnvp_s2_n0.00_seed0_93ed0b97ef88
+2026-05-16 19:56:59,629 INFO CSMF2.step_1_1_1_1.run :: [ckpt] train cfg: expert=realnvp scale=2 noise=0.0 lam=0.0 use_v2=True
+2026-05-16 19:56:59,708 ERROR CSMF2.models.experts :: [build_expert] unknown kwargs ['n_couplings'] for expert='realnvp'
+2026-05-16 19:56:59,709 ERROR CSMF2.step_1_1_1_1.run :: MAP-refine run FAILED
+Traceback (most recent call last):
+  File "/home/benjamin/CSMFII/CSMF2/experiments/step_1_1_1_1/run.py", line 600, in <module>
+    report = run(cfg)
+             ^^^^^^^^
+  File "/home/benjamin/CSMFII/CSMF2/experiments/step_1_1_1_1/run.py", line 371, in run
+    expert = build_expert(expert_name, dim=tcfg.get("dim", 784),
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/benjamin/CSMFII/CSMF2/models/experts.py", line 270, in build_expert
+    raise ValueError(f"unknown kwargs {sorted(unknown)} for expert={name!r}")
+ValueError: unknown kwargs ['n_couplings'] for expert='realnvp'
+

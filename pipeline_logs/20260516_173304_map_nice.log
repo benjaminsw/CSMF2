@@ -1,0 +1,10 @@
+2026-05-16 19:57:01,544 INFO CSMF2.step_1_1_1_1.run :: MAP-refine run | tag=map_ckpt_init-random_steps50_lr1e-02_lp1e-03_seed0_18768f635fae | cfg=MAPCfg(ckpt_dir='CSMF2/experiments/step_1_1_1/results/nice_s2_n0.10_seed0_7c8e2c947626/', best_params=None, best_params_expert=None, train_results_root=None, steps=50, lr=0.01, lambda_prior=0.001, init='random', n_test=256, batch_size=64, seed=0, out_root='./CSMF2/experiments/step_1_1_1_1/results')
+2026-05-16 19:57:01,585 INFO CSMF2.step_1_1_1_1.run :: [ckpt] loading from CSMF2/experiments/step_1_1_1/results/nice_s2_n0.10_seed0_7c8e2c947626
+2026-05-16 19:57:01,585 INFO CSMF2.step_1_1_1_1.run :: [ckpt] train cfg: expert=nice scale=2 noise=0.1 lam=0.1 use_v2=True
+2026-05-16 19:57:01,680 INFO CSMF2.step_1_1_1_1.run :: [ckpt] loaded; expert + cond frozen
+2026-05-16 19:57:02,608 INFO CSMF2.step_1_1_1_1.run :: [batch 0] B=64  psnr_before_mean=13.93  psnr_after_mean=17.07  fwd_rel_before=0.482  fwd_rel_after=0.326
+2026-05-16 19:57:02,726 INFO CSMF2.step_1_1_1_1.run :: [batch 1] B=64  psnr_before_mean=13.75  psnr_after_mean=16.87  fwd_rel_before=0.469  fwd_rel_after=0.319
+2026-05-16 19:57:02,862 INFO CSMF2.step_1_1_1_1.run :: [batch 2] B=64  psnr_before_mean=13.89  psnr_after_mean=16.93  fwd_rel_before=0.476  fwd_rel_after=0.327
+2026-05-16 19:57:02,994 INFO CSMF2.step_1_1_1_1.run :: [batch 3] B=64  psnr_before_mean=14.16  psnr_after_mean=17.41  fwd_rel_before=0.466  fwd_rel_after=0.318
+2026-05-16 19:57:02,994 INFO CSMF2.step_1_1_1_1.run :: [aggregate] fwd_rel: 0.473 -> 0.323   psnr: 13.93 -> 17.07   improved % = 99.6
+2026-05-16 19:57:03,256 INFO CSMF2.step_1_1_1_1.run :: MAP-refine run DONE  out=CSMF2/experiments/step_1_1_1_1/results/map_ckpt_init-random_steps50_lr1e-02_lp1e-03_seed0_18768f635fae
