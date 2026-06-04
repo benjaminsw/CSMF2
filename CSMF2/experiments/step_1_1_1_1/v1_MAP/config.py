@@ -1,5 +1,5 @@
 # =============================================================================
-# STEP-1_1_1_1 v0.2 -- experiments.step_1_1_1_1.config
+# STEP-1_1_1_1 v0.1.1 -- experiments.step_1_1_1_1.config
 # Purpose: typed config for a single MAP-refinement run (inference time).
 #          Frozen dataclass, sha256 hash baked into run_tag for reproducibility.
 # CONVENTION: no silent defaults. Every invariant -> logger.error + raise.
@@ -19,16 +19,6 @@
 #   to a ckpt-dir via a lookup table. It is NOT a dependency. If best_params
 #   is None (default), the experiment runs without it.
 #
-# Changelog (v0.1.1 -> v0.2):
-#   * NEW init mode "is_random": importance-sampled random init. Samples
-#     n_candidates z0's, picks the one with the lowest initial residual
-#     ||A(decode(z0,h)) - y||^2 PER IMAGE, then runs MAP from that winner.
-#   * NEW field: n_candidates (int >= 1). Only meaningful when init=is_random.
-#     For init=random and init=encoded, n_candidates is forced to 1 in
-#     __post_init__ so the run_tag hash stays comparable.
-#   * NEW field: track_candidates (bool). When True, full per-image
-#     selection log (best_k, all-K residuals) is written to metrics.json.
-#   * The default init remains "random" -- v0.2 is backward compatible.
 # Changelog (v0.1 -> v0.1.1):
 #   * Demoted best_params from "default required" to "optional helper".
 #     Default is now None. User must supply ONE of:
@@ -46,11 +36,10 @@
 # Changelog (NEW in v0.1):
 #   * Introduced.
 # Update summary:
-#   v0.2 adds importance-sampled init as a drop-in alternative to random.
-#   Same MAP loop downstream; just a smarter starting z. The expected gain
-#   is largest for experts with poor latent KS (Glow, NICE); experts with
-#   near-perfect latent (NSF KS=0.008) should gain little since random init
-#   already lands close to a good region.
+#   v0.1.1 disentangles MAP refinement from any specific training step.
+#   This step now answers ONLY the question: "given any trained conditional
+#   flow, does MAP refinement improve reconstruction?" Reusable for any
+#   future training experiment without code changes.
 # =============================================================================
 from __future__ import annotations
 from dataclasses import dataclass, asdict
@@ -59,7 +48,7 @@ import json
 import logging
 
 logger = logging.getLogger(__name__)
-__version__ = "0.2"
+__version__ = "0.1.1"
 __abbr__ = "STEP-1_1_1_1"
 
 
@@ -78,12 +67,7 @@ class MAPCfg:
     steps: int = 50
     lr: float = 1e-2
     lambda_prior: float = 1e-3
-    init: str = "random"                       # {"random", "is_random", "encoded"}
-    # ---- importance-sampled init (v0.2) --------------------------------
-    n_candidates: int = 8                      # K. Only used when init="is_random".
-                                               # For other inits, coerced to 1.
-    track_candidates: bool = False             # save per-image best_k + all-K
-                                               # initial residuals to metrics.json
+    init: str = "random"                       # {"random", "encoded"}
     # ---- evaluation ----------------------------------------------------
     n_test: int = 256
     batch_size: int = 64
@@ -134,28 +118,11 @@ class MAPCfg:
                          self.lambda_prior)
             raise ValueError(
                 f"lambda_prior must be >=0, got {self.lambda_prior}")
-        if self.init not in ("random", "is_random", "encoded"):
-            logger.error("[MAPCfg] init must be in {random,is_random,encoded}, "
-                         "got %r", self.init)
-            raise ValueError(
-                f"init must be in {{random,is_random,encoded}}, "
-                f"got {self.init!r}")
-        # n_candidates invariants
-        if self.n_candidates < 1:
-            logger.error("[MAPCfg] n_candidates must be >=1, got %d",
-                         self.n_candidates)
-            raise ValueError(
-                f"n_candidates must be >=1, got {self.n_candidates}")
-        # For modes that don't use candidates, force K=1 so the run_tag hash
-        # stays comparable to v0.1.1 baselines (frozen dataclass: use
-        # object.__setattr__).
-        if self.init != "is_random" and self.n_candidates != 1:
-            object.__setattr__(self, "n_candidates", 1)
-        # Warn (not error) at very large K -- usually wasted compute.
-        if self.init == "is_random" and self.n_candidates > 64:
-            logger.warning("[MAPCfg] n_candidates=%d is large; diminishing "
-                           "returns past ~16-32 in practice",
-                           self.n_candidates)
+        if self.init not in ("random", "encoded"):
+            logger.error("[MAPCfg] init must be in {random,encoded}, got %r",
+                         self.init)
+            raise ValueError(f"init must be in {{random,encoded}}, "
+                             f"got {self.init!r}")
         if self.n_test < 1:
             logger.error("[MAPCfg] n_test must be >=1, got %d", self.n_test)
             raise ValueError(f"n_test must be >=1, got {self.n_test}")
@@ -176,11 +143,6 @@ class MAPCfg:
             src = "ckpt"
         else:
             src = f"best-{self.best_params_expert}"
-        # init=is_random gets a K suffix so the tag distinguishes K values.
-        if self.init == "is_random":
-            init_str = f"is{self.n_candidates}"
-        else:
-            init_str = self.init
-        return (f"map_{src}_init-{init_str}_steps{self.steps}_"
+        return (f"map_{src}_init-{self.init}_steps{self.steps}_"
                 f"lr{self.lr:.0e}_lp{self.lambda_prior:.0e}_"
                 f"seed{self.seed}_{self.hash()}")

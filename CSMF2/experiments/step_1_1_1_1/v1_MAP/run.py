@@ -1,27 +1,19 @@
 # =============================================================================
-# STEP-1_1_1_1 v0.2 -- experiments.step_1_1_1_1.run
+# STEP-1_1_1_1 v0.1.1 -- experiments.step_1_1_1_1.run
 # Purpose: end-to-end MAP refinement on ANY trained conditional flow ckpt.
 #   1. Resolve ckpt directory (primary: --ckpt-dir; helper: --best-params)
 #   2. Load expert + cond from ckpt (architecture inferred from ckpt's cfg)
 #   3. Iterate over n_test val images in batches, call refine()
 #   4. Aggregate metrics (residual / prior / z_norm / PSNR before+after /
 #      fwd_rel before+after); save metrics.json
-#   5. Save plots:
+#   5. Save 6 plots:
 #        plots/reconstruction_panel.png   (4-row headline)
 #        plots/loss_trajectory.png        (residual + prior + total over t)
 #        plots/z_norm_trajectory.png      (mean ||z|| over t)
 #        plots/residual_heatmap.png       (per-pixel A(x_hat)-y, before vs after)
 #        plots/xhat_filmstrip.png         (x_hat at t=0,steps/4,steps/2,steps-1)
 #        plots/psnr_scatter.png           (psnr_before vs psnr_after; y=x line)
-#        plots/candidate_residuals.png    (init=is_random ONLY: K-candidate distribution)
 # CONVENTION: every failure -> logger.error + raise. No fallback / placeholder.
-# Changelog (v0.1.1 -> v0.2):
-#   * New CLI flags --n-candidates and --track-candidates wired through to
-#     refine() via cfg.n_candidates / cfg.track_candidates.
-#   * New init mode --init=is_random.
-#   * New plot candidate_residuals.png (only when init=is_random).
-#   * metrics.json gains aggregate.residual_initial_{best,worst,mean_K}_mean
-#     and (when track_candidates=True) per_image.best_k + per_image.res_all.
 # Changelog (v0.1 -> v0.1.1):
 #   * Independent-experiment refactor. --ckpt-dir is now the primary
 #     interface. --best-params + --best-params-expert + --train-results-root
@@ -34,8 +26,10 @@
 # Changelog (NEW in v0.1):
 #   * Introduced.
 # Update summary:
-#   v0.2 wires importance-sampled init into the orchestrator. Plots, metrics,
-#   and CLI all support the new mode without breaking v0.1.1 behavior.
+#   v0.1.1 makes step_1_1_1_1 a generic inference-time experiment. It
+#   answers ONLY: "given any trained conditional flow, does MAP refinement
+#   improve reconstruction?" -- without coupling to any specific training
+#   regime. Reusable as-is for future training steps.
 # =============================================================================
 from __future__ import annotations
 import argparse
@@ -65,7 +59,7 @@ from ...models.experts import build_expert
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(name)s :: %(message)s")
 logger = logging.getLogger("CSMF2.step_1_1_1_1.run")
-__version__ = "0.2"
+__version__ = "0.1.1"
 __abbr__ = "STEP-1_1_1_1"
 
 
@@ -301,47 +295,6 @@ def _plot_psnr_scatter(psnr_before, psnr_after, save_path, title):
     fig.savefig(save_path, bbox_inches="tight"); plt.close(fig)
 
 
-def _plot_candidate_residuals(all_selections, save_path, title, K):
-    """init=is_random ONLY: histogram of K-candidate initial residuals vs the
-    per-image winning residual.
-
-    all_selections: list per-batch of selection dicts with res_all (K, B)
-                    and res_init_best (B,).
-    """
-    sel = [s for s in all_selections if s is not None]
-    if not sel:
-        return
-    # Flatten K*N candidate residuals + N winner residuals
-    all_cand = []   # all candidate residuals (every k, every image)
-    all_best = []   # winner residual per image
-    for s in sel:
-        # res_all is shape (K, B); winner is res_init_best shape (B,)
-        for row in s["res_all"]:
-            all_cand.extend(row)
-        all_best.extend(s["res_init_best"])
-    fig, ax = plt.subplots(figsize=(7.5, 4.5), dpi=120)
-    # Histogram of all candidate residuals
-    cand_arr = np.asarray(all_cand)
-    best_arr = np.asarray(all_best)
-    bins = np.linspace(0.0, float(np.percentile(cand_arr, 99.0)), 40)
-    ax.hist(cand_arr, bins=bins, color="#9ecae1", edgecolor="#3182bd",
-            alpha=0.7, label=f"all candidate residuals (K={K}, N={len(best_arr)})")
-    ax.hist(best_arr, bins=bins, color="#fdae6b", edgecolor="#e6550d",
-            alpha=0.85,
-            label=f"per-image WINNER residual (mean={best_arr.mean():.5f})")
-    ax.axvline(cand_arr.mean(), color="#3182bd", linestyle=":",
-               label=f"mean candidate = {cand_arr.mean():.5f}")
-    ax.axvline(best_arr.mean(), color="#e6550d", linestyle=":",
-               label=f"mean winner    = {best_arr.mean():.5f}")
-    ax.set_xlabel("initial residual  ||A(x_hat) - y||^2  (mean per image)")
-    ax.set_ylabel("count")
-    ax.set_title(title)
-    ax.legend(fontsize=8); ax.grid(True, alpha=0.3)
-    fig.tight_layout()
-    save_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(save_path, bbox_inches="tight"); plt.close(fig)
-
-
 # ---------- main run ---------------------------------------------------------
 
 
@@ -459,7 +412,6 @@ def run(cfg: MAPCfg) -> dict:
     all_psnr_before, all_psnr_after = [], []
     all_fwd_rel_before, all_fwd_rel_after = [], []
     all_loss_curves = []         # one entry per batch (averaged inside refine)
-    all_selections  = []         # per-batch selection log (None if not is_random)
     first_panel_done = False
     n_seen = 0
     snapshots_for_filmstrip = []   # first batch only
@@ -467,12 +419,8 @@ def run(cfg: MAPCfg) -> dict:
     for bi, (x_img, y_img) in enumerate(loader):
         x_img = x_img.to(device); y_img = y_img.to(device)
 
-        # baseline x_initial: a SINGLE random z0 decoded through the trained
-        # flow (no MAP). This is the "lucky/unlucky" baseline that IS init
-        # tries to beat. Note: this z0 is NOT the same z0 that MAP starts
-        # from when init=is_random -- IS picks the best of K -- so for
-        # is_random runs, the comparison "x_initial -> x_star" tells you
-        # "random sample baseline -> MAP-refined IS winner".
+        # baseline: random z0, decode through trained flow (no MAP).
+        # This is x_initial; how good is the model out of the box on this y?
         B = y_img.size(0)
         with torch.no_grad():
             h = cond(y_img)
@@ -487,8 +435,7 @@ def run(cfg: MAPCfg) -> dict:
             expert=expert, cond=cond, y=y_img, A_fn=A_fn,
             inverse_logit=inverse_logit, dequantize_logit=dequantize_logit,
             steps=cfg.steps, lr=cfg.lr, lambda_prior=cfg.lambda_prior,
-            init=cfg.init, n_candidates=cfg.n_candidates,
-            x_true=x_img if cfg.init == "encoded" else None,
+            init=cfg.init, x_true=x_img if cfg.init == "encoded" else None,
             device=device, gen=gen)
 
         # PSNR (using x_true since we have it)
@@ -513,7 +460,6 @@ def run(cfg: MAPCfg) -> dict:
             "loss":     log_batch["loss"],
             "z_norm":   log_batch["z_norm"],
         })
-        all_selections.append(log_batch.get("selection"))
         if not first_panel_done:
             snapshots_for_filmstrip.append(log_batch["x_snapshots"])
             # 1st batch -> plots
@@ -547,8 +493,6 @@ def run(cfg: MAPCfg) -> dict:
     fwd_rel_after_arr  = np.asarray(all_fwd_rel_after)
 
     aggregate = {
-        "init_mode":            cfg.init,
-        "n_candidates":         int(cfg.n_candidates),
         "fwd_rel_before_mean":  float(fwd_rel_before_arr.mean()),
         "fwd_rel_after_mean":   float(fwd_rel_after_arr.mean()),
         "psnr_before_mean":     float(psnr_before_arr.mean()),
@@ -566,25 +510,6 @@ def run(cfg: MAPCfg) -> dict:
         "n_nonfinite_batches":  0,
         "wall_clock_s":         time.time() - t0,
     }
-    # Importance-sampled init aggregates (only meaningful when init=is_random)
-    sel_present = [s for s in all_selections if s is not None]
-    if sel_present:
-        # Flatten per-image fields across batches
-        all_best     = [v for s in sel_present for v in s["res_init_best"]]
-        all_worst    = [v for s in sel_present for v in s["res_init_worst"]]
-        all_mean_K   = [v for s in sel_present for v in s["res_init_mean"]]
-        all_best_k   = [v for s in sel_present for v in s["best_k"]]
-        aggregate["residual_initial_best_mean"]   = float(np.mean(all_best))
-        aggregate["residual_initial_worst_mean"]  = float(np.mean(all_worst))
-        aggregate["residual_initial_mean_K_mean"] = float(np.mean(all_mean_K))
-        aggregate["is_init_gain_mean"] = float(
-            np.mean(all_mean_K) - np.mean(all_best))
-        # Histogram of which candidate index won most often
-        from collections import Counter
-        bk_counts = Counter(all_best_k)
-        aggregate["best_k_histogram"] = {
-            int(k): int(bk_counts.get(k, 0))
-            for k in range(int(cfg.n_candidates))}
     logger.info("[aggregate] fwd_rel: %.3f -> %.3f   psnr: %.2f -> %.2f   "
                 "improved %% = %.1f",
                 aggregate["fwd_rel_before_mean"],
@@ -592,16 +517,6 @@ def run(cfg: MAPCfg) -> dict:
                 aggregate["psnr_before_mean"],
                 aggregate["psnr_after_mean"],
                 aggregate["psnr_improved_pct"] * 100.0)
-    if sel_present:
-        logger.info("[aggregate/IS] K=%d  res_init: best=%.5f  worst=%.5f  "
-                    "mean_K=%.5f  is_gain=%.5f",
-                    int(cfg.n_candidates),
-                    aggregate["residual_initial_best_mean"],
-                    aggregate["residual_initial_worst_mean"],
-                    aggregate["residual_initial_mean_K_mean"],
-                    aggregate["is_init_gain_mean"])
-        logger.info("[aggregate/IS] best_k histogram: %s",
-                    aggregate["best_k_histogram"])
 
     # 8. remaining plots (loss + z_norm + psnr scatter)
     _plot_loss_trajectory(
@@ -615,13 +530,6 @@ def run(cfg: MAPCfg) -> dict:
         psnr_before_arr, psnr_after_arr,
         plots / "psnr_scatter.png",
         title=f"PSNR before vs after MAP  ({expert_name})")
-    # IS-only: candidate residuals plot
-    if sel_present:
-        _plot_candidate_residuals(
-            all_selections, plots / "candidate_residuals.png",
-            title=f"Candidate residual distribution "
-                  f"({expert_name}, K={cfg.n_candidates})",
-            K=int(cfg.n_candidates))
 
     # 9. metrics.json
     metrics = {
@@ -636,15 +544,6 @@ def run(cfg: MAPCfg) -> dict:
         "fwd_rel_before": all_fwd_rel_before,
         "fwd_rel_after":  all_fwd_rel_after,
     }
-    # Per-image IS data only when explicitly requested (it can be large)
-    if sel_present and cfg.track_candidates:
-        per_image_best_k = []
-        per_image_res_best = []
-        for s in sel_present:
-            per_image_best_k.extend(s["best_k"])
-            per_image_res_best.extend(s["res_init_best"])
-        metrics["per_image_best_k"] = per_image_best_k
-        metrics["per_image_res_init_best"] = per_image_res_best
     (out_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
     logger.info("MAP-refine run DONE  out=%s", out_dir)
     return metrics
@@ -678,20 +577,9 @@ def _parse_args() -> MAPCfg:
     p.add_argument("--steps", type=int, default=50)
     p.add_argument("--lr", type=float, default=1e-2)
     p.add_argument("--lambda-prior", type=float, default=1e-3)
-    p.add_argument("--init", choices=("random", "is_random", "encoded"),
-                   default="random",
-                   help="z0 init mode. "
-                        "'random'~N(0,1) (single sample; realistic inference); "
-                        "'is_random' = importance-sampled: sample K candidates "
-                        "and pick the one with lowest ||A(x_hat)-y||^2 per "
-                        "image (use --n-candidates K); "
+    p.add_argument("--init", choices=("random", "encoded"), default="random",
+                   help="z0 init mode. 'random'~N(0,1) is the realistic case; "
                         "'encoded' uses encode(x_true) as the ceiling.")
-    p.add_argument("--n-candidates", type=int, default=8,
-                   help="K. Number of z0 candidates to sample when "
-                        "--init=is_random. Ignored otherwise.")
-    p.add_argument("--track-candidates", action="store_true", default=False,
-                   help="If set, save per-image best_k + winning residuals to "
-                        "metrics.json (debug only; adds ~1 KB per image).")
     p.add_argument("--n-test", type=int, default=256)
     p.add_argument("--batch-size", type=int, default=64)
     p.add_argument("--seed", type=int, default=0)
@@ -703,10 +591,7 @@ def _parse_args() -> MAPCfg:
                   best_params_expert=a.best_params_expert,
                   train_results_root=a.train_results_root,
                   steps=a.steps, lr=a.lr, lambda_prior=a.lambda_prior,
-                  init=a.init,
-                  n_candidates=a.n_candidates,
-                  track_candidates=a.track_candidates,
-                  n_test=a.n_test, batch_size=a.batch_size,
+                  init=a.init, n_test=a.n_test, batch_size=a.batch_size,
                   seed=a.seed, out_root=a.out_root)
 
 
