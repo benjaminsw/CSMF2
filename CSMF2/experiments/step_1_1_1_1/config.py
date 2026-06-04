@@ -1,5 +1,5 @@
 # =============================================================================
-# STEP-1_1_1_1 v0.2 -- experiments.step_1_1_1_1.config
+# STEP-1_1_1_1 v0.3 -- experiments.step_1_1_1_1.config
 # Purpose: typed config for a single MAP-refinement run (inference time).
 #          Frozen dataclass, sha256 hash baked into run_tag for reproducibility.
 # CONVENTION: no silent defaults. Every invariant -> logger.error + raise.
@@ -19,6 +19,17 @@
 #   to a ckpt-dir via a lookup table. It is NOT a dependency. If best_params
 #   is None (default), the experiment runs without it.
 #
+# Changelog (v0.2 -> v0.3):
+#   * NEW field: n_starts (int >= 1). Multi-start MAP. When n_starts > 1
+#     AND init="is_random", refine the TOP-S of K candidates and pick the
+#     per-image winner by final_objective = residual + lambda_prior * prior
+#     (NOT residual alone, to avoid z drift past the prior).
+#   * INVARIANT: when init="is_random", n_candidates >= n_starts (can't
+#     pick more starts than there are candidates). Raises on violation.
+#   * For init in {random, encoded}, n_starts is coerced to 1 (same pattern
+#     as n_candidates coercion in v0.2).
+#   * run_tag adds "_startsS" suffix when n_starts > 1 to keep v0.2-equivalent
+#     runs comparable.
 # Changelog (v0.1.1 -> v0.2):
 #   * NEW init mode "is_random": importance-sampled random init. Samples
 #     n_candidates z0's, picks the one with the lowest initial residual
@@ -46,11 +57,10 @@
 # Changelog (NEW in v0.1):
 #   * Introduced.
 # Update summary:
-#   v0.2 adds importance-sampled init as a drop-in alternative to random.
-#   Same MAP loop downstream; just a smarter starting z. The expected gain
-#   is largest for experts with poor latent KS (Glow, NICE); experts with
-#   near-perfect latent (NSF KS=0.008) should gain little since random init
-#   already lands close to a good region.
+#   v0.3 adds multi-start MAP as a third tier on top of v0.2's IS init.
+#   Progression: v0.1 (1 sample) -> v0.2 (best of K) -> v0.3 (top-S of K,
+#   refine all S, keep best by FINAL OBJECTIVE). Sequential loop over S
+#   keeps memory bounded; same MAP inner loop reused.
 # =============================================================================
 from __future__ import annotations
 from dataclasses import dataclass, asdict
@@ -59,7 +69,7 @@ import json
 import logging
 
 logger = logging.getLogger(__name__)
-__version__ = "0.2"
+__version__ = "0.3"
 __abbr__ = "STEP-1_1_1_1"
 
 
@@ -84,6 +94,17 @@ class MAPCfg:
                                                # For other inits, coerced to 1.
     track_candidates: bool = False             # save per-image best_k + all-K
                                                # initial residuals to metrics.json
+    # ---- multi-start MAP (v0.3) ----------------------------------------
+    n_starts: int = 1                          # S. Top-S candidates by initial
+                                               # residual become starting points
+                                               # for S independent MAP runs.
+                                               # Per-image winner selected by
+                                               # final_objective = residual +
+                                               # lambda_prior * prior.
+                                               # When init != "is_random",
+                                               # coerced to 1.
+                                               # When init == "is_random",
+                                               # n_candidates must be >= n_starts.
     # ---- evaluation ----------------------------------------------------
     n_test: int = 256
     batch_size: int = 64
@@ -156,6 +177,27 @@ class MAPCfg:
             logger.warning("[MAPCfg] n_candidates=%d is large; diminishing "
                            "returns past ~16-32 in practice",
                            self.n_candidates)
+        # n_starts invariants (v0.3)
+        if self.n_starts < 1:
+            logger.error("[MAPCfg] n_starts must be >=1, got %d",
+                         self.n_starts)
+            raise ValueError(f"n_starts must be >=1, got {self.n_starts}")
+        # For non-IS modes, multi-start is meaningless -> coerce to 1.
+        if self.init != "is_random" and self.n_starts != 1:
+            object.__setattr__(self, "n_starts", 1)
+        # Critical: when using IS, can't pick more starts than candidates.
+        if self.init == "is_random" and self.n_starts > self.n_candidates:
+            logger.error("[MAPCfg] n_starts (%d) must be <= n_candidates "
+                         "(%d) when init='is_random'",
+                         self.n_starts, self.n_candidates)
+            raise ValueError(
+                f"n_starts ({self.n_starts}) must be <= n_candidates "
+                f"({self.n_candidates}) when init='is_random'")
+        # Warn at very large S -- compute scales linearly in S.
+        if self.init == "is_random" and self.n_starts > 16:
+            logger.warning("[MAPCfg] n_starts=%d is large; compute scales "
+                           "linearly in S (each start runs a full MAP loop)",
+                           self.n_starts)
         if self.n_test < 1:
             logger.error("[MAPCfg] n_test must be >=1, got %d", self.n_test)
             raise ValueError(f"n_test must be >=1, got {self.n_test}")
@@ -181,6 +223,9 @@ class MAPCfg:
             init_str = f"is{self.n_candidates}"
         else:
             init_str = self.init
-        return (f"map_{src}_init-{init_str}_steps{self.steps}_"
+        # Multi-start adds _startsS suffix only when S>1 (preserves S=1 tag
+        # compatibility with v0.2 runs).
+        starts_str = f"_starts{self.n_starts}" if self.n_starts > 1 else ""
+        return (f"map_{src}_init-{init_str}{starts_str}_steps{self.steps}_"
                 f"lr{self.lr:.0e}_lp{self.lambda_prior:.0e}_"
                 f"seed{self.seed}_{self.hash()}")
