@@ -5,6 +5,11 @@
 #          - _aggregate.md  (markdown table for write-up)
 #          - stdout table with ANSI colour + step 1.2 unlock verdict.
 # Usage:   python -m CSMF2.experiments.step_1_1.aggregate
+# Changelog (v0.4 -> v0.5):
+#   * Conditioning columns from summary["conditioning"] (Phase 0C): CSV gains
+#     conditioning_pass / fzdy_last / fzdy_tau / h_std_batch_last /
+#     shuffle_gap_last / film_alive_last; grouped stdout + markdown gain a
+#     `cond` (pass/total) column. Display-only; no gate logic lives here.
 # Changelog (NEW in v0.4):
 #   * Introduced.
 # =============================================================================
@@ -20,7 +25,7 @@ from pathlib import Path
 from statistics import mean, stdev
 
 logger = logging.getLogger(__name__)
-__version__ = "0.4"
+__version__ = "0.5"
 __abbr__ = "STEP-1_1"
 
 _USE_COLOR = os.environ.get("NO_COLOR", "") == ""
@@ -58,6 +63,29 @@ def _group_key(r: dict) -> tuple:
     return (r.get("expert"), r.get("scale"), r.get("noise"))
 
 
+def _cond_cols(r: dict) -> dict:
+    # v0.5: conditioning health from summary["conditioning"]; missing -> "".
+    c = r.get("conditioning") or {}
+
+    def g(k):
+        v = c.get(k)
+        return "" if v is None else v
+
+    return {
+        "conditioning_pass": int(bool(c.get("conditioning_pass"))) if c else "",
+        "fzdy_last":         g("fzdy_last"),
+        "fzdy_tau":          g("fzdy_tau"),
+        "h_std_batch_last":  g("h_std_batch_last"),
+        "shuffle_gap_last":  g("shuffle_gap_last"),
+        "film_alive_last":   g("film_alive_last"),
+    }
+
+
+def _cond_pass(r: dict) -> bool:
+    # v0.5: True iff summary["conditioning"].conditioning_pass is truthy.
+    return bool((r.get("conditioning") or {}).get("conditioning_pass"))
+
+
 def main(results_root: Path = None) -> int:
     results_root = results_root or Path("./CSMF2/experiments/step_1_1/results")
     rows = _load_summaries(results_root)
@@ -70,7 +98,10 @@ def main(results_root: Path = None) -> int:
     fields = ["run_tag", "expert", "scale", "noise", "seed",
               "epochs_completed", "exit_criteria_met",
               "train_first", "train_last", "test_first", "test_last",
-              "nll_improved", "cycle_max_last", "fwd_rel_last"]
+              "nll_improved", "cycle_max_last", "fwd_rel_last",
+              # v0.5: conditioning health (source: summary["conditioning"])
+              "conditioning_pass", "fzdy_last", "fzdy_tau",
+              "h_std_batch_last", "shuffle_gap_last", "film_alive_last"]
     with csv_path.open("w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()
@@ -90,6 +121,7 @@ def main(results_root: Path = None) -> int:
                 "nll_improved": int(bool(r["nll"]["improved"])),
                 "cycle_max_last": r.get("cycle_max_last"),
                 "fwd_rel_last":   r.get("fwd_rel_last"),
+                **_cond_cols(r),
             })
 
     # grouped by (expert, scale, noise) --------------------------------------
@@ -98,12 +130,13 @@ def main(results_root: Path = None) -> int:
         groups[_group_key(r)].append(r)
 
     # ---- markdown table -----------------------------------------------------
-    md = ["| expert | scale | noise | pass/total | test NLL (last, mean ± std) | cycle_max |",
-          "|---|---|---|---|---|---|"]
+    md = ["| expert | scale | noise | pass/total | cond | test NLL (last, mean ± std) | cycle_max |",
+          "|---|---|---|---|---|---|---|"]
     print(f"\n{_B}STEP-1_1 SWEEP AGGREGATE ({len(rows)} runs){_N}")
-    print("=" * 78)
-    print(f"{'group':<22} {'pass/total':>12} {'NLL (mean±std)':>20} {'cycle_max':>14}")
-    print("-" * 78)
+    print("=" * 92)
+    print(f"{'group':<22} {'pass/total':>12} {'cond':>10} "
+          f"{'NLL (mean±std)':>20} {'cycle_max':>14}")
+    print("-" * 92)
 
     # expert -> set of (scale, noise) combos with ALL seeds passing
     per_expert_ok: dict[str, int] = defaultdict(int)
@@ -113,6 +146,7 @@ def main(results_root: Path = None) -> int:
         runs = groups[k]
         n_pass = sum(1 for r in runs if r.get("exit_criteria_met"))
         n_tot = len(runs)
+        n_cond = sum(1 for r in runs if _cond_pass(r))
         nlls = [r["nll"]["test_last"] for r in runs
                 if r.get("nll", {}).get("test_last") is not None]
         cyc  = [r.get("cycle_max_last") for r in runs
@@ -122,16 +156,19 @@ def main(results_root: Path = None) -> int:
                    (f"{nlls[0]:.1f}" if nlls else "—"))
         cyc_str = (f"{max(cyc):.1e}" if cyc else "—")
         col = _G if n_pass == n_tot else (_Y if n_pass > 0 else _R)
+        cond_col = _G if n_cond == n_tot else (_Y if n_cond > 0 else _R)
+        cond_str = f"{n_cond}/{n_tot}"
         group_tag = f"{k[0]:<7} s{k[1]} n{k[2]}"
         print(f"{group_tag:<22} {col}{n_pass:>6}/{n_tot:<5}{_N} "
+              f"{cond_col}{cond_str:>10}{_N} "
               f"{nll_str:>20} {cyc_str:>14}")
         md.append(f"| {k[0]} | {k[1]} | {k[2]} | {n_pass}/{n_tot} | "
-                  f"{nll_str} | {cyc_str} |")
+                  f"{cond_str} | {nll_str} | {cyc_str} |")
 
         per_expert_total[k[0]] += n_tot
         per_expert_ok[k[0]]    += n_pass
 
-    print("-" * 78)
+    print("-" * 92)
     experts_competent: list[str] = []
     for expert, tot in per_expert_total.items():
         ok = per_expert_ok[expert]

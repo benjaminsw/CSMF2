@@ -1,5 +1,5 @@
 # =============================================================================
-# STEP-1_1 v0.1 -- models.flows.nsf_layer
+# STEP-1_1 v0.2 -- models.flows.nsf_layer
 # Purpose: Neural Spline Flow (Durkan+ 2019) coupling layer. Monotonic
 #          rational-quadratic (RQ) spline on [-B, B] with linear tails; K bins.
 #          Conditioner (FiLM) emits hidden features that the spline param net
@@ -12,7 +12,22 @@
 #   * B = 3.0, K = 8 by default (paper defaults for tabular).
 #   * Linear tails (identity outside [-B, B]) so the transform handles
 #     unbounded logit-space MNIST inputs.
+# Changelog (v0.1 -> v0.2):
+#   * NUMERICAL: clamp the logabsdet log arguments (deriv_numer, denom) to
+#     _LOG_FLOOR=1e-30 before torch.log, in BOTH the forward and inverse
+#     branches. The existing bin-width/height/derivative floors keep the spline
+#     PARAMS positive but do NOT bound deriv_numer (a product, underflows to 0
+#     in float32) or denom (a sum, can cross ~0); either drove log->-inf and
+#     tripped the non-finite guard. Surfaced under the cond-gate h=0 ablation
+#     (OOD input) on nsf s1/n0.05 -- training path with real h(y) was healthy
+#     (FZDY 1.78). The non-finite guard at the end of _rq_spline is UNCHANGED
+#     and still fatal: the clamp removes the underflow cause, the guard still
+#     catches anything genuinely non-finite.
 # Update summary:
+#   v0.2 hardens the logabsdet against float32 underflow-to-zero in the log
+#   arguments (clamp_min 1e-30). Does not touch the spline math, the param
+#   floors, or the fatal non-finite guard. Fixes the h=0 ablation crash without
+#   masking a real failure -- a genuinely non-finite spline still raises.
 #   Single-file RQ-spline implementation sufficient for step_1_1. This is not a
 #   full multi-scale NSF; we compose ~6 such couplings over the flat (B, D)
 #   MNIST vector. Matches the WP0 goal "same conditioner, same degradation
@@ -22,7 +37,7 @@
 from __future__ import annotations
 import logging
 logger = logging.getLogger(__name__)
-__version__ = "0.1"
+__version__ = "0.2"
 __abbr__ = "STEP-1_1"
 
 import math
@@ -35,6 +50,13 @@ from ..conditioner import FiLMHead, ConcatInjector
 DEFAULT_MIN_BIN_WIDTH  = 1e-3
 DEFAULT_MIN_BIN_HEIGHT = 1e-3
 DEFAULT_MIN_DERIVATIVE = 1e-3
+# v0.2: floor for log arguments in the logabsdet. The bin/height/derivative
+# floors above keep the SPLINE PARAMS positive, but deriv_numer (a product) and
+# denom (a sum, can pass through ~0) are not floored and can underflow to 0 in
+# float32 -> log(0) = -inf. Seen only under the cond-gate h=0 ablation (OOD
+# input) where the param net is pushed into a degenerate corner. 1e-30 (not
+# finfo.tiny ~1.18e-38) so log() stays a sane magnitude rather than ~-87.
+_LOG_FLOOR = 1e-30
 
 
 def _rq_spline(inputs: torch.Tensor,
@@ -116,7 +138,8 @@ def _rq_spline(inputs: torch.Tensor,
                 input_deriv_p1 * root ** 2
                 + 2 * input_delta * theta_1m
                 + input_deriv * (1 - root) ** 2)
-            logabs_inside = torch.log(deriv_numer) - 2 * torch.log(denom)
+            logabs_inside = (torch.log(deriv_numer.clamp_min(_LOG_FLOOR))
+                             - 2 * torch.log(denom.clamp_min(_LOG_FLOOR)))
             out[inside] = outputs_inside
             logabsdet[inside] = -logabs_inside
         else:
@@ -131,7 +154,8 @@ def _rq_spline(inputs: torch.Tensor,
                 input_deriv_p1 * theta ** 2
                 + 2 * input_delta * theta_1m
                 + input_deriv * (1 - theta) ** 2)
-            logabs_inside = torch.log(deriv_numer) - 2 * torch.log(denom)
+            logabs_inside = (torch.log(deriv_numer.clamp_min(_LOG_FLOOR))
+                             - 2 * torch.log(denom.clamp_min(_LOG_FLOOR)))
             out[inside] = outputs_inside
             logabsdet[inside] = logabs_inside
 

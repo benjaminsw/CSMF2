@@ -1,5 +1,36 @@
 # =============================================================================
-# STEP-1_1 v0.13 -- experiments.step_1_1.run
+# STEP-1_1 v0.18 -- experiments.step_1_1.run
+# Changelog (v0.17 -> v0.18):
+#   * NEW CLI: --lr (default 1e-3) now forwarded to StepCfg.lr. Previously lr
+#     was only a StepCfg field with no CLI flag, so every run used the 1e-3
+#     default regardless. Required for CCR Phase 2's lr sweep {1e-3,3e-4,1e-4}.
+# Changelog (v0.16 -> v0.17):
+#   * Phase 0: top-level exit_criteria_met now MIRRORS summarize() (summary.py
+#     v0.8), which includes the final-epoch conditioning floor (FZDY + h_std,
+#     plus v2-only shuffle/film when present). Previously the top-level value
+#     was an inline 4-check subset (logdet/invert/latent/cycle) that could pass
+#     a conditioning-collapsed run; resume-skip and the CLI exit code read that
+#     stale value. Now all consumers (resume, CLI, aggregate, summary) agree.
+# Changelog (v0.15 -> v0.16):
+#   * WIRE (Glow conditioning debug, step 2): cond_path_probe called per
+#     epoch for expert='glow'. Merges {"cond_path_probe": {...}} into the
+#     epoch record: per-layer film_gain, conv3 weight-norm, and the std of
+#     coupling (s,t) across different y (layer 0). Localizes whether the
+#     conditioning choke is film_gain or conv3, upstream of FZDY.
+# Changelog (v0.14 -> v0.15):
+#   * Test-0 support: --scale now accepts 1 (identity, no downsample); NEW
+#     --blur-sigma (default 1.0) so blur can be set to 0.0. With
+#     --scale 1 --blur-sigma 0.0 --noise-sigma 0.0 the task is y=x.
+#   * y_input_size derivation (28//scale)^2 already yields 784 at scale=1;
+#     no change needed for the y-residual bypass.
+# Changelog (v0.13 -> v0.14):
+#   * WIRE: fixed-z different-y diagnostic (FZDY, Phase 3) now CALLED in the
+#     per-epoch sanity block. Merges {"fixed_z_different_y": {...}} into the
+#     epoch record so summary.py's informational gate fires. Figure ->
+#     plots/gen_diag/fixed_z_different_y_epoch_N.png. Runs for ALL experts
+#     (uses expert.cond/decode; not gated on use_v2_conditioner).
+#   * NEW CLI: --fzdy-n-y, --fzdy-n-z, --fzdy-tau (forwarded to StepCfg;
+#     config defaults 6 / 3 / 0.05 apply when omitted).
 # Changelog (v0.12 -> v0.13):
 #   * NEW: forward cfg.cond_y_residual_alpha_init to Conditioner (and
 #     y_input_size derived from cfg.scale). When > 0, conditioner has a
@@ -16,8 +47,14 @@
 # Changelog (NEW in v0.1):
 #   * Introduced.
 # Update summary:
-#   v0.13 adds an architectural rescue for Glow's conditioner collapse: a
-#   learnable linear bypass from y to h. Default OFF preserves v0.12.
+#   v0.18 exposes --lr on the CLI (was a no-op StepCfg field), unblocking the
+#   CCR Phase 2 lr sweep.
+#   v0.17 closes the conditioning-collapse blind spot in the run-level verdict:
+#   collapsed runs (final-epoch FZDY < fzdy_tau) now exit non-zero and are not
+#   skipped on --resume. No training change.
+#   v0.16 adds the cond_path_probe (Glow only) so a later film_gain floor /
+#   conv3 init bump can be verified to actually move the conditioning signal
+#   into (s,t), not merely change NLL. Defaults preserve v0.15 behaviour.
 # =============================================================================
 from __future__ import annotations
 import argparse
@@ -31,7 +68,7 @@ import traceback
 from pathlib import Path
 
 logger = logging.getLogger("CSMF2.step_1_1.run")
-__version__ = "0.13"
+__version__ = "0.18"
 __abbr__ = "STEP-1_1"
 
 import numpy as np
@@ -49,6 +86,8 @@ from .sanity import (numeric_logdet_check, invertibility_check,
                      plot_sw2_diversity, plot_diag_spectrum,
                      plot_s_spectrum, plot_w1x1_spectrum,
                      plot_film_alive, plot_logp_shuffle)
+from .diagnostics.fixed_z_diag import fixed_z_different_y
+from .diagnostics.cond_path_probe import cond_path_probe
 from ...common import cond_viz as cv
 from ...data.degrade import MNISTDegraded, dequantize_logit
 from ...models.conditioner import Conditioner
@@ -582,6 +621,17 @@ def run(cfg: StepCfg) -> dict:
                    "cycle_heatmap": cycle_rep,
                    "forward_consistency": fwd_rep,
                    "latent_interp": interp_rep}
+            # FZDY v0.1 (Phase 3): fixed-z different-y diagnostic. Decodes one
+            # fixed z under several y; gates on whether outputs vary with y.
+            # Figure -> plots/gen_diag/fixed_z_different_y_epoch_N.png.
+            fzdy_rep = fixed_z_different_y(
+                expert, y_img, epoch=epoch, out_dir=plots,
+                n_y=cfg.fzdy_n_y, n_z=cfg.fzdy_n_z, tau=cfg.fzdy_tau)
+            rep.update(fzdy_rep)
+            # CPATH v0.1 (Glow conditioning debug): per-layer film_gain,
+            # conv3 weight-norm, and (s,t)-vs-y std. Localizes the choke.
+            if cfg.expert == "glow":
+                rep.update(cond_path_probe(expert, y_img, n_y=cfg.fzdy_n_y))
             sanity_reports.append(rep)
             if not inv_rep["passed"]:
                 logger.error("[run] invertibility FAILED: %s", inv_rep)
@@ -713,6 +763,15 @@ def run(cfg: StepCfg) -> dict:
         from .summary import summarize
         summary_block = summarize(out_dir)
         exit_ok = bool(summary_block["exit_criteria_met"])
+        # v0.17: single source of truth. summarize() (v0.8) is authoritative
+        # (it includes the final-epoch conditioning floor); mirror its verdict
+        # to the TOP-LEVEL exit_criteria_met so resume-skip + CLI exit code
+        # match aggregate.py / the summary block. summarize() already wrote the
+        # summary block to disk; we re-attach it here before rewriting so the
+        # in-memory report (which lacks it) does not clobber it.
+        report["summary"] = summary_block
+        report["exit_criteria_met"] = exit_ok
+        (out_dir / "report.json").write_text(json.dumps(report, indent=2))
     except Exception:
         logger.error("[run] summarize() failed\n%s", traceback.format_exc())
         raise
@@ -729,10 +788,18 @@ def _parse_args() -> tuple[StepCfg, bool]:
                    help="Default 'nice'. v0.8: v2 conditioner supported for "
                         "nice / realnvp / glow. For nsf you MUST pass "
                         "--no-use-v2-conditioner.")
-    p.add_argument("--scale", type=int, choices=[2, 4], required=True)
+    p.add_argument("--scale", type=int, choices=[1, 2, 4], required=True,
+                   help="1 = identity (no downsample). With --blur-sigma 0 "
+                        "and --noise-sigma 0 this is the y=x Test-0 task.")
+    p.add_argument("--blur-sigma", type=float, default=1.0,
+                   help="Gaussian blur sigma. 0.0 = no blur (identity). "
+                        "Default 1.0.")
     p.add_argument("--noise-sigma", type=float, choices=[0.0, 0.05, 0.1], required=True)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--epochs", type=int, default=5)
+    p.add_argument("--lr", type=float, default=1e-3,
+                   help="Adam learning rate (StepCfg.lr). Default 1e-3. "
+                        "CCR Phase 2 sweeps {1e-3, 3e-4, 1e-4}.")
     p.add_argument("--batch-size", type=int, default=128)
     p.add_argument("--cond-width", type=int, choices=[64, 128], default=128)
     p.add_argument("--use-film", type=int, choices=[0, 1], default=1)
@@ -781,13 +848,23 @@ def _parse_args() -> tuple[StepCfg, bool]:
                         "h = cnn_head(y) + alpha * Linear(y.flatten). "
                         "Default 0.0 = bypass DISABLED. Suggested rescue "
                         "value for Glow: 0.3.")
+    # v0.14: FZDY fixed-z different-y diagnostic knobs
+    p.add_argument("--fzdy-n-y", type=int, default=6,
+                   help="distinct y per fixed-z grid (>=2). Default 6.")
+    p.add_argument("--fzdy-n-z", type=int, default=3,
+                   help="fixed-z bank size (>=1). Default 3.")
+    p.add_argument("--fzdy-tau", type=float, default=0.05,
+                   help="min mean output-sensitivity to pass (informational). "
+                        "Calibrate on a known-good NICE run. Default 0.05.")
     p.add_argument("--data-root", default="./mnist_data")
     p.add_argument("--out-root",  default="./CSMF2/experiments/step_1_1/results")
     p.add_argument("--resume", action="store_true",
                    help="skip if a completed report.json already exists")
     a = p.parse_args()
     cfg = StepCfg(expert=a.expert, scale=a.scale, noise_sigma=a.noise_sigma,
+                  blur_sigma=a.blur_sigma,
                   seed=a.seed, epochs=a.epochs, batch_size=a.batch_size,
+                  lr=a.lr,
                   cond_width=a.cond_width, use_film=bool(a.use_film),
                   cache_h=bool(a.cache_h), data_root=a.data_root,
                   out_root=a.out_root,
@@ -804,7 +881,9 @@ def _parse_args() -> tuple[StepCfg, bool]:
                   shuffle_loss_margin=a.shuffle_loss_margin,
                   h_std_penalty_mu=a.h_std_penalty_mu,
                   h_std_target=a.h_std_target,
-                  cond_y_residual_alpha_init=a.cond_y_residual_alpha_init)
+                  cond_y_residual_alpha_init=a.cond_y_residual_alpha_init,
+                  fzdy_n_y=a.fzdy_n_y, fzdy_n_z=a.fzdy_n_z,
+                  fzdy_tau=a.fzdy_tau)
     return cfg, a.resume
 
 

@@ -1,9 +1,20 @@
 # =============================================================================
-# STEP-1_1 v0.2 -- data.degrade
+# STEP-1_1 v0.3 -- data.degrade
 # Purpose: deterministic MNIST degradation pipeline y = Ax + n, with
 #          A = Downsample_s o Gauss_blur(sigma). Returns (x_clean, y_degraded).
 # CONVENTION: NLL = LOSS (lower = better). No fallback / mock / pass.
 #             Any failure -> logger.error(...) + raise.
+# Changelog (v0.2 -> v0.3):
+#   * NEW (Test-0 / identity task): blur(sigma=0.0) is the IDENTITY (a
+#     Gaussian with sigma->0 is a delta kernel). This is an explicit,
+#     mathematically-correct path, NOT a silent fallback. sigma<0 still
+#     raises. _gauss_kernel_2d stays strict (sigma<=0 raises) since it is a
+#     pure kernel builder and must never be called at 0.
+#   * NEW: downsample(scale=1) is the IDENTITY (avg_pool k=1,s=1). scale now
+#     in {1,2,4}; scale=1 keeps y at native 28x28.
+#   * Net effect: degrade(sigma=0, scale=1, noise_sigma=0) yields y == x,
+#     the "y=x" identity task used to verify an expert can learn an EASY
+#     conditional map before blaming the inverse problem.
 # Changelog (v0.1 -> v0.2):
 #   * NEW: train/val/test split. The 60k MNIST training set is partitioned
 #     into 55k train + 5k val with a fixed seed (SPLIT_SEED=12345). The 10k
@@ -23,17 +34,16 @@
 #   * Supports scale in {2, 4} and noise_sigma in {0.0, 0.05, 0.1}.
 #   * Logit-dequantization helpers (for flows trained in logit space).
 # Update summary:
-#   v0.2 closes a methodological gap: prior runs used the test set as val,
-#   so exit gates and per-epoch sanity were measured on data later reported
-#   as "test NLL". v0.2 carves a proper 5k held-out val from the 60k train
-#   set; test stays sealed for final eval only. Step 1.2 gate training will
-#   use split="train" + split="val" by convention.
+#   v0.3 adds the identity task (y=x) via sigma=0 (delta-blur) and scale=1
+#   (no downsample). This is the Test-0 sanity check: if an expert cannot
+#   learn y=x, the fault is the implementation, not the inverse problem.
+#   v0.2 behaviour is byte-identical for sigma>0, scale in {2,4}.
 # =============================================================================
 from __future__ import annotations
 import logging
 import traceback
 logger = logging.getLogger(__name__)
-__version__ = "0.2"
+__version__ = "0.3"
 __abbr__ = "STEP-1_1"
 
 import math
@@ -56,18 +66,28 @@ def _gauss_kernel_2d(sigma: float, ksize: int = 5) -> torch.Tensor:
 
 def blur(x: torch.Tensor, sigma: float, ksize: int = 5) -> torch.Tensor:
     # x: (B,1,H,W) in [0,1]. Returns (B,1,H,W) blurred.
+    # sigma == 0.0 -> IDENTITY (delta kernel; explicit Test-0 path). sigma < 0
+    # -> raise. sigma > 0 -> Gaussian blur.
     if x.dim() != 4 or x.size(1) != 1:
         logger.error("[degrade.blur] expected (B,1,H,W), got %s", tuple(x.shape))
         raise ValueError(f"expected (B,1,H,W), got {tuple(x.shape)}")
+    if sigma < 0.0:
+        logger.error("[degrade.blur] sigma must be >= 0, got %.4f", sigma)
+        raise ValueError(f"sigma must be >= 0, got {sigma}")
+    if sigma == 0.0:
+        return x                                  # identity blur (delta)
     k = _gauss_kernel_2d(sigma, ksize).to(x.device, x.dtype)
     pad = ksize // 2
     return F.conv2d(F.pad(x, [pad] * 4, mode="reflect"), k)
 
 
 def downsample(x: torch.Tensor, scale: int) -> torch.Tensor:
-    if scale not in (2, 4):
-        logger.error("[degrade.downsample] scale must be 2 or 4, got %s", scale)
-        raise ValueError(f"scale must be in {{2, 4}}, got {scale}")
+    if scale not in (1, 2, 4):
+        logger.error("[degrade.downsample] scale must be 1, 2 or 4, got %s",
+                     scale)
+        raise ValueError(f"scale must be in {{1, 2, 4}}, got {scale}")
+    if scale == 1:
+        return x                                  # identity (no downsample)
     return F.avg_pool2d(x, kernel_size=scale, stride=scale)
 
 

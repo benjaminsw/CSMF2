@@ -1,8 +1,19 @@
 # =============================================================================
-# STEP-1_1 v0.8 -- experiments.step_1_1.config
+# STEP-1_1 v0.10 -- experiments.step_1_1.config
 # Purpose: typed config for a single step_1_1 run. Frozen dataclass, sha256
 #          hash baked into run_tag for reproducibility.
 # CONVENTION: no silent defaults. Every invariant -> logger.error + raise.
+# Changelog (v0.9 -> v0.10):
+#   * Test-0 / identity task: scale now in {1,2,4} (was {2,4}); scale=1 = no
+#     downsample. blur_sigma may be 0.0 (delta blur = identity). Combined
+#     with noise_sigma=0.0 this is the y=x task. Invariant: blur_sigma >= 0.
+# Changelog (v0.8 -> v0.9):
+#   * NEW (FZDY diag): fzdy_n_y, fzdy_n_z, fzdy_tau for the fixed-z
+#     different-y diagnostic (Phase 3). fzdy_n_y = distinct y per grid,
+#     fzdy_n_z = fixed-z bank size, fzdy_tau = min mean output-sensitivity
+#     to pass (informational gate; calibrate on a known-good NICE run).
+#   * Invariants: fzdy_n_y >= 2, fzdy_n_y <= batch_size, fzdy_n_z >= 1,
+#     fzdy_tau >= 0.
 # Changelog (v0.7 -> v0.8):
 #   * NEW: cond_y_residual_alpha_init (float, default 0.0). Initial value
 #     for the learnable alpha that scales the optional y-residual bypass
@@ -18,8 +29,9 @@
 # Changelog (NEW in v0.1):
 #   * Introduced.
 # Update summary:
-#   v0.8 adds the y-residual rescue knob. Default OFF preserves v0.7
-#   behaviour. Use --cond-y-residual-alpha-init 0.3 to enable.
+#   v0.10 unlocks the identity task (scale=1, blur_sigma=0) so an expert can
+#   be verified on y=x before harder inverse problems. v0.9 behaviour is
+#   unchanged for scale in {2,4} with blur_sigma>0.
 # =============================================================================
 from __future__ import annotations
 import logging
@@ -27,7 +39,7 @@ import hashlib
 import json
 from dataclasses import dataclass, asdict, field
 logger = logging.getLogger(__name__)
-__version__ = "0.8"
+__version__ = "0.10"
 __abbr__ = "STEP-1_1"
 
 
@@ -35,7 +47,7 @@ __abbr__ = "STEP-1_1"
 class StepCfg:
     # data
     data_root: str = "./mnist_data"
-    scale: int = 2                    # in {2, 4}
+    scale: int = 2                    # in {1, 2, 4}; 1 = identity (no downsample)
     blur_sigma: float = 1.0
     noise_sigma: float = 0.0          # in {0.0, 0.05, 0.1}
     batch_size: int = 128
@@ -78,6 +90,10 @@ class StepCfg:
     h_std_target: float = 0.05         # active when h.std() < this value
     # model -- conditioner y-residual bypass (v0.8; default OFF)
     cond_y_residual_alpha_init: float = 0.0   # 0.0 = bypass disabled
+    # diagnostics -- fixed-z different-y (v0.9; FZDY, Phase 3)
+    fzdy_n_y: int = 6          # R: distinct y samples per grid (>=2)
+    fzdy_n_z: int = 3          # K: fixed-z bank size (>=1)
+    fzdy_tau: float = 0.05     # min mean output-sensitivity to pass; calibrate
     # bookkeeping
     seed: int = 0
     out_root: str = "./CSMF2/experiments/step_1_1/results"
@@ -85,9 +101,13 @@ class StepCfg:
     sanity_every_epoch: bool = True
 
     def __post_init__(self):
-        if self.scale not in (2, 4):
-            logger.error("[StepCfg] scale must be 2 or 4, got %s", self.scale)
-            raise ValueError(f"scale must be in {{2,4}}, got {self.scale}")
+        if self.scale not in (1, 2, 4):
+            logger.error("[StepCfg] scale must be 1, 2 or 4, got %s", self.scale)
+            raise ValueError(f"scale must be in {{1,2,4}}, got {self.scale}")
+        if self.blur_sigma < 0.0:
+            logger.error("[StepCfg] blur_sigma must be >=0, got %s",
+                         self.blur_sigma)
+            raise ValueError(f"blur_sigma must be >=0, got {self.blur_sigma}")
         if self.noise_sigma not in (0.0, 0.05, 0.1):
             logger.error("[StepCfg] noise_sigma must be in {0.0, 0.05, 0.1}, got %s",
                          self.noise_sigma)
@@ -195,6 +215,22 @@ class StepCfg:
             raise ValueError(
                 f"cond_y_residual_alpha_init must be >=0, got "
                 f"{self.cond_y_residual_alpha_init}")
+        # ---- fixed-z different-y diagnostic invariants (v0.9) ------------
+        if self.fzdy_n_y < 2:
+            logger.error("[StepCfg] fzdy_n_y must be >=2 (need variation), "
+                         "got %s", self.fzdy_n_y)
+            raise ValueError(f"fzdy_n_y must be >=2, got {self.fzdy_n_y}")
+        if self.fzdy_n_y > self.batch_size:
+            logger.error("[StepCfg] fzdy_n_y (%s) must be <= batch_size (%s)",
+                         self.fzdy_n_y, self.batch_size)
+            raise ValueError(
+                f"fzdy_n_y {self.fzdy_n_y} > batch_size {self.batch_size}")
+        if self.fzdy_n_z < 1:
+            logger.error("[StepCfg] fzdy_n_z must be >=1, got %s", self.fzdy_n_z)
+            raise ValueError(f"fzdy_n_z must be >=1, got {self.fzdy_n_z}")
+        if self.fzdy_tau < 0.0:
+            logger.error("[StepCfg] fzdy_tau must be >=0, got %s", self.fzdy_tau)
+            raise ValueError(f"fzdy_tau must be >=0, got {self.fzdy_tau}")
 
     def hash(self) -> str:
         blob = json.dumps(asdict(self), sort_keys=True).encode("utf-8")
