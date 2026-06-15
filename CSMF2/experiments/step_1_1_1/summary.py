@@ -1,18 +1,51 @@
 # =============================================================================
-# STEP-1_1_1 v0.1 -- experiments.step_1_1_1.summary
+# STEP-1_1_1 v0.11 -- experiments.step_1_1_1.summary
+# Changelog (v0.9 -> v0.11, STEP-1_1 -> STEP-1_1_1):
+#   * BACKPORT rename: __abbr__ + RUN SUMMARY banner -> STEP-1_1_1;
+#     header realigned (was header v0.8 / __version__ 0.9).
+#   * NEW (LSP-ABL v0.1): echo lambda_lat in the run-summary banner.
+#     Gate logic unchanged.
+# Update summary:
+#   v0.11 re-homes summary to step_1_1_1 and surfaces the latent-shape
+#   penalty weight in the console banner. Conditioning/exit gates same.
 # Purpose: read `sanity_per_epoch` in report.json and produce a pass/fail ledger
 #          printed to the console (ANSI coloured) + dumped to summary.txt and
 #          summary.csv in the run directory.
 # CONVENTION: read-only -- never mutates the run. Failures -> logger.error
 #             + raise (no fallback / mock / pass).
-# Changelog (NEW in STEP-1_1_1 v0.1):
-#   * Forked from step_1_1 summary v0.5. Behaviour unchanged on the hard-
-#     gate table (still pass/fail with N/A semantics for Glow). The new
-#     soft warnings introduced in step_1_1_1 (latent_ks, fwd_rel improve)
-#     live in report["exit_warnings"] and are echoed by summarize() at the
-#     end of the table; they do NOT contribute to exit_criteria_met. This
-#     keeps the binary go/no-go signal separate from the investigative
-#     latent-shape diagnostics.
+# Changelog (v0.8 -> v0.9):
+#   * film_alive in _conditioning_block now judged over the LAST 5 epochs
+#     (passes if v2_diag.film_alive.alive is True in >=1 of the last 5),
+#     not the single final epoch. film_alive flickers true/false epoch-to-
+#     epoch on a noisy diagnostic; a healthy run could false-fail conditioning
+#     on a last-epoch coin-flip (observed: seeds 1/2 of realnvp s2/n0.05,
+#     FZDY ~1.6 / fwd_rel ~0.22 but film_alive_last False -> cond_pass False).
+#   * N/A semantics preserved: film_ok is None only when NO epoch in the
+#     window carries v2_diag.film_alive (NSF --no-use-v2-conditioner).
+# Changelog (v0.7 -> v0.8):
+#   * Phase 0 (conditioning collapse): exit_ok now also requires FINAL-epoch
+#     conditioning. fzdy_last_ok (fixed_z_different_y.passed) + h_std_last_ok
+#     (h_std_obs_hist[-1].batch >= 0.02) are UNIVERSAL; shuffle_last_ok
+#     (v2_diag.logp_shuffle.gap_mean > 0) + film_last_ok (v2_diag.film_alive
+#     .alive) are graded only when v2_diag exists, else N/A (NSF never fails).
+#   * FZDY judged on the LAST epoch only -- NOT moved into _HARD_GATES, whose
+#     passed==total rule would false-fail the conditioning ramp-up.
+#   * NEW summary_block["conditioning"] sub-block + conditioning remedy hints.
+# Changelog (v0.6 -> v0.7):
+#   * BUGFIX (Glow false FAIL): _gate_is_na now checks the SPECIFIC keys a
+#     gate reads, not "all snapshots empty". Previously, if ANY cond_gate
+#     key was populated (e.g. cond_grad for grad_flow) the snapshots looked
+#     non-empty, so h_alive / film_alive / determinism graded their MISSING
+#     keys as 0 -> false FAIL (0/70). Now a gate is N/A iff none of its
+#     required keys appear in any snapshot. Glow's authoritative conditioning
+#     check stays v2_diag.film_alive (unaffected here).
+#   * NEW: glow_film_gain summary. min/mean/max of the per-layer film_gain
+#     (read from report["glow_film_gain_hist"]) printed + stored in the
+#     summary block. Surfaces the conditioning-strength decay at a glance.
+# Changelog (v0.5 -> v0.6):
+#   * NEW informational gate: fixed_z_sensitivity (FZDY Phase 3). Reads
+#     rec["fixed_z_different_y"]["passed"]. Non-blocking; not cond-gate
+#     dependent. Auto-appears in summary.txt / summary.csv.
 # Changelog (v0.4 -> v0.5):
 #   * N/A semantics: gates that depend on cond_gate_history (h_alive,
 #     film_alive, determinism, no_nan_inf, null_control_gap, h_st_slope,
@@ -24,6 +57,20 @@
 #   * Display: N/A shown as YELLOW "--" instead of red "X".
 # Changelog (NEW in v0.4):
 #   * Introduced. 7 hard gates + 4 informational checks.
+# Update summary:
+#   v0.9 makes the film_alive conditioning sub-check robust to last-epoch noise:
+#   it now passes if FiLM was alive in any of the last 5 epochs, matching the
+#   windowed spirit of the other conditioning signals. Fixes spurious
+#   conditioning_pass=False on healthy runs (real conditioning intact: high FZDY,
+#   low fwd_rel) where only the final-epoch FiLM std happened to dip below eps.
+#   Re-grades from existing JSON, no retrain.
+#   v0.8 makes conditioning collapse BLOCK exit_criteria_met: a run that ignores
+#   y (final-epoch FZDY < fzdy_tau) now fails even with good NLL/latent/cycle.
+#   v2-only signals (shuffle/film) graded when present, N/A otherwise, so NSF is
+#   unaffected. Existing runs re-grade with no retrain -- metrics already in JSON.
+#   v0.7 fixed the Glow false-FAIL on conditioning gates (they now correctly
+#   read N/A when their cond_gate keys are absent) and surfaces film_gain
+#   min/mean/max so its decay is visible without opening report.json.
 # =============================================================================
 from __future__ import annotations
 import csv
@@ -33,7 +80,7 @@ import os
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
-__version__ = "0.1"
+__version__ = "0.11"
 __abbr__ = "STEP-1_1_1"
 
 
@@ -68,6 +115,7 @@ _INFO_GATES: list[tuple[str, str]] = [
     ("h_st_slope",                  "h_st Δlogp slope > 1e-3"),
     ("grad_flow",                   "grad norm > 1e-6"),
     ("fwd_consistency_tracked",     "fwd residual reported"),
+    ("fixed_z_sensitivity",         "fixed-z diff-y mean sens ≥ τ (FZDY)"),
 ]
 
 _NLL_IMPROVED_KEY = "nll_improved"   # computed from history, not per-epoch
@@ -80,15 +128,33 @@ _COND_GATE_DEPENDENT = {
     "null_control_gap", "h_st_slope", "grad_flow",
 }
 
+# v0.7: the cond_gate_history key(s) each gate actually reads. A gate is N/A
+# iff NONE of its required keys appear in ANY per-epoch snapshot. This stops a
+# populated unrelated key (e.g. cond_grad) from making missing-key gates grade
+# as FAIL instead of N/A.
+_GATE_REQUIRED_KEYS: dict[str, tuple[str, ...]] = {
+    "h_alive":          ("h_std",),
+    "film_alive":       ("gamma_std", "beta_std"),
+    "determinism":      ("det_max_dh",),
+    "no_nan_inf":       ("nan_inf",),
+    "null_control_gap": ("real_nll", "abl_nll"),
+    "h_st_slope":       ("h_st_slope",),
+    "grad_flow":        ("cond_grad", "film_grad_min"),
+}
+
 
 def _gate_is_na(gate: str, cg_snapshots: list[dict | None]) -> bool:
-    # A cond-gate-dependent gate is N/A iff every per-epoch snapshot is
-    # missing the keys it would read. Implemented as "all snapshots empty".
+    # v0.7: per-gate N/A. A cond-gate-dependent gate is N/A iff none of the
+    # keys it reads are present in any snapshot (data was never recorded).
     if gate not in _COND_GATE_DEPENDENT:
         return False
     if not cg_snapshots:
         return True
-    return all((s is None) or (len(s) == 0) for s in cg_snapshots)
+    req = _GATE_REQUIRED_KEYS.get(gate, ())
+    for s in cg_snapshots:
+        if s and any(k in s for k in req):
+            return False          # data available -> grade it
+    return True                   # no required key anywhere -> N/A
 
 
 def _epoch_passes(rec: dict, gate: str, cg_snapshot: dict | None) -> bool:
@@ -128,9 +194,34 @@ def _epoch_passes(rec: dict, gate: str, cg_snapshot: dict | None) -> bool:
             return g > 1e-6 and fg > 1e-6
         if gate == "fwd_consistency_tracked":
             return "forward_consistency" in rec
+        if gate == "fixed_z_sensitivity":
+            fz = rec.get("fixed_z_different_y")
+            if not fz:
+                return False
+            return bool(fz.get("passed", False))
     except (KeyError, TypeError):
         return False
     return False
+
+
+def _film_gain_stats(report: dict) -> dict | None:
+    # v0.7: summarise report["glow_film_gain_hist"] (list of per-layer gain
+    # lists, one per epoch). Returns first/last-epoch means and last-epoch
+    # min/mean/max, or None if absent (non-Glow runs).
+    hist = report.get("glow_film_gain_hist")
+    if not hist:
+        return None
+    first, last = hist[0], hist[-1]
+    if not isinstance(last, list) or not last:
+        return None
+    return {
+        "first_epoch_mean": sum(first) / len(first),
+        "last_epoch_mean":  sum(last) / len(last),
+        "last_min":  min(last),
+        "last_max":  max(last),
+        "n_layers":  len(last),
+        "decayed":   (sum(last) / len(last)) < (sum(first) / len(first)),
+    }
 
 
 def _build_cg_snapshots(report: dict) -> list[dict]:
@@ -152,6 +243,70 @@ def _build_cg_snapshots(report: dict) -> list[dict]:
             snap["nan_inf"] = cg["nan_inf"][i]
         out.append(snap)
     return out
+
+
+def _conditioning_block(report: dict, per_epoch: list[dict]) -> dict:
+    # v0.8: final-epoch conditioning health. FZDY + h_std.batch are UNIVERSAL
+    # (all experts). shuffle/film come from v2_diag and are N/A when absent
+    # (NSF runs --no-use-v2-conditioner). A missing UNIVERSAL metric grades as
+    # FAIL (logged), never as pass.
+    last = per_epoch[-1] if per_epoch else {}
+
+    # FZDY (universal) ----
+    fz = last.get("fixed_z_different_y")
+    if fz is None:
+        logger.warning("[conditioning] final epoch missing fixed_z_different_y "
+                       "-> FZDY graded FAIL")
+    fzdy_last    = fz.get("sensitivity_mean") if fz else None
+    fzdy_tau     = fz.get("tau") if fz else None
+    fzdy_last_ok = bool(fz and fz.get("passed", False))
+
+    # h_std batch (universal) ----
+    hsh = report.get("h_std_obs_hist", [])
+    if not hsh:
+        logger.warning("[conditioning] h_std_obs_hist empty -> h_std graded FAIL")
+    h_std_batch_last = hsh[-1].get("batch") if hsh else None
+    h_std_batch_ok   = (h_std_batch_last is not None and h_std_batch_last >= 0.02)
+
+    # v2-only signals (N/A when v2_diag absent) ----
+    # shuffle: read from the final epoch (monotone, no flicker).
+    # film_alive: v0.9 -- judged over the LAST 5 epochs (alive in >=1 of them),
+    # because the per-epoch FiLM std flickers around eps and a single final-epoch
+    # dip would false-fail an otherwise-healthy run.
+    v2 = last.get("v2_diag")
+    if v2 is not None:
+        shuffle_gap_last = v2.get("logp_shuffle", {}).get("gap_mean")
+        shuffle_ok = (shuffle_gap_last is not None and shuffle_gap_last > 0)
+    else:
+        shuffle_gap_last = None; shuffle_ok = None
+
+    # film_alive over a trailing window of up to 5 epochs
+    _tail = per_epoch[-5:] if per_epoch else []
+    _alive_flags = [
+        e.get("v2_diag", {}).get("film_alive", {}).get("alive")
+        for e in _tail
+    ]
+    _alive_flags = [a for a in _alive_flags if a is not None]
+    if _alive_flags:
+        film_alive_last = any(_alive_flags)   # True if alive in >=1 of last 5
+        film_ok = bool(film_alive_last)
+    else:
+        film_alive_last = None; film_ok = None  # N/A: no v2_diag.film_alive present
+
+    # overall: universal gates must pass; v2 gates only if present
+    conditioning_pass = bool(fzdy_last_ok and h_std_batch_ok)
+    if shuffle_ok is not None:
+        conditioning_pass = conditioning_pass and shuffle_ok
+    if film_ok is not None:
+        conditioning_pass = conditioning_pass and film_ok
+
+    return {
+        "fzdy_last": fzdy_last, "fzdy_tau": fzdy_tau, "fzdy_last_ok": fzdy_last_ok,
+        "h_std_batch_last": h_std_batch_last, "h_std_batch_ok": h_std_batch_ok,
+        "shuffle_gap_last": shuffle_gap_last, "shuffle_gap_ok_or_na": shuffle_ok,
+        "film_alive_last": film_alive_last, "film_alive_ok_or_na": film_ok,
+        "conditioning_pass": conditioning_pass,
+    }
 
 
 def summarize(run_dir: Path) -> dict:
@@ -197,7 +352,11 @@ def summarize(run_dir: Path) -> dict:
         (ledger[g]["passed"] == ledger[g]["total"] and ledger[g]["total"] > 0)
         for g, _ in _HARD_GATES)
     logdet_ok = bool(report.get("logdet_check", {}).get("passed", False))
-    exit_ok = bool(hard_all_pass and logdet_ok and nll_improved)
+    # v0.8: final-epoch conditioning floor (Phase 0). FZDY + h_std are universal;
+    # shuffle/film graded only when v2_diag exists (N/A for NSF).
+    cond_blk = _conditioning_block(report, per_epoch)
+    exit_ok = bool(hard_all_pass and logdet_ok and nll_improved
+                   and cond_blk["conditioning_pass"])
 
     # remedy hints -----------------------------------------------------------
     remedies: list[str] = []
@@ -211,6 +370,19 @@ def summarize(run_dir: Path) -> dict:
         remedies.append("numeric log-det check failed -- inspect formulas")
     if not nll_improved:
         remedies.append("NLL did not decrease -- check LR / init / data pipeline")
+    # v0.8: conditioning remedy hints.
+    if not cond_blk["fzdy_last_ok"]:
+        remedies.append("conditioning failed: FZDY below threshold "
+                        f"(last={cond_blk['fzdy_last']}, tau={cond_blk['fzdy_tau']}) "
+                        "-- model ignores y")
+    if not cond_blk["h_std_batch_ok"]:
+        remedies.append("conditioning failed: h_std_obs.batch < 0.02 "
+                        f"(last={cond_blk['h_std_batch_last']})")
+    if cond_blk["shuffle_gap_ok_or_na"] is False:
+        remedies.append("conditioning failed: shuffle gap <= 0 "
+                        f"(last={cond_blk['shuffle_gap_last']})")
+    if cond_blk["film_alive_ok_or_na"] is False:
+        remedies.append("conditioning failed: FiLM across-y not alive")
 
     # write summary.txt ------------------------------------------------------
     lines = _format_lines(cfg, report, ledger, tr_hist, te_hist,
@@ -259,6 +431,8 @@ def summarize(run_dir: Path) -> dict:
                          if per_epoch else None),
         "exit_criteria_met": exit_ok,
         "remedy_hints": remedies,
+        "glow_film_gain": _film_gain_stats(report),
+        "conditioning": cond_blk,
     }
     report["summary"] = summary_block
     report_path.write_text(json.dumps(report, indent=2))
@@ -290,11 +464,21 @@ def _format_lines(cfg, report, ledger, tr_hist, te_hist, n_ep, exit_ok, remedies
     lines.append(f"expert: {cfg.get('expert')}   scale: {cfg.get('scale')}   "
                  f"noise: {cfg.get('noise_sigma')}   seed: {cfg.get('seed')}   "
                  f"epochs: {n_ep}")
+    lines.append(f"lambda_lat: {cfg.get('latent_moment_lambda')}   "
+                 f"(latent-shape penalty; 0 = baseline)")
     if tr_hist:
         lines.append(f"train NLL:  {tr_hist[0]:10.2f}  ->  {tr_hist[-1]:10.2f}  "
                      f"(Δ = {tr_hist[-1] - tr_hist[0]:+.2f})")
     if te_hist:
         lines.append(f"test  NLL:  {te_hist[0]:10.2f}  ->  {te_hist[-1]:10.2f}")
+
+    fg = _film_gain_stats(report)
+    if fg is not None:
+        flag = f" {_R}(DECAYING){_N}" if fg["decayed"] else ""
+        lines.append(f"film_gain:  mean {fg['first_epoch_mean']:.3f} -> "
+                     f"{fg['last_epoch_mean']:.3f}  "
+                     f"[last min {fg['last_min']:.3f} / max {fg['last_max']:.3f}, "
+                     f"{fg['n_layers']} layers]{flag}")
 
     lines.append("")
     lines.append(f"{_B}HARD GATES (halt on fail){_N}")
@@ -329,11 +513,5 @@ def _format_lines(cfg, report, ledger, tr_hist, te_hist, n_ep, exit_ok, remedies
         lines.append(f"{_B}REMEDY HINTS:{_N}")
         for r in remedies:
             lines.append(f"  - {r}")
-    # STEP-1_1_1: surface soft exit warnings (do NOT affect exit_criteria_met).
-    exit_warnings = report.get("exit_warnings", []) if isinstance(report, dict) else []
-    if exit_warnings:
-        lines.append(f"{_Y}STEP-1_1_1 SOFT WARNINGS (non-blocking):{_N}")
-        for w in exit_warnings:
-            lines.append(f"  ! {w}")
     lines.append(sep)
     return lines

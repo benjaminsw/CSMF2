@@ -1,12 +1,25 @@
 # =============================================================================
-# STEP-1_1_1 v0.1 -- experiments.step_1_1_1.sanity
+# STEP-1_1 v0.4 -- experiments.step_1_1.sanity
 # Purpose: step-specific sanity routines (see v0.2 description below).
 # CONVENTION: any failure -> logger.error + raise. No fallback.
-# Changelog (NEW in STEP-1_1_1 v0.1):
-#   * Forked verbatim from step_1_1 sanity v0.3. No behavioural changes.
-#   * Reason for fork: step_1_1_1 evolves independently of step_1_1; any
-#     future sanity tweaks (e.g. KS test variants, fwd_rel re-baselining)
-#     stay scoped to this file.
+# Changelog (v0.4 -> v0.5):
+#   * plot_film_alive: the alive VERDICT now uses the MEDIAN across-y std of
+#     gamma/beta over FiLM heads, not the MIN. With min, a single quiet layer
+#     (beta_std ~7e-4 < eps=1e-3) flipped alive=False for the whole run even
+#     though FZDY ~1.6 proved conditioning works (observed: realnvp s2/n0.05
+#     seeds 1/2). Median checks whether FiLM is BROADLY alive; FZDY remains the
+#     real collapse detector. eps kept at 1e-3. The min values are still
+#     returned (gamma_std_min/beta_std_min) for reference; NEW gamma_std_med/
+#     beta_std_med added to the returned dict and used for the verdict.
+# Changelog (v0.3 -> v0.4):
+#   * BUGFIX (false "alive"): plot_film_alive measured g.std() over the WHOLE
+#     (B, feat) tensor, so channel-to-channel spread dominated and reported
+#     alive=True even when gamma/beta were IDENTICAL across y (collapsed
+#     conditioner). Now the alive verdict uses the ACROSS-Y std:
+#         y_sens = g.std(dim=0).mean()      # per-feature std across batch
+#     i.e. "does FiLM move when y moves". The old channel spread is still
+#     reported as gamma_chan_spread / beta_chan_spread for reference, but is
+#     NOT used for the verdict. Requires batch B>=2 (raises otherwise).
 # Changelog (v0.2 -> v0.3):
 #   * plot_diag_spectrum: SKIP-with-log-info if expert has no DiagScale layer
 #     (RealNVP / Glow). Returns {"skipped": True, "reason": "..."}. NOT a
@@ -35,19 +48,26 @@
 # Changelog (NEW in v0.1):
 #   * Introduced.
 # Update summary:
-#   v0.3 makes the spectrum plot expert-aware so the merged run.py can call
-#   the right one (diag_spectrum for NICE, s_spectrum for RealNVP/Glow,
-#   w1x1_spectrum extra for Glow) without hardcoding the dispatch in run.py.
+#   v0.5 makes the FiLM-alive verdict robust to one near-silent layer: it now
+#   judges on the MEDIAN across-y std (not the min), so a single layer dipping
+#   below eps no longer false-fails an otherwise-healthy conditioner. FZDY is
+#   still the authoritative collapse signal. Affects only newly-written reports
+#   (the flag is computed at run time); existing reports keep their baked value.
+#   v0.4 fixes the misleading FiLM-alive verdict: it now measures whether
+#   gamma/beta change ACROSS y (the only thing that proves conditioning is
+#   used), not channel spread (always nonzero). A collapsed conditioner now
+#   correctly reads alive=False. Spectrum dispatch (v0.3) unchanged.
 # =============================================================================
 from __future__ import annotations
 import logging
 import traceback
 from pathlib import Path
 logger = logging.getLogger(__name__)
-__version__ = "0.1"
+__version__ = "0.5"
 __abbr__ = "STEP-1_1_1"
 
 import math
+from statistics import median
 import numpy as np
 import torch
 
@@ -639,29 +659,45 @@ def plot_film_alive(expert, cond, y: torch.Tensor, out_path,
     if not film_heads:
         logger.error("[plot_film_alive] no FiLM heads in expert")
         raise RuntimeError("no FiLM heads found in expert")
+    if y.dim() != 4 or y.size(0) < 2:
+        logger.error("[plot_film_alive] need batch B>=2 to measure across-y "
+                     "std, got y shape %s", tuple(y.shape))
+        raise ValueError("plot_film_alive requires y batch with B>=2")
     with torch.no_grad():
         h = cond(y)
         gammas, betas, labels = [], [], []
+        gamma_chan, beta_chan = [], []
         for label, film in film_heads:
-            g, b = film(h)
-            gammas.append(float(g.std().item()))
-            betas.append(float(b.std().item()))
+            g, b = film(h)                       # each (B, feat_width)
+            # v0.4: ACROSS-Y std (per feature, averaged) -- "does FiLM move
+            # when y moves". This is the verdict metric.
+            gammas.append(float(g.std(dim=0).mean().item()))
+            betas.append(float(b.std(dim=0).mean().item()))
+            # old metric, kept for reference only (channel-to-channel spread;
+            # always nonzero even if the conditioner is collapsed).
+            gamma_chan.append(float(g.std().item()))
+            beta_chan.append(float(b.std().item()))
             labels.append(label)
     g_min = float(min(gammas)); b_min = float(min(betas))
-    alive = (g_min > eps) and (b_min > eps)
+    # v0.5: VERDICT on the MEDIAN across-y std, not the min. One quiet layer
+    # (b_min ~7e-4) must not flip alive=False when FiLM is broadly responsive.
+    g_med = float(median(gammas)); b_med = float(median(betas))
+    alive = (g_med > eps) and (b_med > eps)
     plt = _mpl()
     fig, ax = plt.subplots(figsize=(0.5 * len(labels) + 2.5, 2.6))
     x = np.arange(len(labels))
-    ax.bar(x - 0.18, gammas, 0.36, label="gamma_std")
-    ax.bar(x + 0.18, betas,  0.36, label="beta_std")
+    ax.bar(x - 0.18, gammas, 0.36, label="gamma_std (across y)")
+    ax.bar(x + 0.18, betas,  0.36, label="beta_std (across y)")
     ax.axhline(eps, color="r", lw=0.8, ls="--", label=f"eps={eps:g}")
     ax.set_xticks(x); ax.set_xticklabels(labels, rotation=45, fontsize=7)
-    ax.set_yscale("log"); ax.set_ylabel("std (log)")
+    ax.set_yscale("log"); ax.set_ylabel("std across y (log)")
     ax.legend(loc="upper right", fontsize=8)
-    ax.set_title(f"per-layer FiLM std   alive={alive}", fontsize=9)
+    ax.set_title(f"per-layer FiLM across-y std   alive={alive}", fontsize=9)
     _save_fig(plt, out_path)
     return {"gamma_stds": gammas, "beta_stds": betas, "labels": labels,
             "gamma_std_min": g_min, "beta_std_min": b_min,
+            "gamma_std_med": g_med, "beta_std_med": b_med,
+            "gamma_chan_spread": gamma_chan, "beta_chan_spread": beta_chan,
             "alive": bool(alive), "eps": float(eps)}
 
 

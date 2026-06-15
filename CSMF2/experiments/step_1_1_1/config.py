@@ -1,35 +1,49 @@
 # =============================================================================
-# STEP-1_1_1 v0.1 -- experiments.step_1_1_1.config
-# Purpose: typed config for a single step_1_1_1 run -- latent-shape fix
-#          extension to step_1_1. Frozen dataclass, sha256 hash baked into
-#          run_tag for reproducibility.
+# STEP-1_1_1 v0.12 -- experiments.step_1_1_1.config
+# Purpose: typed config for a single step_1_1_1 run. Frozen dataclass, sha256
+#          hash baked into run_tag for reproducibility.
 # CONVENTION: no silent defaults. Every invariant -> logger.error + raise.
-# Changelog (NEW in STEP-1_1_1 v0.1):
-#   * Forked from step_1_1 config v0.8.
-#   * NEW: latent_moment_lambda (float, default 0.0). Weight on the latent
-#     moment-matching penalty added to the training loss:
-#         L += lambda * ( mean(z.mean(0)**2) + mean((z.std(0)-1)**2) )
-#     Pushes per-dim latent mean toward 0 and per-dim variance toward 1.
-#     Default 0.0 = OFF (run is byte-identical to step_1_1 v0.13 at
-#     runtime modulo the new __abbr__ and __version__).
-#     Recommended sweep: {0.0, 0.1, 1.0, 10.0}.
-#     Caveat: enforces moments only, not full Gaussianity. If KS stays
-#     above target after sweeping, escalate to MMD in step_1_1_2.
-#   * NEW: latent_ks_target (float, default 0.10). Soft target for the
-#     latent-KS exit gate.
-#   * NEW: fwd_rel_target (float, default 0.5). Soft target for the
-#     reconstruction-quality exit gate. When --resume-from is used,
-#     a relative-improvement criterion is preferred over the absolute one.
-#   * NEW: resume_from (str | None, default None). Optional path to a
-#     step_1_1 checkpoint to fine-tune from. None = fresh init.
-#   * Invariants: latent_moment_lambda >= 0; latent_ks_target > 0;
-#     fwd_rel_target > 0.
+# Changelog (v0.10 -> v0.12, STEP-1_1 -> STEP-1_1_1):
+#   * BACKPORT rename: __abbr__ STEP-1_1 -> STEP-1_1_1, module-path label,
+#     out_root default ../step_1_1/results -> ../step_1_1_1/results so
+#     step_1_1_1 runs no longer collide with step_1_1 results.
+#   * NEW (LSP-ABL v0.1): latent_moment_lambda (float >=0, default 0.0).
+#     Per-dim z-moment penalty weight. In asdict() -> distinct cfg_hash per
+#     lambda, so the 4-point grid never shares a results folder.
+#   * Invariant: latent_moment_lambda >= 0.
 # Update summary:
-#   step_1_1_1 is a standalone fork of step_1_1 to investigate one
-#   question: "Does latent moment matching improve prior sampling and
-#   reconstruction?" Shared code with step_1_1 lives in CSMF2/models/,
-#   CSMF2/data/, CSMF2/common/. Experiment files (this config, run.py,
-#   sanity.py, summary.py) are copies and evolve independently.
+#   v0.12 re-homes the config to step_1_1_1 and adds the opt-in latent-shape
+#   penalty knob for the lambda_lat ablation. latent_moment_lambda=0.0
+#   reproduces v0.10 behaviour bit-for-bit (field set otherwise identical).
+# Changelog (v0.9 -> v0.10):
+#   * Test-0 / identity task: scale now in {1,2,4} (was {2,4}); scale=1 = no
+#     downsample. blur_sigma may be 0.0 (delta blur = identity). Combined
+#     with noise_sigma=0.0 this is the y=x task. Invariant: blur_sigma >= 0.
+# Changelog (v0.8 -> v0.9):
+#   * NEW (FZDY diag): fzdy_n_y, fzdy_n_z, fzdy_tau for the fixed-z
+#     different-y diagnostic (Phase 3). fzdy_n_y = distinct y per grid,
+#     fzdy_n_z = fixed-z bank size, fzdy_tau = min mean output-sensitivity
+#     to pass (informational gate; calibrate on a known-good NICE run).
+#   * Invariants: fzdy_n_y >= 2, fzdy_n_y <= batch_size, fzdy_n_z >= 1,
+#     fzdy_tau >= 0.
+# Changelog (v0.7 -> v0.8):
+#   * NEW: cond_y_residual_alpha_init (float, default 0.0). Initial value
+#     for the learnable alpha that scales the optional y-residual bypass
+#     in Conditioner (v0.5+):
+#         h = cnn_head(y) + alpha * Linear(y.flatten(1))
+#     When 0.0, the bypass is disabled and Conditioner is v0.4-equivalent.
+#     Recommended for Glow rescue experiments: 0.3.
+#   * Invariant: cond_y_residual_alpha_init >= 0.
+# Changelog (v0.6 -> v0.7):
+#   * NEW: h_std_penalty_mu, h_std_target.
+# Changelog (v0.5 -> v0.6):
+#   * NEW: shuffle_loss_lambda, shuffle_loss_margin.
+# Changelog (NEW in v0.1):
+#   * Introduced.
+# Update summary:
+#   v0.10 unlocks the identity task (scale=1, blur_sigma=0) so an expert can
+#   be verified on y=x before harder inverse problems. v0.9 behaviour is
+#   unchanged for scale in {2,4} with blur_sigma>0.
 # =============================================================================
 from __future__ import annotations
 import logging
@@ -37,7 +51,7 @@ import hashlib
 import json
 from dataclasses import dataclass, asdict, field
 logger = logging.getLogger(__name__)
-__version__ = "0.1"
+__version__ = "0.12"
 __abbr__ = "STEP-1_1_1"
 
 
@@ -45,7 +59,7 @@ __abbr__ = "STEP-1_1_1"
 class StepCfg:
     # data
     data_root: str = "./mnist_data"
-    scale: int = 2                    # in {2, 4}
+    scale: int = 2                    # in {1, 2, 4}; 1 = identity (no downsample)
     blur_sigma: float = 1.0
     noise_sigma: float = 0.0          # in {0.0, 0.05, 0.1}
     batch_size: int = 128
@@ -86,15 +100,14 @@ class StepCfg:
     # train -- direct h.std penalty (v0.7; default OFF)
     h_std_penalty_mu: float = 0.0      # 0.0 = off
     h_std_target: float = 0.05         # active when h.std() < this value
+    # train -- per-dim latent-moment penalty (LSP-ABL v0.1; default OFF)
+    latent_moment_lambda: float = 0.0  # 0.0 = off; per-dim z-moment penalty
     # model -- conditioner y-residual bypass (v0.8; default OFF)
     cond_y_residual_alpha_init: float = 0.0   # 0.0 = bypass disabled
-    # train -- latent moment-matching penalty (STEP-1_1_1 v0.1; default OFF)
-    latent_moment_lambda: float = 0.0    # 0.0 = off
-    # exit-gate soft targets (STEP-1_1_1 v0.1)
-    latent_ks_target: float = 0.10
-    fwd_rel_target:   float = 0.5
-    # fine-tuning: optional path to a checkpoint to resume from
-    resume_from: str | None = None
+    # diagnostics -- fixed-z different-y (v0.9; FZDY, Phase 3)
+    fzdy_n_y: int = 6          # R: distinct y samples per grid (>=2)
+    fzdy_n_z: int = 3          # K: fixed-z bank size (>=1)
+    fzdy_tau: float = 0.05     # min mean output-sensitivity to pass; calibrate
     # bookkeeping
     seed: int = 0
     out_root: str = "./CSMF2/experiments/step_1_1_1/results"
@@ -102,9 +115,13 @@ class StepCfg:
     sanity_every_epoch: bool = True
 
     def __post_init__(self):
-        if self.scale not in (2, 4):
-            logger.error("[StepCfg] scale must be 2 or 4, got %s", self.scale)
-            raise ValueError(f"scale must be in {{2,4}}, got {self.scale}")
+        if self.scale not in (1, 2, 4):
+            logger.error("[StepCfg] scale must be 1, 2 or 4, got %s", self.scale)
+            raise ValueError(f"scale must be in {{1,2,4}}, got {self.scale}")
+        if self.blur_sigma < 0.0:
+            logger.error("[StepCfg] blur_sigma must be >=0, got %s",
+                         self.blur_sigma)
+            raise ValueError(f"blur_sigma must be >=0, got {self.blur_sigma}")
         if self.noise_sigma not in (0.0, 0.05, 0.1):
             logger.error("[StepCfg] noise_sigma must be in {0.0, 0.05, 0.1}, got %s",
                          self.noise_sigma)
@@ -205,6 +222,13 @@ class StepCfg:
                          self.h_std_target)
             raise ValueError(
                 f"h_std_target must be >=0, got {self.h_std_target}")
+        # ---- latent-moment penalty invariant (LSP-ABL v0.1) --------------
+        if self.latent_moment_lambda < 0.0:
+            logger.error("[StepCfg] latent_moment_lambda must be >=0, got %s",
+                         self.latent_moment_lambda)
+            raise ValueError(
+                f"latent_moment_lambda must be >=0, got "
+                f"{self.latent_moment_lambda}")
         # ---- cond y-residual invariant (v0.8) ----------------------------
         if self.cond_y_residual_alpha_init < 0.0:
             logger.error("[StepCfg] cond_y_residual_alpha_init must be >=0, "
@@ -212,23 +236,22 @@ class StepCfg:
             raise ValueError(
                 f"cond_y_residual_alpha_init must be >=0, got "
                 f"{self.cond_y_residual_alpha_init}")
-        # ---- latent moment / exit-gate invariants (STEP-1_1_1 v0.1) ------
-        if self.latent_moment_lambda < 0.0:
-            logger.error("[StepCfg] latent_moment_lambda must be >=0, got %s",
-                         self.latent_moment_lambda)
+        # ---- fixed-z different-y diagnostic invariants (v0.9) ------------
+        if self.fzdy_n_y < 2:
+            logger.error("[StepCfg] fzdy_n_y must be >=2 (need variation), "
+                         "got %s", self.fzdy_n_y)
+            raise ValueError(f"fzdy_n_y must be >=2, got {self.fzdy_n_y}")
+        if self.fzdy_n_y > self.batch_size:
+            logger.error("[StepCfg] fzdy_n_y (%s) must be <= batch_size (%s)",
+                         self.fzdy_n_y, self.batch_size)
             raise ValueError(
-                f"latent_moment_lambda must be >=0, got "
-                f"{self.latent_moment_lambda}")
-        if self.latent_ks_target <= 0.0:
-            logger.error("[StepCfg] latent_ks_target must be >0, got %s",
-                         self.latent_ks_target)
-            raise ValueError(
-                f"latent_ks_target must be >0, got {self.latent_ks_target}")
-        if self.fwd_rel_target <= 0.0:
-            logger.error("[StepCfg] fwd_rel_target must be >0, got %s",
-                         self.fwd_rel_target)
-            raise ValueError(
-                f"fwd_rel_target must be >0, got {self.fwd_rel_target}")
+                f"fzdy_n_y {self.fzdy_n_y} > batch_size {self.batch_size}")
+        if self.fzdy_n_z < 1:
+            logger.error("[StepCfg] fzdy_n_z must be >=1, got %s", self.fzdy_n_z)
+            raise ValueError(f"fzdy_n_z must be >=1, got {self.fzdy_n_z}")
+        if self.fzdy_tau < 0.0:
+            logger.error("[StepCfg] fzdy_tau must be >=0, got %s", self.fzdy_tau)
+            raise ValueError(f"fzdy_tau must be >=0, got {self.fzdy_tau}")
 
     def hash(self) -> str:
         blob = json.dumps(asdict(self), sort_keys=True).encode("utf-8")

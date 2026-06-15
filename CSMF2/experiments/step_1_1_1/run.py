@@ -1,40 +1,76 @@
 # =============================================================================
-# STEP-1_1_1 v0.1 -- experiments.step_1_1_1.run
-# Purpose: train ONE (expert, seed, scale, noise) run. Same as step_1_1
-#          v0.13 + (a) latent moment-matching penalty, (b) optional resume
-#          from a step_1_1 checkpoint, (c) per-epoch latent KS / fwd_rel /
-#          intra_std / cycle_max / frac_gap top-level history fields,
-#          (d) soft exit-gate (warnings, not hard fail), (e) end-of-run
-#          density + reconstruction plots saved to results/<tag>/plots/.
-# CONVENTION: every failure -> logger.error + raise. No fallback / placeholder.
-# Changelog (NEW in STEP-1_1_1 v0.1):
-#   * Forked from step_1_1 run.py v0.13.
-#   * NEW: latent moment penalty in training loop (opt-in via
-#     cfg.latent_moment_lambda > 0):
-#         L += lambda * ( mean(z.mean(0)**2) + mean((z.std(0)-1)**2) )
-#     Per-50-step log: "[lat] mean_l2=X std_l2=Y".
-#     Per-epoch log:    "[lat_epoch] mean_l2=X std_l2=Y lambda=L".
-#   * NEW CLI: --latent-moment-lambda (default 0.0),
-#              --latent-ks-target (default 0.10),
-#              --fwd-rel-target (default 0.5),
-#              --resume-from PATH (default None).
-#   * NEW per-epoch top-level history fields (promoted from sanity panel):
-#         latent_ks_hist, latent_moment_hist, fwd_rel_hist,
-#         intra_std_hist, frac_gap_above_1_nat_hist, cycle_max_hist.
-#   * NEW: --resume-from loads expert + conditioner state_dicts from a
-#     prior checkpoint before training starts. Cfg must be compatible
-#     (same expert + scale + noise + h_dim). Raises on mismatch.
-#   * NEW: end-of-run plots saved via density_plots module:
-#         plots/latent_density.png
-#         plots/cycle_density.png
-#         plots/reconstruction_panel.png
-#   * Default behaviour at lambda=0 + no resume = byte-identical training
-#     to step_1_1 v0.13 (modulo logger name + out_root).
+# STEP-1_1_1 v0.20 -- experiments.step_1_1_1.run
+# Changelog (v0.18 -> v0.20, STEP-1_1 -> STEP-1_1_1):
+#   * BACKPORT rename: logger CSMF2.step_1_1 -> CSMF2.step_1_1_1, __abbr__,
+#     banner strings, --out-root default -> ../step_1_1_1/results.
+#   * NEW (LSP-ABL v0.1): per-dim latent-moment penalty term in the loss
+#     (opt-in via cfg.latent_moment_lambda; non-finite -> logger.error+raise),
+#     --latent-moment-lambda CLI, per-epoch lat_moment_hist in report, and a
+#     per-epoch [lat_moment] log line. lambda=0.0 leaves the loss unchanged.
+#   * NEW: --plots {gate,full} (default gate). gate computes ALL gate metrics
+#     every epoch but renders decorative PNGs (orig/interp/samples/sw2/
+#     spectrum/cond-gate-hook) only on the final epoch; full = old behaviour.
+#   * NEW: end-of-run density_plots (latent density / cycle density /
+#     reconstruction panel) -> report["density"]. Always run once at end.
 # Update summary:
-#   STEP-1_1_1 investigates whether moment matching of the latent
-#   distribution improves prior-sampling reconstruction. The penalty is
-#   cheap, differentiable, and a natural first attempt; if KS stays high
-#   after the planned sweep, escalate to MMD/SW2 in step_1_1_2.
+#   v0.20 wires the latent-shape penalty + its evidence plots and re-homes
+#   all logging/output to step_1_1_1. With --latent-moment-lambda 0.0 and
+#   --plots full the run is behaviourally identical to step_1_1 v0.18.
+# Changelog (v0.17 -> v0.18):
+#   * NEW CLI: --lr (default 1e-3) now forwarded to StepCfg.lr. Previously lr
+#     was only a StepCfg field with no CLI flag, so every run used the 1e-3
+#     default regardless. Required for CCR Phase 2's lr sweep {1e-3,3e-4,1e-4}.
+# Changelog (v0.16 -> v0.17):
+#   * Phase 0: top-level exit_criteria_met now MIRRORS summarize() (summary.py
+#     v0.8), which includes the final-epoch conditioning floor (FZDY + h_std,
+#     plus v2-only shuffle/film when present). Previously the top-level value
+#     was an inline 4-check subset (logdet/invert/latent/cycle) that could pass
+#     a conditioning-collapsed run; resume-skip and the CLI exit code read that
+#     stale value. Now all consumers (resume, CLI, aggregate, summary) agree.
+# Changelog (v0.15 -> v0.16):
+#   * WIRE (Glow conditioning debug, step 2): cond_path_probe called per
+#     epoch for expert='glow'. Merges {"cond_path_probe": {...}} into the
+#     epoch record: per-layer film_gain, conv3 weight-norm, and the std of
+#     coupling (s,t) across different y (layer 0). Localizes whether the
+#     conditioning choke is film_gain or conv3, upstream of FZDY.
+# Changelog (v0.14 -> v0.15):
+#   * Test-0 support: --scale now accepts 1 (identity, no downsample); NEW
+#     --blur-sigma (default 1.0) so blur can be set to 0.0. With
+#     --scale 1 --blur-sigma 0.0 --noise-sigma 0.0 the task is y=x.
+#   * y_input_size derivation (28//scale)^2 already yields 784 at scale=1;
+#     no change needed for the y-residual bypass.
+# Changelog (v0.13 -> v0.14):
+#   * WIRE: fixed-z different-y diagnostic (FZDY, Phase 3) now CALLED in the
+#     per-epoch sanity block. Merges {"fixed_z_different_y": {...}} into the
+#     epoch record so summary.py's informational gate fires. Figure ->
+#     plots/gen_diag/fixed_z_different_y_epoch_N.png. Runs for ALL experts
+#     (uses expert.cond/decode; not gated on use_v2_conditioner).
+#   * NEW CLI: --fzdy-n-y, --fzdy-n-z, --fzdy-tau (forwarded to StepCfg;
+#     config defaults 6 / 3 / 0.05 apply when omitted).
+# Changelog (v0.12 -> v0.13):
+#   * NEW: forward cfg.cond_y_residual_alpha_init to Conditioner (and
+#     y_input_size derived from cfg.scale). When > 0, conditioner has a
+#     learnable linear bypass from flattened y to h. Default 0.0 = OFF.
+#   * NEW CLI: --cond-y-residual-alpha-init (default 0.0).
+#   * NEW per-epoch log when enabled:
+#         "[y_resid] alpha=X"
+#     Tracks whether the model is leaning into the bypass (alpha grows or
+#     stays) or abandoning it (alpha decays to 0).
+# Changelog (v0.11 -> v0.12):
+#   * BUGFIX: h.std penalty now measures across-batch std (correct metric).
+# Changelog (v0.10 -> v0.11):
+#   * Direct h.std penalty + grad-norm logging.
+# Changelog (NEW in v0.1):
+#   * Introduced.
+# Update summary:
+#   v0.18 exposes --lr on the CLI (was a no-op StepCfg field), unblocking the
+#   CCR Phase 2 lr sweep.
+#   v0.17 closes the conditioning-collapse blind spot in the run-level verdict:
+#   collapsed runs (final-epoch FZDY < fzdy_tau) now exit non-zero and are not
+#   skipped on --resume. No training change.
+#   v0.16 adds the cond_path_probe (Glow only) so a later film_gain floor /
+#   conv3 init bump can be verified to actually move the conditioning signal
+#   into (s,t), not merely change NLL. Defaults preserve v0.15 behaviour.
 # =============================================================================
 from __future__ import annotations
 import argparse
@@ -48,7 +84,7 @@ import traceback
 from pathlib import Path
 
 logger = logging.getLogger("CSMF2.step_1_1_1.run")
-__version__ = "0.1"
+__version__ = "0.20"
 __abbr__ = "STEP-1_1_1"
 
 import numpy as np
@@ -66,6 +102,10 @@ from .sanity import (numeric_logdet_check, invertibility_check,
                      plot_sw2_diversity, plot_diag_spectrum,
                      plot_s_spectrum, plot_w1x1_spectrum,
                      plot_film_alive, plot_logp_shuffle)
+from .diagnostics.fixed_z_diag import fixed_z_different_y
+from .diagnostics.cond_path_probe import cond_path_probe
+from .density_plots import (plot_latent_density, plot_cycle_density,
+                            plot_reconstruction_panel)
 from ...common import cond_viz as cv
 from ...data.degrade import MNISTDegraded, dequantize_logit
 from ...models.conditioner import Conditioner
@@ -227,13 +267,16 @@ def _cond_gate_hook(expert, cond, test_loader, device, gen, plots_dir,
 
 
 # ---------- the run ---------------------------------------------------------
-def run(cfg: StepCfg) -> dict:
+def run(cfg: StepCfg, *, plots_mode: str = "gate") -> dict:
+    if plots_mode not in ("gate", "full"):
+        logger.error("[run] plots_mode must be gate|full, got %r", plots_mode)
+        raise ValueError(f"plots_mode must be gate|full, got {plots_mode!r}")
     set_seed(cfg.seed)
     out_dir = Path(cfg.out_root) / cfg.run_tag()
     plots = out_dir / "plots"
     plots.mkdir(parents=True, exist_ok=True)
     _configure_logging(out_dir)
-    logger.info("STEP-1_1 run | tag=%s | cfg=%s", cfg.run_tag(), cfg)
+    logger.info("STEP-1_1_1 run | tag=%s | cfg=%s", cfg.run_tag(), cfg)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     gen = torch.Generator(device=device).manual_seed(cfg.seed)
@@ -320,49 +363,6 @@ def run(cfg: StepCfg) -> dict:
     opt = torch.optim.Adam(list(expert.parameters()), lr=cfg.lr,
                            weight_decay=cfg.weight_decay)
 
-    # STEP-1_1_1: optional resume from a prior checkpoint (e.g. a step_1_1
-    # run). Loads conditioner + expert state_dicts. Cfg compatibility is
-    # checked strictly -- any mismatch in expert/scale/noise/h_dim/dim
-    # raises. Optimizer state is NOT restored (intentional: we are starting
-    # a new optimisation episode with new objectives).
-    if cfg.resume_from is not None:
-        ckpt_path = Path(cfg.resume_from)
-        if not ckpt_path.exists():
-            logger.error("[resume] checkpoint path does not exist: %s",
-                         ckpt_path)
-            raise FileNotFoundError(f"resume_from path does not exist: "
-                                    f"{ckpt_path}")
-        logger.info("[resume] loading checkpoint from %s", ckpt_path)
-        ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
-        # Compatibility checks
-        ck_cfg = ckpt.get("cfg", {})
-        for k in ("expert", "scale", "noise_sigma", "h_dim", "dim"):
-            v_new = getattr(cfg, k)
-            v_old = ck_cfg.get(k)
-            if v_old is not None and v_old != v_new:
-                logger.error("[resume] cfg mismatch: %s old=%r new=%r",
-                             k, v_old, v_new)
-                raise ValueError(
-                    f"resume_from cfg mismatch on {k}: "
-                    f"old={v_old!r} new={v_new!r}")
-        if "expert" not in ckpt or "cond" not in ckpt:
-            logger.error("[resume] checkpoint missing 'expert' or 'cond' "
-                         "state_dict (keys=%s)", list(ckpt.keys()))
-            raise KeyError("checkpoint must contain 'expert' and 'cond' "
-                           "state_dicts")
-        # strict=False because step_1_1_1 cond may have y_residual buffers
-        # that the source checkpoint lacks (and vice versa); we still log
-        # missing / unexpected keys explicitly.
-        m1 = expert.load_state_dict(ckpt["expert"], strict=False)
-        m2 = cond.load_state_dict(ckpt["cond"], strict=False)
-        if m1.missing_keys or m1.unexpected_keys:
-            logger.warning("[resume] expert load -- missing=%s unexpected=%s",
-                           m1.missing_keys, m1.unexpected_keys)
-        if m2.missing_keys or m2.unexpected_keys:
-            logger.warning("[resume] cond load -- missing=%s unexpected=%s",
-                           m2.missing_keys, m2.unexpected_keys)
-        logger.info("[resume] checkpoint loaded successfully")
-
     # ---------- v0.8: Glow data-dependent Actnorm init ---------------------
     # One pass over a single train batch before epoch 1. Each Actnorm sees
     # its own pre-actnorm activations and initialises s, b. Skipped for
@@ -419,15 +419,9 @@ def run(cfg: StepCfg) -> dict:
     glow_film_gain_hist: list[list[float]] = []   # v0.9: Glow-only, list of per-step gains per epoch
     shuffle_hinge_hist: list[dict] = []            # v0.10: list of {"gap": float, "hinge": float} per epoch
     h_std_obs_hist:    list[dict] = []             # v0.12: per-epoch {"total":, "batch":}
+    lat_moment_hist:   list[dict] = []             # LSP-ABL v0.1: {"penalty":,"lambda":}
     grad_norms_hist:   list[dict] = []             # v0.11: per-epoch {"cond": float, "film_gain": float}
     y_resid_alpha_hist: list[float] = []           # v0.13: per-epoch y_residual_alpha values
-    # STEP-1_1_1: latent + reconstruction trajectory metrics
-    latent_moment_hist: list[dict] = []            # per-epoch {"mean_l2":, "std_l2":}
-    latent_ks_hist:     list[float] = []           # per-epoch latent KS vs N(0,1)
-    fwd_rel_hist:       list[float] = []           # per-epoch forward_consistency.fwd_rel_mean
-    intra_std_hist:     list[dict] = []            # per-epoch {"X":, "Y":}
-    frac_gap_hist:      list[float] = []           # per-epoch logp_shuffle.frac_gap_above_1_nat (= gap_median > 1.0 not exactly, derived)
-    cycle_max_hist:     list[float] = []           # per-epoch cycle_panel.cycle_max_err
     sanity_reports: list[dict]  = []
     cg_history: dict = {
         "cond_grad":  [], "film_grad": [],
@@ -442,10 +436,9 @@ def run(cfg: StepCfg) -> dict:
         t0 = time.time(); nb = 0; nll_sum = 0.0
         # v0.10: shuffle-hinge accumulators (used only when lambda > 0)
         hinge_sum = 0.0; gap_sum = 0.0; n_hinge = 0
+        lat_pen_sum = 0.0; n_lat = 0   # LSP-ABL: latent-moment penalty accum
         # v0.11: h.std accumulators + last-step grad-norm captures
         h_std_pen_sum = 0.0; h_std_obs_sum = 0.0; h_std_batch_sum = 0.0; n_hstd = 0
-        # STEP-1_1_1: latent moment accumulators
-        lat_mean_sum = 0.0; lat_var_sum = 0.0; n_lat = 0
         last_film_gain_grad = 0.0
         for step, (x_img, y_img) in enumerate(train_loader):
             x_img = x_img.to(device); y_img = y_img.to(device)
@@ -484,6 +477,20 @@ def run(cfg: StepCfg) -> dict:
                 hinge_sum += float(hinge.item())
                 gap_sum   += float(gap.item())
                 n_hinge   += 1
+            # LSP-ABL v0.1: per-dim latent-moment penalty (opt-in). Drives
+            # each latent dim toward N(0,1): mean->0, std->1. PER-DIM (not a
+            # single pooled mean/var) so no dim can hide behind the global
+            # average -- a pooled penalty is satisfied by a degenerate joint
+            # shape. z (B,D) is the differentiable encode() output above.
+            if cfg.latent_moment_lambda > 0.0:
+                lat_pen = ((z.mean(dim=0) ** 2).mean()
+                           + ((z.std(dim=0, unbiased=False) - 1.0) ** 2).mean())
+                if not torch.isfinite(lat_pen):
+                    logger.error("[run] non-finite latent-moment penalty at "
+                                 "epoch=%d step=%d", epoch, step)
+                    raise RuntimeError("non-finite latent-moment penalty")
+                total = total + cfg.latent_moment_lambda * lat_pen
+                lat_pen_sum += float(lat_pen.item()); n_lat += 1
             # v0.12: penalty operates on across-BATCH std (averaged over dims),
             # not total h.std(). The latter is satisfied by collapsing all y to
             # one point with per-dim spread -- audited in v0.11. Across-batch
@@ -508,25 +515,6 @@ def run(cfg: StepCfg) -> dict:
                             epoch, step + 1,
                             float(h_std_total.item()),
                             float(h_std_batch.item()))
-            # STEP-1_1_1 v0.1: latent moment-matching penalty (opt-in).
-            # Pushes per-dim z toward (mean=0, var=1). Acts on the SAME z
-            # already computed above -- no extra forward pass.
-            z_mean_l2 = (z.mean(dim=0) ** 2).mean()
-            z_var_l2  = ((z.var(dim=0, unbiased=False) - 1.0) ** 2).mean()
-            if cfg.latent_moment_lambda > 0.0:
-                L_moment = z_mean_l2 + z_var_l2
-                if not torch.isfinite(L_moment):
-                    logger.error("[run] non-finite latent moment at "
-                                 "epoch=%d step=%d", epoch, step)
-                    raise RuntimeError("non-finite latent moment penalty")
-                total = total + cfg.latent_moment_lambda * L_moment
-            lat_mean_sum += float(z_mean_l2.item())
-            lat_var_sum  += float(z_var_l2.item())
-            n_lat        += 1
-            if (step + 1) % cfg.log_every == 0:
-                logger.info("[lat] epoch=%d step=%d mean_l2=%.5f std_l2=%.5f",
-                            epoch, step + 1,
-                            float(z_mean_l2.item()), float(z_var_l2.item()))
             opt.zero_grad(set_to_none=True)
             total.backward()
             # capture grad norms from the LAST minibatch of the epoch for grad_traj
@@ -621,17 +609,12 @@ def run(cfg: StepCfg) -> dict:
         h_std_obs_hist.append({"total": h_std_total_mean,
                                "batch": h_std_batch_mean})
 
-        # STEP-1_1_1: latent moment per-epoch log + history.
-        lat_mean_mean = lat_mean_sum / max(n_lat, 1)
-        lat_var_mean  = lat_var_sum  / max(n_lat, 1)
-        if cfg.latent_moment_lambda > 0.0:
-            logger.info("[lat_epoch] mean_l2=%.5f std_l2=%.5f lambda=%.3f",
-                        lat_mean_mean, lat_var_mean, cfg.latent_moment_lambda)
-        else:
-            logger.info("[lat_epoch] mean_l2=%.5f std_l2=%.5f (no penalty)",
-                        lat_mean_mean, lat_var_mean)
-        latent_moment_hist.append({"mean_l2": lat_mean_mean,
-                                   "std_l2":  lat_var_mean})
+        # LSP-ABL v0.1: per-epoch latent-moment penalty mean (0.0 when OFF).
+        lat_pen_mean = (lat_pen_sum / n_lat) if n_lat > 0 else 0.0
+        logger.info("[lat_moment] lambda=%.3g penalty=%.5f",
+                    cfg.latent_moment_lambda, lat_pen_mean)
+        lat_moment_hist.append({"penalty": lat_pen_mean,
+                                "lambda": cfg.latent_moment_lambda})
 
         # v0.13: y-residual alpha log (only when enabled)
         if cfg.cond_y_residual_alpha_init > 0.0 and \
@@ -655,14 +638,22 @@ def run(cfg: StepCfg) -> dict:
             x_img = x_img.to(device); y_img = y_img.to(device)
             x_logit, _ = dequantize_logit(x_img, generator=gen)
             x_flat = x_logit.flatten(1)
+            # LSP-ABL v0.1: --plots gate renders decorative PNGs only on the
+            # final epoch (or every epoch under --plots full). Gate-metric
+            # plots below are ALWAYS rendered every epoch.
+            render_decorative = (plots_mode == "full") or (epoch == cfg.epochs - 1)
 
             inv_rep   = invertibility_check(expert, x_flat, y_img)
             lat_rep   = plot_latent_histogram(
                 expert, x_flat, y_img,
                 plots / f"latent_hist_epoch_{epoch}.png")
-            panel_rep = plot_orig_degraded_cycle_generated(
-                expert, x_flat, y_img,
-                plots / f"orig_deg_cycle_gen_epoch_{epoch}.png")
+            # decorative: orig/degraded/cycle/generated 4-up panel
+            if render_decorative:
+                panel_rep = plot_orig_degraded_cycle_generated(
+                    expert, x_flat, y_img,
+                    plots / f"orig_deg_cycle_gen_epoch_{epoch}.png")
+            else:
+                panel_rep = None
             # v0.3 -- cycle heatmap / forward consistency / latent interp (slerp)
             cycle_rep = plot_cycle_error_heatmap(
                 expert, x_flat, y_img,
@@ -671,9 +662,13 @@ def run(cfg: StepCfg) -> dict:
                 expert, y_img,
                 blur_sigma=cfg.blur_sigma, scale=cfg.scale,
                 out_path=plots / f"fwd_consistency_epoch_{epoch}.png")
-            interp_rep = plot_latent_interp(
-                expert, y_img,
-                plots / f"latent_interp_epoch_{epoch}.png")
+            # decorative: slerp latent interpolation strip
+            if render_decorative:
+                interp_rep = plot_latent_interp(
+                    expert, y_img,
+                    plots / f"latent_interp_epoch_{epoch}.png")
+            else:
+                interp_rep = None
             rep = {"epoch": epoch,
                    "train_nll": train_nll, "test_nll": test_nll,
                    "invertibility": inv_rep,
@@ -682,6 +677,17 @@ def run(cfg: StepCfg) -> dict:
                    "cycle_heatmap": cycle_rep,
                    "forward_consistency": fwd_rep,
                    "latent_interp": interp_rep}
+            # FZDY v0.1 (Phase 3): fixed-z different-y diagnostic. Decodes one
+            # fixed z under several y; gates on whether outputs vary with y.
+            # Figure -> plots/gen_diag/fixed_z_different_y_epoch_N.png.
+            fzdy_rep = fixed_z_different_y(
+                expert, y_img, epoch=epoch, out_dir=plots,
+                n_y=cfg.fzdy_n_y, n_z=cfg.fzdy_n_z, tau=cfg.fzdy_tau)
+            rep.update(fzdy_rep)
+            # CPATH v0.1 (Glow conditioning debug): per-layer film_gain,
+            # conv3 weight-norm, and (s,t)-vs-y std. Localizes the choke.
+            if cfg.expert == "glow":
+                rep.update(cond_path_probe(expert, y_img, n_y=cfg.fzdy_n_y))
             sanity_reports.append(rep)
             if not inv_rep["passed"]:
                 logger.error("[run] invertibility FAILED: %s", inv_rep)
@@ -693,7 +699,7 @@ def run(cfg: StepCfg) -> dict:
             # Glow stores FiLM inside layer.coupling.film1/film2 -- the v2
             # diagnostics block below covers the same conditioning health
             # checks (film_alive, logp_shuffle) using Glow's actual structure.
-            if cfg.expert != "glow":
+            if cfg.expert != "glow" and render_decorative:
                 _cond_gate_hook(expert, cond, test_loader, device, gen, plots,
                                 epoch, cg_history)
 
@@ -703,27 +709,33 @@ def run(cfg: StepCfg) -> dict:
             if cfg.use_v2_conditioner:
                 v2_dir = plots / "gen_diag"
                 y_one = y_img[:1]
-                v2_grid    = plot_samples_grid(
-                    expert, y_one,
-                    v2_dir / f"samples_grid_epoch_{epoch}.png")
-                v2_fixed_z = plot_samples_fixed_z(
-                    expert, y_one,
-                    v2_dir / "samples_fixed_z.png",       # overwrite each epoch
-                    n=32)
-                v2_sw2     = plot_sw2_diversity(
-                    expert, y_one,
-                    v2_dir / f"sw2_diversity_epoch_{epoch}.png",
-                    n_samples=256, n_proj=64)
-                # spectrum: diag_spectrum for NICE (has DiagScale),
-                # s_spectrum for RealNVP / Glow (affine couplings).
-                if cfg.expert == "nice":
-                    v2_spec = plot_diag_spectrum(
-                        expert,
-                        v2_dir / f"diag_spectrum_epoch_{epoch}.png")
+                # decorative sample/diversity/spectrum plots: final epoch only
+                # under --plots gate (these are the heaviest I/O in the loop).
+                if render_decorative:
+                    v2_grid    = plot_samples_grid(
+                        expert, y_one,
+                        v2_dir / f"samples_grid_epoch_{epoch}.png")
+                    v2_fixed_z = plot_samples_fixed_z(
+                        expert, y_one,
+                        v2_dir / "samples_fixed_z.png",   # overwrite each epoch
+                        n=32)
+                    v2_sw2     = plot_sw2_diversity(
+                        expert, y_one,
+                        v2_dir / f"sw2_diversity_epoch_{epoch}.png",
+                        n_samples=256, n_proj=64)
+                    # spectrum: diag_spectrum for NICE (DiagScale),
+                    # s_spectrum for RealNVP / Glow (affine couplings).
+                    if cfg.expert == "nice":
+                        v2_spec = plot_diag_spectrum(
+                            expert,
+                            v2_dir / f"diag_spectrum_epoch_{epoch}.png")
+                    else:
+                        v2_spec = plot_s_spectrum(
+                            expert, x_flat, y_img,
+                            v2_dir / f"s_spectrum_epoch_{epoch}.png")
                 else:
-                    v2_spec = plot_s_spectrum(
-                        expert, x_flat, y_img,
-                        v2_dir / f"s_spectrum_epoch_{epoch}.png")
+                    v2_grid = v2_fixed_z = v2_sw2 = v2_spec = None
+                # GATE metrics -- always every epoch (conditioning health):
                 v2_film    = plot_film_alive(
                     expert, cond, y_img,
                     v2_dir / f"film_alive_epoch_{epoch}.png",
@@ -737,38 +749,11 @@ def run(cfg: StepCfg) -> dict:
                             "spectrum": v2_spec,
                             "film_alive": v2_film,
                             "logp_shuffle": v2_shuf}
-                if cfg.expert == "glow":
+                if cfg.expert == "glow" and render_decorative:
                     v2_block["w1x1_spectrum"] = plot_w1x1_spectrum(
                         expert,
                         v2_dir / f"w1x1_spectrum_epoch_{epoch}.png")
                 rep["v2_diag"] = v2_block
-
-            # STEP-1_1_1: promote per-epoch diagnostics to top-level histories
-            # for easy plotting and exit-gate logic without panel re-parsing.
-            latent_ks_hist.append(float(lat_rep.get("ks", float("nan"))))
-            fwd_rel_hist.append(float(fwd_rep.get("fwd_rel_mean",
-                                                  float("nan"))))
-            cycle_max_hist.append(float(cycle_rep.get("cycle_max",
-                                                      float("nan"))))
-            # intra_std + frac_gap live in the v2_diag block when v2 is on.
-            if cfg.use_v2_conditioner and "v2_diag" in rep:
-                sw2 = rep["v2_diag"].get("sw2_diversity", {})
-                intra_std_hist.append({
-                    "X": float(sw2.get("intra_std_X", float("nan"))),
-                    "Y": float(sw2.get("intra_std_Y", float("nan"))),
-                })
-                shuf = rep["v2_diag"].get("logp_shuffle", {})
-                # frac_gap_above_1_nat is reported by plot_logp_shuffle.
-                # Fallback: compute from median+std if direct field missing.
-                if "frac_gap_above_1_nat" in shuf:
-                    frac_gap_hist.append(float(shuf["frac_gap_above_1_nat"]))
-                else:
-                    # use gap_median as a rough proxy; not the same metric.
-                    frac_gap_hist.append(float("nan"))
-            else:
-                intra_std_hist.append({"X": float("nan"),
-                                       "Y": float("nan")})
-                frac_gap_hist.append(float("nan"))
 
     # ---------- exit-criteria report ---------------------------------------
     last = sanity_reports[-1]
@@ -778,29 +763,6 @@ def run(cfg: StepCfg) -> dict:
         last["latent"]["passed"] and
         last["cycle_panel"]["passed"]
     )
-    # STEP-1_1_1: soft exit-gate warnings (do NOT halt training).
-    # Surfaced in log + persisted to report["exit_warnings"].
-    exit_warnings: list[str] = []
-    last_ks = latent_ks_hist[-1] if latent_ks_hist else float("nan")
-    last_fwd = fwd_rel_hist[-1]  if fwd_rel_hist  else float("nan")
-    first_fwd = fwd_rel_hist[0]  if fwd_rel_hist  else float("nan")
-    if not (last_ks <= cfg.latent_ks_target):
-        exit_warnings.append(
-            f"latent_ks={last_ks:.4f} > target {cfg.latent_ks_target:.4f}")
-    # Reconstruction: prefer relative improvement when resuming.
-    if cfg.resume_from is not None and not math.isnan(first_fwd):
-        rel_improve = (first_fwd - last_fwd) / max(first_fwd, 1e-6)
-        if rel_improve < 0.20:
-            exit_warnings.append(
-                f"fwd_rel improved only {rel_improve*100:.1f}% < 20% target "
-                f"(first={first_fwd:.3f}, last={last_fwd:.3f})")
-    else:
-        if not (last_fwd <= cfg.fwd_rel_target):
-            exit_warnings.append(
-                f"fwd_rel={last_fwd:.3f} > target {cfg.fwd_rel_target:.3f} "
-                f"(informational; no resume baseline available)")
-    for w in exit_warnings:
-        logger.warning("[exit_gate] %s", w)
     # Reshape cg_history for summary.py. We save per-epoch means so the
     # summary can apply pass/fail thresholds. h/γ/β stds are collected in
     # the hook; if absent, summary will treat those gates as failing -- the
@@ -828,23 +790,13 @@ def run(cfg: StepCfg) -> dict:
         "glow_film_gain_hist": glow_film_gain_hist,   # v0.9
         "shuffle_hinge_hist":  shuffle_hinge_hist,    # v0.10
         "h_std_obs_hist":      h_std_obs_hist,        # v0.11
+        "lat_moment_hist":     lat_moment_hist,       # LSP-ABL v0.1
         "grad_norms_hist":     grad_norms_hist,       # v0.11
         "y_resid_alpha_hist":  y_resid_alpha_hist,    # v0.13
-        # STEP-1_1_1: latent + reconstruction trajectory metrics
-        "latent_moment_hist":  latent_moment_hist,
-        "latent_ks_hist":      latent_ks_hist,
-        "fwd_rel_hist":        fwd_rel_hist,
-        "intra_std_hist":      intra_std_hist,
-        "frac_gap_hist":       frac_gap_hist,
-        "cycle_max_hist":      cycle_max_hist,
-        "exit_warnings":       exit_warnings,
         "exit_criteria_met": bool(exit_ok),
     }
     (out_dir / "report.json").write_text(json.dumps(report, indent=2))
-    torch.save({"expert": expert.state_dict(),
-                "cond":   cond.state_dict(),
-                "cfg":    cfg.__dict__,        # STEP-1_1_1: for resume validation
-               },
+    torch.save({"expert": expert.state_dict(), "cond": cond.state_dict()},
                out_dir / "ckpt.pt")
 
     # v0.7: ONE-SHOT final NLL on the sealed 10k test set (split="test").
@@ -863,57 +815,41 @@ def run(cfg: StepCfg) -> dict:
     report["final_test_nll"] = final_test_nll
     (out_dir / "report.json").write_text(json.dumps(report, indent=2))
 
-    # STEP-1_1_1: end-of-run density + reconstruction plots.
-    # Compute on one fresh test batch -- not training data.
-    try:
-        from .density_plots import (plot_latent_density,
-                                    plot_cycle_density,
-                                    plot_reconstruction_panel)
-        expert.eval(); cond.eval()
-        x_img, y_img = next(iter(test_loader))
-        x_img = x_img.to(device); y_img = y_img.to(device)
-        with torch.no_grad():
-            x_logit, _ = dequantize_logit(x_img, generator=gen)
-            x_flat = x_logit.flatten(1)
-            h = cond(y_img)
-            z, _ = expert.encode(x_flat, h)
-            # 1) latent density vs N(0,1)
-            lat_density_rep = plot_latent_density(
-                z, plots / "latent_density.png",
-                title="z = encode(x, y) vs N(0,1)",
-                lambda_used=cfg.latent_moment_lambda)
-            # 2) cycle density: x - decode(encode(x))
-            x_back = expert.decode(z, h)
-            cyc_density_rep = plot_cycle_density(
-                x_flat, x_back, plots / "cycle_density.png",
-                title="Per-pixel cycle error  x - decode(encode(x))")
-            # 3) reconstruction panel
-            # row 3: decode(encoded z, y) -- already x_back, just reshape
-            x_back_img = x_back.view_as(x_img)
-            # row 4: decode(z ~ N(0,1), y) -- new prior sample
-            z_prior = torch.randn(z.shape, device=device, generator=gen,
-                                  dtype=z.dtype)
-            x_prior_flat = expert.decode(z_prior, h)
-            x_prior_img = x_prior_flat.view_as(x_img)
-            recon_rep = plot_reconstruction_panel(
-                y_img, x_img, x_back_img, x_prior_img,
-                plots / "reconstruction_panel.png",
-                title=(f"Recon: encoded vs N(0,1)-sampled z  "
-                       f"(lambda_moment={cfg.latent_moment_lambda:.3g})"),
-                n_show=8)
-        report["latent_density"]     = lat_density_rep
-        report["cycle_density"]      = cyc_density_rep
-        report["reconstruction_panel"] = recon_rep
-        (out_dir / "report.json").write_text(json.dumps(report, indent=2))
-    except Exception:
-        logger.error("[run] step_1_1_1 density plots FAILED\n%s",
-                     traceback.format_exc())
-        raise
-
     # v0.5: always-on NLL curve at end of run -> plots/nll_curve.png
     nll_curve_rep = plot_nll_curve(train_nll_hist, test_nll_hist,
                                    plots / "nll_curve.png")
     report["nll_curve"] = nll_curve_rep
+    (out_dir / "report.json").write_text(json.dumps(report, indent=2))
+
+    # LSP-ABL v0.1: end-of-run latent-shape evidence (run ONCE). Shows the
+    # direct visual cost/benefit of lambda_lat: latent density vs N(0,1),
+    # cycle-error density, and encoded-z vs prior-z reconstruction panel.
+    expert.eval(); cond.eval()
+    dens_dir = plots / "density"
+    with torch.no_grad():
+        x_img, y_img = next(iter(test_loader))
+        x_img = x_img.to(device); y_img = y_img.to(device)
+        x_logit, _ = dequantize_logit(x_img, generator=gen)
+        x_flat = x_logit.flatten(1)
+        h = cond(y_img)
+        z_enc, _ = expert.encode(x_flat, h)
+        x_cycle = expert.decode(z_enc, h)                 # decode(encode(x))
+        z_prior = torch.randn(y_img.size(0), expert.dim, generator=gen,
+                              device=device, dtype=x_flat.dtype)
+        x_prior = expert.decode(z_prior, h)               # decode(z~N(0,1))
+        side = int(round((expert.dim) ** 0.5))            # 784 -> 28
+        img = lambda t: torch.sigmoid(t).reshape(-1, 1, side, side)
+        dens = {
+            "latent": plot_latent_density(
+                z_enc, dens_dir / "latent_density.png",
+                lambda_used=cfg.latent_moment_lambda),
+            "cycle": plot_cycle_density(
+                x_flat, x_cycle, dens_dir / "cycle_density.png"),
+            "recon_panel": plot_reconstruction_panel(
+                y_img, x_img, img(x_cycle), img(x_prior),
+                dens_dir / "reconstruction_panel.png"),
+        }
+    report["density"] = dens
     (out_dir / "report.json").write_text(json.dumps(report, indent=2))
 
     # end-of-run summary (ANSI-coloured console + summary.txt + summary.csv)
@@ -921,11 +857,20 @@ def run(cfg: StepCfg) -> dict:
         from .summary import summarize
         summary_block = summarize(out_dir)
         exit_ok = bool(summary_block["exit_criteria_met"])
+        # v0.17: single source of truth. summarize() (v0.8) is authoritative
+        # (it includes the final-epoch conditioning floor); mirror its verdict
+        # to the TOP-LEVEL exit_criteria_met so resume-skip + CLI exit code
+        # match aggregate.py / the summary block. summarize() already wrote the
+        # summary block to disk; we re-attach it here before rewriting so the
+        # in-memory report (which lacks it) does not clobber it.
+        report["summary"] = summary_block
+        report["exit_criteria_met"] = exit_ok
+        (out_dir / "report.json").write_text(json.dumps(report, indent=2))
     except Exception:
         logger.error("[run] summarize() failed\n%s", traceback.format_exc())
         raise
 
-    logger.info("STEP-1_1 run DONE  exit_ok=%s  out=%s", exit_ok, out_dir)
+    logger.info("STEP-1_1_1 run DONE  exit_ok=%s  out=%s", exit_ok, out_dir)
     return report
 
 
@@ -937,10 +882,18 @@ def _parse_args() -> tuple[StepCfg, bool]:
                    help="Default 'nice'. v0.8: v2 conditioner supported for "
                         "nice / realnvp / glow. For nsf you MUST pass "
                         "--no-use-v2-conditioner.")
-    p.add_argument("--scale", type=int, choices=[2, 4], required=True)
+    p.add_argument("--scale", type=int, choices=[1, 2, 4], required=True,
+                   help="1 = identity (no downsample). With --blur-sigma 0 "
+                        "and --noise-sigma 0 this is the y=x Test-0 task.")
+    p.add_argument("--blur-sigma", type=float, default=1.0,
+                   help="Gaussian blur sigma. 0.0 = no blur (identity). "
+                        "Default 1.0.")
     p.add_argument("--noise-sigma", type=float, choices=[0.0, 0.05, 0.1], required=True)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--epochs", type=int, default=5)
+    p.add_argument("--lr", type=float, default=1e-3,
+                   help="Adam learning rate (StepCfg.lr). Default 1e-3. "
+                        "CCR Phase 2 sweeps {1e-3, 3e-4, 1e-4}.")
     p.add_argument("--batch-size", type=int, default=128)
     p.add_argument("--cond-width", type=int, choices=[64, 128], default=128)
     p.add_argument("--use-film", type=int, choices=[0, 1], default=1)
@@ -989,34 +942,31 @@ def _parse_args() -> tuple[StepCfg, bool]:
                         "h = cnn_head(y) + alpha * Linear(y.flatten). "
                         "Default 0.0 = bypass DISABLED. Suggested rescue "
                         "value for Glow: 0.3.")
-    # STEP-1_1_1: latent moment penalty + soft exit targets + resume-from
+    # v0.14: FZDY fixed-z different-y diagnostic knobs
+    p.add_argument("--fzdy-n-y", type=int, default=6,
+                   help="distinct y per fixed-z grid (>=2). Default 6.")
+    p.add_argument("--fzdy-n-z", type=int, default=3,
+                   help="fixed-z bank size (>=1). Default 3.")
+    p.add_argument("--fzdy-tau", type=float, default=0.05,
+                   help="min mean output-sensitivity to pass (informational). "
+                        "Calibrate on a known-good NICE run. Default 0.05.")
+    # LSP-ABL v0.1: latent-shape penalty + plot mode
     p.add_argument("--latent-moment-lambda", type=float, default=0.0,
-                   help="weight on the latent moment-matching penalty "
-                        "(STEP-1_1_1). Default 0.0 = OFF. Suggested sweep: "
-                        "{0.0, 0.1, 1.0, 10.0}.")
-    p.add_argument("--latent-ks-target", type=float, default=0.10,
-                   help="soft target for the latent-KS exit warning. "
-                        "Default 0.10.")
-    p.add_argument("--fwd-rel-target", type=float, default=0.5,
-                   help="soft target for fwd_rel_mean. Used as absolute "
-                        "target when not resuming; when --resume-from is "
-                        "given, a 20%% relative-improvement criterion is "
-                        "preferred. Default 0.5.")
-    p.add_argument("--resume-from", type=str, default=None,
-                   help="optional path to a checkpoint (.pt) to load expert "
-                        "+ conditioner state_dicts from before training. "
-                        "Useful for fine-tuning from a step_1_1 run. "
-                        "Default: None (fresh init).")
+                   help="per-dim latent-moment penalty weight (>=0). 0.0=OFF. "
+                        "Ablation grid: {0.0,0.1,0.3,1.0}.")
+    p.add_argument("--plots", choices=("gate", "full"), default="gate",
+                   help="gate=compute all gate metrics every epoch, render "
+                        "decorative PNGs final-epoch only (default). "
+                        "full=render every plot every epoch (legacy).")
     p.add_argument("--data-root", default="./mnist_data")
     p.add_argument("--out-root",  default="./CSMF2/experiments/step_1_1_1/results")
-    p.add_argument("--skip-if-complete", action="store_true",
-                   dest="skip_if_complete",
-                   help="skip if a completed report.json already exists "
-                        "(was --resume in step_1_1; renamed to avoid "
-                        "confusion with --resume-from)")
+    p.add_argument("--resume", action="store_true",
+                   help="skip if a completed report.json already exists")
     a = p.parse_args()
     cfg = StepCfg(expert=a.expert, scale=a.scale, noise_sigma=a.noise_sigma,
+                  blur_sigma=a.blur_sigma,
                   seed=a.seed, epochs=a.epochs, batch_size=a.batch_size,
+                  lr=a.lr,
                   cond_width=a.cond_width, use_film=bool(a.use_film),
                   cache_h=bool(a.cache_h), data_root=a.data_root,
                   out_root=a.out_root,
@@ -1034,28 +984,26 @@ def _parse_args() -> tuple[StepCfg, bool]:
                   h_std_penalty_mu=a.h_std_penalty_mu,
                   h_std_target=a.h_std_target,
                   cond_y_residual_alpha_init=a.cond_y_residual_alpha_init,
-                  latent_moment_lambda=a.latent_moment_lambda,
-                  latent_ks_target=a.latent_ks_target,
-                  fwd_rel_target=a.fwd_rel_target,
-                  resume_from=a.resume_from)
-    return cfg, a.skip_if_complete
+                  fzdy_n_y=a.fzdy_n_y, fzdy_n_z=a.fzdy_n_z,
+                  fzdy_tau=a.fzdy_tau,
+                  latent_moment_lambda=a.latent_moment_lambda)
+    return cfg, a.resume, a.plots
 
 
 if __name__ == "__main__":
-    cfg, skip_if_complete = _parse_args()
+    cfg, resume, plots_mode = _parse_args()
     out_dir = Path(cfg.out_root) / cfg.run_tag()
-    if skip_if_complete and (out_dir / "report.json").exists():
+    if resume and (out_dir / "report.json").exists():
         try:
             existing = json.loads((out_dir / "report.json").read_text())
             if existing.get("exit_criteria_met"):
-                print(f"[skip] SKIP {cfg.run_tag()} (already complete + passed)")
+                print(f"[resume] SKIP {cfg.run_tag()} (already complete + passed)")
                 sys.exit(0)
         except (OSError, json.JSONDecodeError):
-            logger.warning("[skip_if_complete] corrupt report.json at %s, "
-                           "rerunning", out_dir)
+            logger.warning("[resume] corrupt report.json at %s, rerunning", out_dir)
     try:
-        report = run(cfg)
+        report = run(cfg, plots_mode=plots_mode)
         sys.exit(0 if report.get("exit_criteria_met") else 2)
     except Exception:
-        logger.error("STEP-1_1 run FAILED\n%s", traceback.format_exc())
+        logger.error("STEP-1_1_1 run FAILED\n%s", traceback.format_exc())
         sys.exit(1)
