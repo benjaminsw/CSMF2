@@ -1,21 +1,26 @@
 # =============================================================================
-# STEP-1_1_1_1 v0.1 -- experiments.step_1_1_1_1.model_io
-# Purpose: load a trained step_1_1 checkpoint and rebuild expert + conditioner
-#          ARCHITECTURE-AGNOSTICALLY -- every build parameter (expert type,
-#          dim, h_dim, film/glow/realnvp packs, scale, blur_sigma, ...) is read
-#          from the checkpoint dir's report.json["cfg"], never hard-coded.
-#          Returns frozen modules (eval, requires_grad=False) ready for MAP.
-# CONVENTION: missing files / keys / non-finite -> logger.error + raise.
-#             No fallback / mock / dummy. The flow is never retrained here.
+# STEP-1_1_1_1 v0.2 -- experiments.step_1_1_1_1.model_io
+# Purpose: load a trained checkpoint and rebuild expert + conditioner
+#          ARCHITECTURE-AGNOSTICALLY from report.json["cfg"]. v0.2: also
+#          CB-AWARE -- if the checkpoint was trained with a conditional base
+#          (cfg.use_conditional_base), build the ConditionalBase, load its
+#          weights, and wrap in CBExpert so every downstream stage (1.2, 1.3,
+#          2.3) loads the correct model with no per-stage change.
+# CONVENTION: missing files/keys, or cfg/ckpt CB mismatch -> logger.error +
+#             raise. No fallback / mock. The model is returned frozen.
+# Changelog (v0.1 -> v0.2):
+#   * CB-aware: load_cfg now returns (StepCfg, raw_cfg_dict) and tolerates
+#     extra CB fields (filters to StepCfg fields). build_from_report builds +
+#     loads ConditionalBase and wraps CBExpert when use_conditional_base=True;
+#     both-ways guard (CB cfg<->'base' key must agree) + explicit type log.
+#     Returns the WRAPPED model (frozen incl. base).
 # Changelog (NEW in v0.1):
-#   * Introduced. build_from_report() mirrors step_1_1/run.py's build block
-#     (cond_kwargs / film_kwargs / extra_kwargs / hidden_for_build) so any
-#     NICE / RealNVP / NSF checkpoint loads without code changes.
+#   * Introduced. build_from_report() mirrors step_1_1/run.py's build block.
 # Update summary:
-#   v0.1 reads report.json["cfg"] -> StepCfg, rebuilds cond + expert exactly as
-#   training did, loads ckpt.pt state_dicts, freezes everything. Glow is not
-#   part of the active roster; it will still load if a Glow ckpt is supplied,
-#   but is out of scope for the MAP ablation.
+#   v0.2 makes the single shared loader handle plain and conditional-base
+#   checkpoints identically, so the Stage 1.3 RECGATE rerun (and Stage 2.3)
+#   load CB experts correctly without touching their code. Verify via the log
+#   line "loaded <expert> as CBExpert (base=conditional)".
 # =============================================================================
 from __future__ import annotations
 import json
@@ -23,18 +28,24 @@ import logging
 from pathlib import Path
 
 import torch
+from dataclasses import fields as _dc_fields
 
 from ..step_1_1.config import StepCfg
 from ...models.conditioner import Conditioner
 from ...models.experts import build_expert
+from ..step_1_4a.cond_base import ConditionalBase
+from ..step_1_4a.cb_expert import CBExpert
 
 logger = logging.getLogger(__name__)
-__version__ = "0.1"
+__version__ = "0.2"
 __abbr__ = "STEP-1_1_1_1"
 
 
-def load_cfg(ckpt_dir: Path) -> StepCfg:
-    """Reconstruct the training StepCfg from report.json['cfg']."""
+def load_cfg(ckpt_dir: Path):
+    """Reconstruct (StepCfg, raw_cfg_dict) from report.json['cfg'].
+    Tolerates extra fields (e.g. CB checkpoints store CBCfg fields that
+    StepCfg does not have): StepCfg is built from the intersecting fields,
+    and the full raw dict is returned for CB-specific reads."""
     report_path = ckpt_dir / "report.json"
     if not report_path.exists():
         logger.error("[model_io] no report.json in %s", ckpt_dir)
@@ -48,20 +59,22 @@ def load_cfg(ckpt_dir: Path) -> StepCfg:
         logger.error("[model_io] report.json missing 'cfg' block in %s",
                      ckpt_dir)
         raise KeyError(f"{report_path}: missing 'cfg'")
+    raw = report["cfg"]
+    known = {f.name for f in _dc_fields(StepCfg)}
+    filtered = {k: v for k, v in raw.items() if k in known}
     try:
-        cfg = StepCfg(**report["cfg"])
+        cfg = StepCfg(**filtered)
     except TypeError as exc:
-        logger.error("[model_io] report cfg fields incompatible with StepCfg: "
-                     "%s", exc)
+        logger.error("[model_io] report cfg incompatible with StepCfg: %s", exc)
         raise
-    return cfg
+    return cfg, raw
 
 
 def build_from_report(ckpt_dir: str, device: torch.device):
     """Rebuild (expert, cond, cfg) from a step_1_1 run dir and load weights.
     Mirrors step_1_1/run.py build block exactly. Returns frozen modules."""
     ckpt_dir = Path(ckpt_dir)
-    cfg = load_cfg(ckpt_dir)
+    cfg, raw_cfg = load_cfg(ckpt_dir)
 
     # ---- conditioner (mirror run.py v0.13) --------------------------------
     _y_in = (28 // cfg.scale) * (28 // cfg.scale)
@@ -105,14 +118,43 @@ def build_from_report(ckpt_dir: str, device: torch.device):
             raise KeyError(f"ckpt.pt missing '{key}'")
         module.load_state_dict(state[key])
 
-    # ---- freeze ------------------------------------------------------------
-    expert.eval(); cond.eval()
-    for p in expert.parameters():
+    # ---- conditional base (CB-aware; v0.2) --------------------------------
+    use_cb = bool(raw_cfg.get("use_conditional_base", False))
+    has_base = "base" in state
+    # both-ways guard: never silently mismatch cfg and checkpoint
+    if use_cb and not has_base:
+        logger.error("[model_io] cfg.use_conditional_base=True but ckpt.pt has "
+                     "no 'base' weights in %s", ckpt_dir)
+        raise KeyError("CB cfg but no 'base' state_dict in ckpt.pt")
+    if (not use_cb) and has_base:
+        logger.error("[model_io] ckpt.pt has 'base' weights but "
+                     "cfg.use_conditional_base is False/absent in %s", ckpt_dir)
+        raise KeyError("'base' weights present but cfg says plain expert")
+
+    if use_cb:
+        base = ConditionalBase(
+            cfg.dim, cfg.h_dim,
+            mu_hidden=int(raw_cfg["base_mu_hidden"]),
+            logsigma_hidden=int(raw_cfg["base_logsigma_hidden"]),
+            logsigma_min=float(raw_cfg["base_logsigma_min"]),
+            logsigma_max=float(raw_cfg["base_logsigma_max"]),
+            base_init=raw_cfg.get("base_init", "zero_mu_unit_sigma"),
+            base_gain=float(raw_cfg.get("base_gain", 1.0))).to(device)
+        base.load_state_dict(state["base"])
+        model = CBExpert(expert, base)
+    else:
+        model = expert
+
+    # ---- freeze (the wrapped model, so base params are frozen too) --------
+    model.eval(); cond.eval()
+    for p in model.parameters():
         p.requires_grad_(False)
     for p in cond.parameters():
         p.requires_grad_(False)
 
-    logger.info("[model_io] loaded %s expert (dim=%d, scale=%d, blur=%.2f) "
-                "from %s -- frozen", cfg.expert, cfg.dim, cfg.scale,
-                cfg.blur_sigma, ckpt_dir)
-    return expert, cond, cfg
+    logger.info("[model_io] loaded %s as %s (base=%s, dim=%d scale=%d "
+                "blur=%.2f) from %s -- frozen", cfg.expert,
+                type(model).__name__,
+                "conditional" if use_cb else "N(0,I)",
+                cfg.dim, cfg.scale, cfg.blur_sigma, ckpt_dir)
+    return model, cond, cfg
