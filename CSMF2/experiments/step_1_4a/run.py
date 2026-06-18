@@ -1,5 +1,5 @@
 # =============================================================================
-# STEP-1_4A v0.3 -- experiments.step_1_4a.run
+# STEP-1_4A v0.4 -- experiments.step_1_4a.run
 # Purpose: train one conditional-base expert (NICE-CB / RealNVP-CB / NSF-CB)
 #          under NLL + Phase-4 CCR. v0.3 adds per-epoch validation, early
 #          stopping on val-NLL plateau/overfit, and KEEP-BEST checkpointing
@@ -8,6 +8,12 @@
 # CONVENTION: non-finite / sigma issues / no eligible best ckpt -> raise.
 #             No fallback / mock / dummy / pass. Identity-safe base init.
 # Exit codes: 0 = trained + report; 1 = crash.
+# Changelog (v0.3 -> v0.4):
+#   * CCR logging detaches before float(): logs["shuffle_gap"]/["h_std"] use
+#     .detach() to silence the "tensor with requires_grad -> scalar" warning.
+#     Logging-only; the grad-tracked gap/std tensors still flow into the loss
+#     unchanged (no effect on training, NLL, or checkpoints).
+#   * --realnvp-n-couplings / --flow-hidden CLI args (RealNVP depth sweep).
 # Changelog (v0.2 -> v0.3):
 #   * Per-epoch val NLL; early stopping (patience on rel val improvement);
 #     keep-best checkpoint (saves the best-val state, base_alive-gated, NOT
@@ -71,7 +77,13 @@ def _build(cfg: CBCfg, device):
                            film_use_gelu=cfg.film_use_gelu)
     extra = {}
     if cfg.expert == "realnvp":
-        extra.update(n_layers=cfg.realnvp_n_couplings)
+        extra.update(n_layers=cfg.realnvp_n_couplings,
+                     realnvp_type=cfg.realnvp_type)
+        if cfg.realnvp_type == "image":
+            extra.update(image_n_couplings=cfg.image_realnvp_n_couplings,
+                         image_hidden=cfg.image_realnvp_hidden,
+                         image_mask_type=cfg.image_realnvp_mask_type,
+                         image_s_max=cfg.image_realnvp_s_max)
     expert = build_expert(cfg.expert, dim=cfg.dim, h_dim=cfg.h_dim,
                           conditioner=cond, hidden=cfg.flow_hidden,
                           use_film=cfg.use_film, **film_kwargs, **extra).to(device)
@@ -108,14 +120,14 @@ def _ccr_terms(model, cond, x_flat, y, cfg):
         gap = (lp_real - lp_shuf).mean()
         l_shuf = torch.clamp(cfg.shuffle_loss_margin - gap, min=0.0)
         extra = extra + cfg.shuffle_loss_lambda * l_shuf
-        logs["shuffle_gap"] = float(gap)
+        logs["shuffle_gap"] = float(gap.detach())
     if cfg.h_std_penalty_mu > 0.0:
         h = cond(y)
         s = h.std(dim=0, unbiased=False).mean()
         l_hstd = torch.clamp(torch.tensor(cfg.h_std_target, device=y.device) - s,
                              min=0.0) ** 2
         extra = extra + cfg.h_std_penalty_mu * l_hstd
-        logs["h_std"] = float(s)
+        logs["h_std"] = float(s.detach())
     return extra, logs
 
 
@@ -368,12 +380,27 @@ def _parse_args():
     p.add_argument("--no-conditional-base", action="store_true",
                    help="train the plain (non-CB) baseline for before/after")
     p.add_argument("--no-use-v2-conditioner", action="store_true")
+    p.add_argument("--realnvp-n-couplings", type=int, default=6,
+                   help="RealNVP coupling-layer count (depth sweep variable)")
+    p.add_argument("--flow-hidden", type=int, default=256,
+                   help="coupling MLP hidden width (fixed during a depth sweep)")
+    p.add_argument("--realnvp-type", choices=("flat", "image"), default="flat",
+                   help="RealNVP coupling type: flat MLP or image CNN (1.4b-A)")
+    p.add_argument("--image-realnvp-n-couplings", type=int, default=8,
+                   help="image-RealNVP CNN coupling blocks")
+    p.add_argument("--image-realnvp-hidden", type=int, default=64,
+                   help="image-RealNVP CNN hidden CHANNELS (separate from --flow-hidden)")
     p.add_argument("--out-root", default="./CSMF2/experiments/step_1_4a/results")
     a = p.parse_args()
     return CBCfg(expert=a.expert, scale=a.scale, noise_sigma=a.noise_sigma,
                  epochs=a.epochs, seed=a.seed,
                  use_conditional_base=not a.no_conditional_base,
                  use_v2_conditioner=not a.no_use_v2_conditioner,
+                 realnvp_n_couplings=a.realnvp_n_couplings,
+                 flow_hidden=a.flow_hidden,
+                 realnvp_type=a.realnvp_type,
+                 image_realnvp_n_couplings=a.image_realnvp_n_couplings,
+                 image_realnvp_hidden=a.image_realnvp_hidden,
                  out_root=a.out_root)
 
 

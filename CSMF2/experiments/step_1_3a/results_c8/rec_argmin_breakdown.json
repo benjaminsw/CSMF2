@@ -1,0 +1,77 @@
+{
+  "experts": [
+    "nice",
+    "realnvp",
+    "nsf"
+  ],
+  "n": 5000,
+  "counts_by_class": {
+    "nice": [
+      0,
+      0,
+      0,
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0
+    ],
+    "realnvp": [
+      2,
+      1,
+      1,
+      6,
+      6,
+      2,
+      5,
+      4,
+      2,
+      4
+    ],
+    "nsf": [
+      477,
+      562,
+      487,
+      486,
+      529,
+      431,
+      496,
+      546,
+      460,
+      491
+    ]
+  },
+  "win_totals": {
+    "nice": 2,
+    "realnvp": 33,
+    "nsf": 4965
+  },
+  "dominant": "nsf",
+  "target_non_dominant": "realnvp",
+  "top2_share": 0.36363636363636365,
+  "max_class_share": 0.18181818181818182,
+  "expected_uniform_per_class": 3.3,
+  "tier": "WEAK_CLUSTER",
+  "verdict": "WEAK_CLUSTER -- realnvp shows mild concentration (36% in top-2). Borderline; confirm with seed 1 before committing to multi-scale.",
+  "self_check": {
+    "expected": null,
+    "recomputed": [
+      2,
+      33,
+      4965
+    ],
+    "status": "skipped",
+    "tol_abs": 10,
+    "tol_l1": 20
+  },
+  "by_degradation_cell": {
+    "s2_n0.05": {
+      "nice": 2,
+      "realnvp": 33,
+      "nsf": 4965
+    }
+  },
+  "degradation_axis_informative": false
+}

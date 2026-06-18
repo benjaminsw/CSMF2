@@ -1,10 +1,17 @@
 # =============================================================================
-# STEP-1_1 v0.4 -- models.experts
+# STEP-1_1 v0.5 -- models.experts
 # Purpose: four conditional flow experts with a shared Conditioner. Each maps
 #          x -> z through a stack of coupling layers and returns (z, logdet).
 #          Base density: standard Normal N(0, I).
 # CONVENTION: .log_prob(x | y) returns shape (B,). .sample(n, y) returns x.
 #             No fallback / mock / pass. Failures raise with logger.error.
+# Changelog (v0.4 -> v0.5):
+#   * IMG-RNVP v0.1: build_expert routes expert='realnvp' with
+#     realnvp_type='image' -> ImageCondRealNVP (CNN image couplings, Stage
+#     1.4b-A). New image_keys allowlist {realnvp_type, image_n_couplings,
+#     image_hidden, image_mask_type, image_s_max}, guarded realnvp-only.
+#     realnvp_type='flat' (default) is unchanged -> CondRealNVP. image_mask_type
+#     is consumed (cfg-validated, checkerboard-only) but not forwarded.
 # Changelog (v0.3 -> v0.4):
 #   * CondGlow accepts film_gain_init (default 0.3) and forwards to GlowStep
 #     -> AffineCoupling2D. Drives the residual-FiLM contribution introduced
@@ -18,8 +25,8 @@
 # Changelog (NEW in v0.1):
 #   * Introduced. CondNICE, CondRealNVP, CondNSF; FiLM by default.
 # Update summary:
-#   v0.4 surfaces the Glow conditioning-rescue knob (film_gain_init) so cfg
-#   can sweep it. Default 0.3 matches the value used in v0.3's audit fix.
+#   v0.5 adds the image-RealNVP routing (Stage 1.4b-A) without touching the
+#   flat/NICE/NSF/Glow paths; realnvp_type defaults to 'flat'.
 # =============================================================================
 from __future__ import annotations
 import logging
@@ -262,8 +269,11 @@ def build_expert(name: str, *, dim: int, h_dim: int,
 
     film_keys = {"film_hidden", "film_depth", "film_use_gelu"}
     glow_keys = {"s_max", "image_shape", "inv1x1_seed_base", "film_gain_init"}
+    # IMG-RNVP v0.1: image RealNVP (Stage 1.4b-A) kwargs, realnvp-only.
+    image_keys = {"realnvp_type", "image_n_couplings", "image_hidden",
+                  "image_mask_type", "image_s_max"}
 
-    unknown = set(kwargs) - (film_keys | glow_keys | {"n_layers"})
+    unknown = set(kwargs) - (film_keys | glow_keys | image_keys | {"n_layers"})
     if unknown:
         logger.error("[build_expert] unknown kwargs %s for expert=%r",
                      sorted(unknown), name)
@@ -284,6 +294,14 @@ def build_expert(name: str, *, dim: int, h_dim: int,
         raise ValueError(
             f"glow_kwargs only supported for expert='glow'; got expert={name!r}")
 
+    image_kwargs = {k: kwargs[k] for k in image_keys if k in kwargs}
+    if image_kwargs and name != "realnvp":
+        logger.error("[build_expert] image_kwargs %s only supported for "
+                     "expert='realnvp', got expert=%r",
+                     list(image_kwargs), name)
+        raise ValueError(
+            f"image_kwargs only supported for expert='realnvp'; got expert={name!r}")
+
     n_layers = kwargs.get("n_layers")
 
     if name == "nice":
@@ -294,6 +312,18 @@ def build_expert(name: str, *, dim: int, h_dim: int,
         return CondNICE(**ctor_kwargs)
 
     if name == "realnvp":
+        realnvp_type = kwargs.get("realnvp_type", "flat")
+        if realnvp_type == "image":
+            from .image_cond_realnvp import ImageCondRealNVP
+            # image_mask_type is consumed (validated in cfg, checkerboard-only)
+            # but not forwarded: the coupling hardcodes checkerboard in v0.1.
+            return ImageCondRealNVP(
+                dim=dim, h_dim=h_dim, conditioner=conditioner,
+                channels=1, img_hw=28,
+                image_n_couplings=kwargs.get("image_n_couplings", 8),
+                image_hidden=kwargs.get("image_hidden", 64),
+                image_s_max=kwargs.get("image_s_max", 2.0),
+                use_film=use_film, **film_kwargs)
         ctor_kwargs = dict(dim=dim, h_dim=h_dim, conditioner=conditioner,
                            hidden=hidden, use_film=use_film, **film_kwargs)
         if n_layers is not None:

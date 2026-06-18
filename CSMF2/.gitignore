@@ -18,6 +18,8 @@ experiments/step_1_1/nice_improved/
 experiments/step_1_1/logs/
 experiments/step_1_1/plots/
 experiments/step_1_1/results/
+experiments/step_1_4a/results_depth
+experiments/step_1_4a/results_depth_md001
 
 # Ignore files
 *.log

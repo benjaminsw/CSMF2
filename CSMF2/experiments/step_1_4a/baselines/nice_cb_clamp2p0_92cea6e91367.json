@@ -1,0 +1,81 @@
+{
+  "abbr": "NCP-N0",
+  "version": "0.6",
+  "baseline_name": "NICE-CB clamp-2p0 baseline",
+  "roadmap_slot": "1.3b/N0",
+  "created_at": "2026-06-18T12:24:04.274300+00:00",
+  "identity": {
+    "expert": "nice",
+    "use_conditional_base": true,
+    "base_logsigma_max": 2.0,
+    "seed": 0,
+    "rng_seed": "not_available",
+    "cfg_hash": "6e5678b743b4",
+    "cfg_hash_source": "run_dir_suffix",
+    "degradation": "s2_n0.05",
+    "scale": 2,
+    "noise_sigma": 0.05,
+    "blur_sigma": 1.0,
+    "run_dir": "/home/benjamin/CSMFII/CSMF2/experiments/step_1_4a/results/nice_cb_s2_n0.05_seed0_6e5678b743b4",
+    "checkpoint_path": "/home/benjamin/CSMFII/CSMF2/experiments/step_1_4a/results/nice_cb_s2_n0.05_seed0_6e5678b743b4/ckpt.pt",
+    "checkpoint_sha256": "92cea6e9136729bbc99ca6e53dc9e0032dc4e5b87adc5d87540ea3ecb56e7377",
+    "checkpoint_size_bytes": 11261793,
+    "checkpoint_mtime": "2026-06-15T20:28:38.412285+00:00",
+    "report_json_path": "/home/benjamin/CSMFII/CSMF2/experiments/step_1_4a/results/nice_cb_s2_n0.05_seed0_6e5678b743b4/report.json",
+    "recgate_report_path": "/home/benjamin/CSMFII/CSMF2/experiments/step_1_3/results/recgate_a1.0_b1.0_fixed_shared_global_S4_seed0_ac14b47db3b5/report.json",
+    "breakdown_report_path": "/home/benjamin/CSMFII/CSMF2/experiments/step_1_3a/results/rec_argmin_breakdown.json",
+    "sanity_log_path": "not_available",
+    "git_commit": "11b175d1b11fea62e69cb4bf2373a6b6d4f1de60"
+  },
+  "metrics": {
+    "rec_argmin_count": 0,
+    "recargmin_diag_tier": "FLAT",
+    "recgate_global_status": "NO_SUCCESS (soft_fwd_rel=0.1623 vs nsf_only=0.1587; neff>1.5=False, max_w<0.70=True)",
+    "nll_train": "not_available",
+    "nll_val": -3053.802667578125,
+    "nll_test": "not_available",
+    "conditioning_evidence": {
+      "status": "proxy_recorded",
+      "type": "conditional_base_shuffle_sensitivity",
+      "base_alive": true,
+      "base_shuffle_gap": 21494.58203125,
+      "h_std": "not_available",
+      "film_gamma_std": "not_available",
+      "film_beta_std": "not_available"
+    },
+    "conditioning_proxy_active": true,
+    "conditioning_direct_stats_available": false,
+    "invertibility_max_linf": 224.46978741884232,
+    "invertibility_pass": false,
+    "logdet_sanity_f64_status": "pass",
+    "logdet_abs_error_mean": 5.4914250284809896e-06,
+    "logdet_abs_error_max": 5.976065111212847e-06,
+    "logdet_n_samples": 4
+  },
+  "provenance": {
+    "recon_grid_path": "/home/benjamin/CSMFII/CSMF2/experiments/step_1_4a/results/nice_cb_s2_n0.05_seed0_6e5678b743b4/plots/p4_recon_panel.png",
+    "sample_grid_path": "not_available",
+    "nll_curve_path": "/home/benjamin/CSMFII/CSMF2/experiments/step_1_4a/results/nice_cb_s2_n0.05_seed0_6e5678b743b4/plots/p_nll_curve.png",
+    "recgate_beta_plot_path": "not_available",
+    "conditioning_curve_path": "not_available",
+    "fraction_at_sigma_max": "not_available",
+    "base_logsigma_mean": "not_available",
+    "base_logsigma_std": "not_available",
+    "shuffle_gap": "not_available",
+    "fixed_z_diff_y_sensitivity": "not_available"
+  },
+  "contract": {
+    "rule": "No NICE change is trusted unless it beats this baseline.",
+    "beats_baseline_iff": {
+      "rec_argmin_tier": "PROVISIONAL+ (WEAK is inconclusive, NOT sufficient)",
+      "rec_argmin_count": "> baseline AND tier not FLAT",
+      "recgate_global_status": "improves",
+      "nll": "no critical regression (use existing RECGATE threshold)",
+      "invertibility_max_linf": "< 1e-05",
+      "logdet_sanity_f64": "pass",
+      "conditioning": "remains active"
+    },
+    "three_seed_lock": "trusted rescue only if PROVISIONAL+ repeats across seeds 0/1/2"
+  },
+  "freeze_hash": "e6da4944017610e6915987fd0a31a38896b5123d878d505bf064e8b18554f491"
+}

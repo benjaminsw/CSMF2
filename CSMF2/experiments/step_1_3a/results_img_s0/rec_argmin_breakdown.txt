@@ -1,0 +1,24 @@
+==============================================================================
+RECARGMIN-DIAG v0.1 -- rec_argmin by digit class (Stage 1.3a)
+==============================================================================
+  n=5000  experts=['nice', 'realnvp', 'nsf']  winner_totals=[1, 97, 4902]
+
+  digit     nice  realnvp      nsf
+      0        0       12      467
+      1        0       10      553
+      2        0        6      482
+      3        0       10      483
+      4        0       13      522
+      5        0        8      426
+      6        1        5      495
+      7        0       12      538
+      8        0        7      455
+      9        0       14      481
+  -----
+  TOTAL        1       97     4902
+
+  target non-dominant expert: realnvp (wins 97, uniform/class ~9.7)
+  top2_share=0.278  max_class_share=0.144
+
+DECISION: FLAT -- realnvp's 97 wins are ~uniform across classes (28% in top-2 vs ~20% uniform). Likely noise; more capacity unlikely to create complementarity.
+==============================================================================

@@ -1,0 +1,42 @@
+# =============================================================================
+# IMG-RNVP v0.1 -- INTEGRATION NOTE for models/experts.py (build_expert)
+# experts.py is not in the sandbox; apply this one routing edit by hand.
+# =============================================================================
+#
+# build_expert currently routes 'realnvp' to the flat CondRealNVP. Add an
+# image branch BEFORE the flat one. The new kwargs (realnvp_type, image_*) are
+# already threaded in from step_1_4a/run.py:
+#
+#   def build_expert(expert, *, dim, h_dim, conditioner, hidden, use_film,
+#                    film_hidden=64, film_depth=1, film_use_gelu=False,
+#                    n_layers=6, realnvp_type="flat",
+#                    image_n_couplings=8, image_hidden=64,
+#                    image_mask_type="checkerboard", image_s_max=2.0, **_):
+#       ...
+#       if expert == "realnvp":
+#           if realnvp_type == "image":
+#               from .image_cond_realnvp import ImageCondRealNVP
+#               return ImageCondRealNVP(
+#                   dim, h_dim, conditioner,
+#                   channels=1, img_hw=28,
+#                   image_n_couplings=image_n_couplings,
+#                   image_hidden=image_hidden,
+#                   image_s_max=image_s_max,
+#                   use_film=use_film, film_hidden=film_hidden,
+#                   film_depth=film_depth, film_use_gelu=film_use_gelu)
+#           # else: existing flat CondRealNVP path (unchanged)
+#           return CondRealNVP(dim=dim, h_dim=h_dim, conditioner=conditioner,
+#                              hidden=hidden, n_layers=n_layers, use_film=use_film,
+#                              film_hidden=film_hidden, film_depth=film_depth,
+#                              film_use_gelu=film_use_gelu, s_max=2.0)
+#
+# Notes:
+#  * image_mask_type is validated in config (checkerboard only in v0.1); it is
+#    accepted here for forward-compat but not yet branched on.
+#  * dim stays 784 (=1*28*28); ImageCondRealNVP asserts this.
+#  * CBExpert wraps the returned expert unchanged -- encode/decode still speak
+#    flat 784, so the conditional base + RECGATE + loader need NO changes.
+#  * file placement: copy
+#       models_flows_realnvp_image_layer.py -> CSMF2/models/flows/realnvp_image_layer.py
+#       models_image_cond_realnvp.py         -> CSMF2/models/image_cond_realnvp.py
+# =============================================================================

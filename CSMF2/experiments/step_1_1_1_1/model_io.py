@@ -1,5 +1,5 @@
 # =============================================================================
-# STEP-1_1_1_1 v0.2 -- experiments.step_1_1_1_1.model_io
+# STEP-1_1_1_1 v0.3 -- experiments.step_1_1_1_1.model_io
 # Purpose: load a trained checkpoint and rebuild expert + conditioner
 #          ARCHITECTURE-AGNOSTICALLY from report.json["cfg"]. v0.2: also
 #          CB-AWARE -- if the checkpoint was trained with a conditional base
@@ -8,6 +8,14 @@
 #          2.3) loads the correct model with no per-stage change.
 # CONVENTION: missing files/keys, or cfg/ckpt CB mismatch -> logger.error +
 #             raise. No fallback / mock. The model is returned frozen.
+# Changelog (v0.2 -> v0.3):
+#   * IMG-RNVP-aware: when raw_cfg.realnvp_type == "image", build the image
+#     RealNVP (ImageCondRealNVP, CNN couplings) instead of the flat CondRealNVP.
+#     Reads realnvp_type / image_realnvp_n_couplings / image_realnvp_hidden /
+#     image_realnvp_s_max from raw_cfg (they are CBCfg fields, absent from the
+#     filtered StepCfg). The image expert subclasses _BaseExpert, so its
+#     checkpoint keys are layers.* + a SEPARATE cond -- the existing
+#     module-by-module load path works unchanged (no conditioner special-case).
 # Changelog (v0.1 -> v0.2):
 #   * CB-aware: load_cfg now returns (StepCfg, raw_cfg_dict) and tolerates
 #     extra CB fields (filters to StepCfg fields). build_from_report builds +
@@ -17,10 +25,9 @@
 # Changelog (NEW in v0.1):
 #   * Introduced. build_from_report() mirrors step_1_1/run.py's build block.
 # Update summary:
-#   v0.2 makes the single shared loader handle plain and conditional-base
-#   checkpoints identically, so the Stage 1.3 RECGATE rerun (and Stage 2.3)
-#   load CB experts correctly without touching their code. Verify via the log
-#   line "loaded <expert> as CBExpert (base=conditional)".
+#   v0.3 lets the single shared loader rebuild flat, CB, and image-RealNVP
+#   checkpoints identically, so Stage 1.3 RECGATE + 1.3a breakdown load the
+#   image expert with no per-stage change.
 # =============================================================================
 from __future__ import annotations
 import json
@@ -93,7 +100,19 @@ def build_from_report(ckpt_dir: str, device: torch.device):
                            film_use_gelu=cfg.film_use_gelu)
     extra_kwargs: dict = {}
     if cfg.expert == "realnvp":
-        extra_kwargs.update(n_layers=cfg.realnvp_n_couplings)
+        # IMG-RNVP v0.2: realnvp_type + image_* live in CBCfg, NOT StepCfg, so
+        # cfg (a filtered StepCfg) may lack them -- read from raw_cfg (the full
+        # saved dict), mirroring the CB block below.
+        if raw_cfg.get("realnvp_type", "flat") == "image":
+            extra_kwargs.update(
+                realnvp_type="image",
+                image_n_couplings=int(raw_cfg["image_realnvp_n_couplings"]),
+                image_hidden=int(raw_cfg["image_realnvp_hidden"]),
+                image_s_max=float(raw_cfg.get("image_realnvp_s_max", 2.0)))
+            # do NOT pass n_layers for the image path (flat-only knob; image
+            # depth is image_realnvp_n_couplings).
+        else:
+            extra_kwargs.update(n_layers=cfg.realnvp_n_couplings)
     elif cfg.expert == "glow":
         extra_kwargs.update(
             n_layers=cfg.glow_n_steps, s_max=cfg.glow_s_max,

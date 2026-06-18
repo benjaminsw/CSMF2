@@ -1,17 +1,28 @@
 # =============================================================================
-# STEP-1_4A v0.1 -- experiments.step_1_4a.config
+# STEP-1_4A v0.2 -- experiments.step_1_4a.config
 # Purpose: typed config for one conditional-base expert training run. Extends
 #          the Step-1.1 StepCfg with the conditional-base knobs. Frozen
 #          dataclass, sha256 run_tag.
 # CONVENTION: no silent defaults. Every invariant -> logger.error + raise.
 #             No fallback / mock / dummy / placeholder.
+# Changelog (v0.1 -> v0.2):
+#   * early_stop_min_delta default 0.005 -> 0.001 (0.5% was too coarse on the
+#     NLL scale: ~16 nats at NLL=-3200, so real single-digit-nat gains were
+#     ignored by keep-best). 0.001 (~3 nats) counts real gains but still skips
+#     sub-nat noise; 0.0 rejected (chases noise, defeats the plateau detector).
+#     NOTE: runs trained at 0.005 (the original depth sweep) are NOT perfectly
+#     comparable to new 0.001 runs -- keep the old sweep as historical evidence,
+#     or retrain the adopted candidate at 0.001.
+#   * Depth-sweep support: realnvp_n_couplings exposed + invariant (>=1);
+#     run_tag embeds _cN for RealNVP so depths land in distinct dirs.
 # Changelog (NEW in v0.1):
 #   * Introduced. use_conditional_base, base_mu_hidden, base_logsigma_hidden,
 #     base_logsigma_min/max, base_init, base_gain, base_tau (alive threshold).
 #     CB applied to ALL experts (declared) to preserve the fair comparison.
 # Update summary:
-#   v0.1 carries the Step-1.1 training/CCR knobs unchanged and adds the CB
-#   block. use_conditional_base=False reproduces the plain Step-1.1 expert.
+#   v0.2 tunes the early-stop threshold for the NLL scale and adds the RealNVP
+#   depth-sweep plumbing. use_conditional_base=False reproduces the plain
+#   Step-1.1 expert.
 # =============================================================================
 from __future__ import annotations
 import logging
@@ -46,6 +57,12 @@ class CBCfg:
     film_use_gelu: bool = True
     realnvp_n_couplings: int = 6
     realnvp_s_max: float = 2.0
+    # --- image RealNVP (Stage 1.4b-A) -------------------------------------
+    realnvp_type: str = "flat"            # flat | image
+    image_realnvp_n_couplings: int = 8    # CNN coupling blocks (image path)
+    image_realnvp_hidden: int = 64        # CNN hidden CHANNELS (NOT flow_hidden)
+    image_realnvp_mask_type: str = "checkerboard"  # checkerboard only in v0.1
+    image_realnvp_s_max: float = 2.0
     # conditional base (NEW)
     use_conditional_base: bool = True
     applied_to: str = "all_experts"    # declared scope
@@ -63,7 +80,7 @@ class CBCfg:
     grad_clip: float = 5.0
     # early stopping (CBASE v0.3): stop on val-NLL plateau/overfit; keep best
     early_stop_patience: int = 20      # epochs of no val improvement before stop
-    early_stop_min_delta: float = 0.005  # rel improvement to count as progress (0.5%)
+    early_stop_min_delta: float = 0.001  # rel val-NLL improvement to count as progress (0.1%)
     # CCR (Phase-4 conditioning rescue; carried from Step 1.1)
     shuffle_loss_lambda: float = 0.1
     shuffle_loss_margin: float = 0.5
@@ -107,6 +124,22 @@ class CBCfg:
         if self.base_tau < 0.0:
             logger.error("[CBCfg] base_tau must be >=0, got %s", self.base_tau)
             raise ValueError("base_tau must be >=0")
+        if self.realnvp_n_couplings < 1:
+            logger.error("[CBCfg] realnvp_n_couplings must be >=1, got %s",
+                         self.realnvp_n_couplings)
+            raise ValueError("realnvp_n_couplings must be >=1")
+        if self.realnvp_type not in ("flat", "image"):
+            logger.error("[CBCfg] realnvp_type must be flat|image, got %r",
+                         self.realnvp_type)
+            raise ValueError("realnvp_type must be flat|image")
+        if self.image_realnvp_n_couplings < 1:
+            logger.error("[CBCfg] image_realnvp_n_couplings must be >=1, got %s",
+                         self.image_realnvp_n_couplings)
+            raise ValueError("image_realnvp_n_couplings must be >=1")
+        if self.image_realnvp_mask_type != "checkerboard":
+            logger.error("[CBCfg] image_realnvp_mask_type: only 'checkerboard' "
+                         "in v0.1, got %r", self.image_realnvp_mask_type)
+            raise ValueError("image_realnvp_mask_type must be 'checkerboard'")
         if self.early_stop_patience < 1:
             logger.error("[CBCfg] early_stop_patience must be >=1, got %s",
                          self.early_stop_patience)
@@ -122,5 +155,11 @@ class CBCfg:
 
     def run_tag(self) -> str:
         cb = "cb" if self.use_conditional_base else "nocb"
-        return (f"{self.expert}_{cb}_s{self.scale}_n{self.noise_sigma:.2f}_"
+        if self.expert == "realnvp" and self.realnvp_type == "image":
+            depth = f"_img_c{self.image_realnvp_n_couplings}"
+        elif self.expert == "realnvp":
+            depth = f"_c{self.realnvp_n_couplings}"
+        else:
+            depth = ""
+        return (f"{self.expert}_{cb}{depth}_s{self.scale}_n{self.noise_sigma:.2f}_"
                 f"seed{self.seed}_{self.hash()}")

@@ -1,0 +1,77 @@
+{
+  "experts": [
+    "nice",
+    "realnvp",
+    "nsf"
+  ],
+  "n": 5000,
+  "counts_by_class": {
+    "nice": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "realnvp": [
+      15,
+      18,
+      11,
+      9,
+      11,
+      16,
+      11,
+      10,
+      14,
+      17
+    ],
+    "nsf": [
+      463,
+      545,
+      477,
+      484,
+      524,
+      418,
+      490,
+      540,
+      448,
+      478
+    ]
+  },
+  "win_totals": {
+    "nice": 1,
+    "realnvp": 132,
+    "nsf": 4867
+  },
+  "dominant": "nsf",
+  "target_non_dominant": "realnvp",
+  "top2_share": 0.26515151515151514,
+  "max_class_share": 0.13636363636363635,
+  "expected_uniform_per_class": 13.2,
+  "tier": "FLAT",
+  "verdict": "FLAT -- realnvp's 132 wins are ~uniform across classes (27% in top-2 vs ~20% uniform). Likely noise; more capacity unlikely to create complementarity.",
+  "self_check": {
+    "expected": null,
+    "recomputed": [
+      1,
+      132,
+      4867
+    ],
+    "status": "skipped",
+    "tol_abs": 10,
+    "tol_l1": 20
+  },
+  "by_degradation_cell": {
+    "s2_n0.05": {
+      "nice": 1,
+      "realnvp": 132,
+      "nsf": 4867
+    }
+  },
+  "degradation_axis_informative": false
+}
