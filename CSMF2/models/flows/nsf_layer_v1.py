@@ -1,22 +1,11 @@
 # =============================================================================
-# STEP-1_1 v0.3 -- models.flows.nsf_layer
+# STEP-1_1 v0.2 -- models.flows.nsf_layer
 # Purpose: Neural Spline Flow (Durkan+ 2019) coupling layer. Monotonic
 #          rational-quadratic (RQ) spline on [-B, B] with linear tails; K bins.
 #          Conditioner (FiLM) emits hidden features that the spline param net
 #          turns into (widths, heights, derivatives).
 # CONVENTION: Gregory-Delbourgo parameterisation. Numerical guards explicit; any
 #             failure -> logger.error + raise.
-# Changelog (v0.2 -> v0.3, after 2.3-A 30ep diverged: rq_spline inverse neg disc):
-#   * DIAGNOSTIC ONLY (no math change): env-gated probe _spline_probe(), active
-#     ONLY when CSMF_NSF_SPLINE_PROBE=1. In the INVERSE branch it logs, per call,
-#     the discriminant stats (min, negative count) + the quadratic coeffs (a,b,c
-#     ranges) + the spline param ranges (width/height/deriv/delta) + input range.
-#     This distinguishes the two divergence hypotheses without choosing a fix:
-#       tiny-negative disc (~ -1e-8..-1e-2, params sane) -> float32 root error -> float64 inverse
-#       params drifting / coeffs exploding               -> training drift -> remove/freeze NSF rec
-#     Default OFF -> 1.3/1.4 and all other stages are byte-identical to v0.2.
-#     The existing fatal neg-disc raise and the non-finite guard are UNCHANGED;
-#     the probe only ADDS logging before them. NOT a clamp -- nothing is masked.
 # Changelog (NEW in v0.1):
 #   * Introduced. Forward via bin lookup + closed-form quotient; inverse via
 #     closed-form quadratic root (numerically stable branch).
@@ -35,21 +24,23 @@
 #     and still fatal: the clamp removes the underflow cause, the guard still
 #     catches anything genuinely non-finite.
 # Update summary:
-#   v0.3 adds an OFF-by-default spline probe to attribute the 2.3-A inverse
-#   divergence (precision vs drift) before any fix is chosen. No spline math,
-#   param floors, fatal guards, or default behaviour change.
-#   v0.2 hardened the logabsdet against float32 underflow-to-zero in the log
-#   arguments (clamp_min 1e-30). Single-file RQ-spline implementation sufficient
-#   for step_1_1; ~6 such couplings compose over the flat (B, D) MNIST vector.
+#   v0.2 hardens the logabsdet against float32 underflow-to-zero in the log
+#   arguments (clamp_min 1e-30). Does not touch the spline math, the param
+#   floors, or the fatal non-finite guard. Fixes the h=0 ablation crash without
+#   masking a real failure -- a genuinely non-finite spline still raises.
+#   Single-file RQ-spline implementation sufficient for step_1_1. This is not a
+#   full multi-scale NSF; we compose ~6 such couplings over the flat (B, D)
+#   MNIST vector. Matches the WP0 goal "same conditioner, same degradation
+#   pipeline across expert families" -- the spline differs only in the elementwise
+#   transform at the tail of the coupling block.
 # =============================================================================
 from __future__ import annotations
 import logging
 logger = logging.getLogger(__name__)
-__version__ = "0.3"
+__version__ = "0.2"
 __abbr__ = "STEP-1_1"
 
 import math
-import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -66,29 +57,6 @@ DEFAULT_MIN_DERIVATIVE = 1e-3
 # input) where the param net is pushed into a degenerate corner. 1e-30 (not
 # finfo.tiny ~1.18e-38) so log() stays a sane magnitude rather than ~-87.
 _LOG_FLOOR = 1e-30
-
-# v0.3: OFF-by-default attribution probe (set CSMF_NSF_SPLINE_PROBE=1 to enable).
-_NSF_SPLINE_PROBE = os.environ.get("CSMF_NSF_SPLINE_PROBE", "0") == "1"
-
-
-def _rng(name, t):
-    """min/max of a tensor as a compact string (detached, no grad warning)."""
-    td = t.detach()
-    return f"{name}[{float(td.min()):.3e},{float(td.max()):.3e}]"
-
-
-def _spline_probe(*, disc, a, b, c, widths, heights, derivs, delta, ins):
-    """Log spline internals to attribute inverse divergence: precision (tiny-neg
-    disc, params sane) vs drift (params/coeffs exploding). Logging only -- never
-    raises, never alters values. Active only when CSMF_NSF_SPLINE_PROBE=1."""
-    dd = disc.detach()
-    neg = int((dd < 0).sum())
-    logger.info("[nsf_probe] disc_min=%.3e disc_neg=%d/%d | %s %s %s | %s %s %s %s | %s",
-                float(dd.min()), neg, dd.numel(),
-                _rng("a", a), _rng("b", b), _rng("c", c),
-                _rng("w", widths), _rng("h", heights),
-                _rng("d", derivs), _rng("delta", delta),
-                _rng("in", ins))
 
 
 def _rq_spline(inputs: torch.Tensor,
@@ -157,10 +125,6 @@ def _rq_spline(inputs: torch.Tensor,
                  (input_deriv_p1 + input_deriv - 2 * input_delta))
             c = -input_delta * (ins - input_cum_h)
             disc = b ** 2 - 4 * a * c
-            if _NSF_SPLINE_PROBE:
-                _spline_probe(disc=disc, a=a, b=b, c=c, widths=widths,
-                              heights=heights, derivs=derivs,
-                              delta=input_delta, ins=ins)
             if (disc < 0).any():
                 logger.error("[rq_spline.inverse] negative discriminant (min=%.3e)",
                              float(disc.min().item()))

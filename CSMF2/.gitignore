@@ -10,6 +10,7 @@ experiments/**/logs/*
 !experiments/**/.gitkeep
 !experiments/**/README.md
 
+
 # Ignore the virtual environment directory
 CSMFII-ENV/
 
@@ -42,7 +43,12 @@ sweep_logs/
 
 # Ignore results directories in any subdirectory of experiments
 experiments/**/results/
+# Also ignore results* directories (e.g. results_30ep_OLD, results_clamp3, results_nice_mix)
+experiments/**/results*/
 
 
 # Ignore logs directories in any subdirectory of experiments
 experiments/**/logs/
+
+experiments/step_2_3/exported_s23A_D
+experiments/step_1_4a/baselines

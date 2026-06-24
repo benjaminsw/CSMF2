@@ -1,5 +1,5 @@
 # =============================================================================
-# STEP-1_1_1_1 v0.3 -- experiments.step_1_1_1_1.model_io
+# STEP-1_1_1_1 v0.4 -- experiments.step_1_1_1_1.model_io
 # Purpose: load a trained checkpoint and rebuild expert + conditioner
 #          ARCHITECTURE-AGNOSTICALLY from report.json["cfg"]. v0.2: also
 #          CB-AWARE -- if the checkpoint was trained with a conditional base
@@ -8,6 +8,12 @@
 #          2.3) loads the correct model with no per-stage change.
 # CONVENTION: missing files/keys, or cfg/ckpt CB mismatch -> logger.error +
 #             raise. No fallback / mock. The model is returned frozen.
+# Changelog (v0.3 -> v0.4):
+#   * nice_mix-aware (NCP-N8): build_from_report now forwards n_layers (read
+#     from raw_cfg['nice_n_layers'], a CBCfg field absent from the filtered
+#     StepCfg) and FiLM kwargs when cfg.expert=='nice_mix', so a nice_mix
+#     checkpoint rebuilds at its trained depth (else load_state_dict mismatches
+#     the saved layer stack). nice/realnvp/nsf/glow/image paths unchanged.
 # Changelog (v0.2 -> v0.3):
 #   * IMG-RNVP-aware: when raw_cfg.realnvp_type == "image", build the image
 #     RealNVP (ImageCondRealNVP, CNN couplings) instead of the flat CondRealNVP.
@@ -94,12 +100,17 @@ def build_from_report(ckpt_dir: str, device: torch.device):
 
     # ---- expert (mirror run.py v0.8+) -------------------------------------
     film_kwargs: dict = {}
-    if cfg.expert in ("nice", "realnvp", "glow"):
+    if cfg.expert in ("nice", "realnvp", "glow", "nice_mix"):
         film_kwargs = dict(film_hidden=cfg.film_hidden,
                            film_depth=cfg.film_depth,
                            film_use_gelu=cfg.film_use_gelu)
     extra_kwargs: dict = {}
-    if cfg.expert == "realnvp":
+    if cfg.expert == "nice_mix":
+        # NCP-N8: nice_mix depth (nice_n_layers) is a CBCfg field, filtered out
+        # of StepCfg, so read it from raw_cfg. Must match the trained depth or
+        # load_state_dict fails against the saved layer stack.
+        extra_kwargs.update(n_layers=int(raw_cfg["nice_n_layers"]))
+    elif cfg.expert == "realnvp":
         # IMG-RNVP v0.2: realnvp_type + image_* live in CBCfg, NOT StepCfg, so
         # cfg (a filtered StepCfg) may lack them -- read from raw_cfg (the full
         # saved dict), mirroring the CB block below.

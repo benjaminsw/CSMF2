@@ -1,8 +1,15 @@
 # =============================================================================
-# STEP-1_1 v0.2 -- models.flows.nice_layer
+# STEP-1_1 v0.3 -- models.flows.nice_layer
 # Purpose: NICE additive coupling (Dinh+ 2014) with FiLM-conditioned m(x1 | h).
 #          Unit Jacobian determinant by construction; invertibility trivial.
 # CONVENTION: No silent fallback. Any NaN / shape error -> logger.error + raise.
+# Changelog (v0.2 -> v0.3):
+#   * NEW FixedPermute(dim, seed): fixed dim permutation, log-det 0, exactly
+#     invertible (inv=argsort(perm)), registered buffers (not trained). For the
+#     NICE-MIX (NCP-N8) expressiveness ablation -- inserted between additive
+#     couplings so dims mix across splits without any exp(s)/learned-1x1. NICE
+#     identity (additive, unit-Jacobian) preserved. NICECoupling/DiagScale
+#     unchanged.
 # Changelog (v0.1 -> v0.2):
 #   * NEW kwargs film_hidden (default 64), film_depth (default 1),
 #     film_use_gelu (default False) on NICECoupling.__init__. Defaults match
@@ -20,7 +27,7 @@
 from __future__ import annotations
 import logging
 logger = logging.getLogger(__name__)
-__version__ = "0.2"
+__version__ = "0.3"
 __abbr__ = "STEP-1_1"
 
 import torch
@@ -97,3 +104,28 @@ class DiagScale(nn.Module):
 
     def inverse(self, y: torch.Tensor) -> torch.Tensor:
         return y * torch.exp(-self.log_s)
+
+
+class FixedPermute(nn.Module):
+    """Fixed (non-learned) dimension permutation for NICE-MIX (NCP-N8).
+    log-det 0 and exactly invertible by construction (inv = argsort(perm)), so
+    it preserves NICE's unit-Jacobian / trivial-invertibility contract and the
+    f64 logdet sanity check is unaffected. Matches the (x, h) -> (y, ldj) /
+    inverse(y, h) signature of NICECoupling so it drops straight into the
+    _BaseExpert.encode/decode layer stack. The permutation is a registered
+    buffer (NOT a Parameter): fixed at construction, never trained -- this keeps
+    NICE-MIX additive-only and distinct from a learned 1x1 (Glow) mixing."""
+    def __init__(self, dim: int, seed: int):
+        super().__init__()
+        g = torch.Generator().manual_seed(int(seed))
+        perm = torch.randperm(dim, generator=g)
+        self.register_buffer("perm", perm)
+        self.register_buffer("inv", torch.argsort(perm))
+
+    def forward(self, x: torch.Tensor, h: torch.Tensor
+                ) -> tuple[torch.Tensor, torch.Tensor]:
+        ldj = torch.zeros(x.shape[0], device=x.device, dtype=x.dtype)
+        return x[..., self.perm], ldj
+
+    def inverse(self, y: torch.Tensor, h: torch.Tensor) -> torch.Tensor:
+        return y[..., self.inv]

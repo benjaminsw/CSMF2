@@ -1,8 +1,16 @@
 # =============================================================================
-# STEP-1_1 v0.10 -- experiments.step_1_1.config
+# STEP-1_1 v0.11 -- experiments.step_1_1.config
 # Purpose: typed config for a single step_1_1 run. Frozen dataclass, sha256
 #          hash baked into run_tag for reproducibility.
 # CONVENTION: no silent defaults. Every invariant -> logger.error + raise.
+# Changelog (v0.10 -> v0.11):
+#   * Accept expert='nice_mix' (NCP-N8 additive NICE + fixed-perm ablation) in
+#     the roster check AND the use_v2_conditioner roster (nice_mix inherits
+#     NICE's FiLM-v2 conditioning). Needed so build_from_report can RELOAD a
+#     nice_mix checkpoint for re-scoring (breakdown / RECGATE / clamp_probe),
+#     which validate via StepCfg. nice_mix's depth (nice_n_layers) is a CBCfg
+#     field, dropped by load_cfg's StepCfg-field filter -> StepCfg unchanged
+#     otherwise. No behaviour change for existing experts.
 # Changelog (v0.9 -> v0.10):
 #   * Test-0 / identity task: scale now in {1,2,4} (was {2,4}); scale=1 = no
 #     downsample. blur_sigma may be 0.0 (delta blur = identity). Combined
@@ -112,8 +120,8 @@ class StepCfg:
             logger.error("[StepCfg] noise_sigma must be in {0.0, 0.05, 0.1}, got %s",
                          self.noise_sigma)
             raise ValueError(f"noise_sigma {self.noise_sigma} out of set")
-        if self.expert not in ("nice", "realnvp", "nsf", "glow"):
-            logger.error("[StepCfg] expert must be nice/realnvp/nsf/glow, got %s",
+        if self.expert not in ("nice", "realnvp", "nsf", "glow", "nice_mix"):
+            logger.error("[StepCfg] expert must be nice/realnvp/nsf/glow/nice_mix, got %s",
                          self.expert)
             raise ValueError(f"expert {self.expert!r} not recognised")
         if self.cond_width not in (64, 128):
@@ -137,13 +145,14 @@ class StepCfg:
                 raise ValueError(
                     f"use_v2_conditioner=True requires {req}; mismatch={mismatch}")
             # v0.4: v2 supported for nice / realnvp / glow. NSF still excluded.
-            if self.expert not in ("nice", "realnvp", "glow"):
+            # nice_mix (NCP-N8) inherits NICE's FiLM-v2 conditioning -> allowed.
+            if self.expert not in ("nice", "realnvp", "glow", "nice_mix"):
                 logger.error("[StepCfg] use_v2_conditioner=True supported for "
-                             "expert in {nice,realnvp,glow}, got %r",
+                             "expert in {nice,realnvp,glow,nice_mix}, got %r",
                              self.expert)
                 raise ValueError(
                     f"use_v2_conditioner=True not supported for "
-                    f"expert={self.expert!r}; valid: {{nice,realnvp,glow}}")
+                    f"expert={self.expert!r}; valid: {{nice,realnvp,glow,nice_mix}}")
         # ---- Glow-specific invariants (whether or not expert='glow') -----
         if self.glow_n_steps < 1:
             logger.error("[StepCfg] glow_n_steps must be >=1, got %s",

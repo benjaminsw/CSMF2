@@ -1,5 +1,5 @@
 # =============================================================================
-# STEP-1_4A v0.4 -- experiments.step_1_4a.run
+# STEP-1_4A v0.6 -- experiments.step_1_4a.run
 # Purpose: train one conditional-base expert (NICE-CB / RealNVP-CB / NSF-CB)
 #          under NLL + Phase-4 CCR. v0.3 adds per-epoch validation, early
 #          stopping on val-NLL plateau/overfit, and KEEP-BEST checkpointing
@@ -8,6 +8,18 @@
 # CONVENTION: non-finite / sigma issues / no eligible best ckpt -> raise.
 #             No fallback / mock / dummy / pass. Identity-safe base init.
 # Exit codes: 0 = trained + report; 1 = crash.
+# Changelog (v0.5 -> v0.6):
+#   * Support expert='nice_mix' (NCP-N8). _build now threads film_kwargs and
+#     n_layers=cfg.nice_n_layers for both 'nice' and 'nice_mix'. New CLI flag
+#     --nice-n-layers (default 4) passed into CBCfg. Existing nice/realnvp/nsf
+#     invocations unchanged at their defaults.
+# Changelog (v0.4 -> v0.5):
+#   * Added --base-logsigma-max CLI flag (type float, default 2.0) and pass it
+#     into CBCfg, exposing the conditional-base logsigma clamp ceiling for the
+#     NCP N3/N4 clamp sweep. Default 2.0 = NO behaviour change for existing
+#     runs; only an explicit --base-logsigma-max 3.0 (etc.) alters it. CBCfg
+#     already validates base_logsigma_min < base_logsigma_max in __post_init__,
+#     and run_tag()'s hash absorbs the new value -> a distinct run dir.
 # Changelog (v0.3 -> v0.4):
 #   * CCR logging detaches before float(): logs["shuffle_gap"]/["h_std"] use
 #     .detach() to silence the "tensor with requires_grad -> scalar" warning.
@@ -72,10 +84,12 @@ def _build(cfg: CBCfg, device):
         cond_kwargs["y_input_size"] = _y_in
     cond = Conditioner(**cond_kwargs).to(device)
     film_kwargs = {}
-    if cfg.expert in ("nice", "realnvp"):
+    if cfg.expert in ("nice", "realnvp", "nice_mix"):
         film_kwargs = dict(film_hidden=cfg.film_hidden, film_depth=cfg.film_depth,
                            film_use_gelu=cfg.film_use_gelu)
     extra = {}
+    if cfg.expert in ("nice", "nice_mix"):
+        extra.update(n_layers=cfg.nice_n_layers)
     if cfg.expert == "realnvp":
         extra.update(n_layers=cfg.realnvp_n_couplings,
                      realnvp_type=cfg.realnvp_type)
@@ -372,7 +386,7 @@ def _plot_loss_curves(curves, best_epoch, plots):
 
 def _parse_args():
     p = argparse.ArgumentParser(description="Stage 1.4a conditional-base expert")
-    p.add_argument("--expert", choices=("nice", "realnvp", "nsf"), required=True)
+    p.add_argument("--expert", choices=("nice", "realnvp", "nsf", "nice_mix"), required=True)
     p.add_argument("--scale", type=int, default=2)
     p.add_argument("--noise-sigma", type=float, default=0.05)
     p.add_argument("--epochs", type=int, default=30)
@@ -382,6 +396,8 @@ def _parse_args():
     p.add_argument("--no-use-v2-conditioner", action="store_true")
     p.add_argument("--realnvp-n-couplings", type=int, default=6,
                    help="RealNVP coupling-layer count (depth sweep variable)")
+    p.add_argument("--nice-n-layers", type=int, default=4,
+                   help="NICE / nice_mix coupling depth (NCP-N8 sweeps this; e.g. 12)")
     p.add_argument("--flow-hidden", type=int, default=256,
                    help="coupling MLP hidden width (fixed during a depth sweep)")
     p.add_argument("--realnvp-type", choices=("flat", "image"), default="flat",
@@ -390,6 +406,9 @@ def _parse_args():
                    help="image-RealNVP CNN coupling blocks")
     p.add_argument("--image-realnvp-hidden", type=int, default=64,
                    help="image-RealNVP CNN hidden CHANNELS (separate from --flow-hidden)")
+    p.add_argument("--base-logsigma-max", type=float, default=2.0,
+                   help="conditional-base logsigma clamp ceiling (NCP N3/N4 "
+                        "clamp sweep; default 2.0 = unchanged behaviour)")
     p.add_argument("--out-root", default="./CSMF2/experiments/step_1_4a/results")
     a = p.parse_args()
     return CBCfg(expert=a.expert, scale=a.scale, noise_sigma=a.noise_sigma,
@@ -397,10 +416,12 @@ def _parse_args():
                  use_conditional_base=not a.no_conditional_base,
                  use_v2_conditioner=not a.no_use_v2_conditioner,
                  realnvp_n_couplings=a.realnvp_n_couplings,
+                 nice_n_layers=a.nice_n_layers,
                  flow_hidden=a.flow_hidden,
                  realnvp_type=a.realnvp_type,
                  image_realnvp_n_couplings=a.image_realnvp_n_couplings,
                  image_realnvp_hidden=a.image_realnvp_hidden,
+                 base_logsigma_max=a.base_logsigma_max,
                  out_root=a.out_root)
 
 

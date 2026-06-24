@@ -1,10 +1,16 @@
 # =============================================================================
-# STEP-1_1 v0.5 -- models.experts
+# STEP-1_1 v0.6 -- models.experts
 # Purpose: four conditional flow experts with a shared Conditioner. Each maps
 #          x -> z through a stack of coupling layers and returns (z, logdet).
 #          Base density: standard Normal N(0, I).
 # CONVENTION: .log_prob(x | y) returns shape (B,). .sample(n, y) returns x.
 #             No fallback / mock / pass. Failures raise with logger.error.
+# Changelog (v0.5 -> v0.6):
+#   * NEW expert 'nice_mix' (CondNICEMix): additive NICE + FixedPermute mixing
+#     between couplings (NCP-N8 expressiveness ablation). Separate class so
+#     'nice' stays byte-identical; registered in EXPERTS and given its own
+#     build_expert branch (before the glow fallthrough) that forwards n_layers.
+#     Additive-only (no exp(s)/learned-1x1); permutation log-det 0.
 # Changelog (v0.4 -> v0.5):
 #   * IMG-RNVP v0.1: build_expert routes expert='realnvp' with
 #     realnvp_type='image' -> ImageCondRealNVP (CNN image couplings, Stage
@@ -25,8 +31,10 @@
 # Changelog (NEW in v0.1):
 #   * Introduced. CondNICE, CondRealNVP, CondNSF; FiLM by default.
 # Update summary:
-#   v0.5 adds the image-RealNVP routing (Stage 1.4b-A) without touching the
-#   flat/NICE/NSF/Glow paths; realnvp_type defaults to 'flat'.
+#   v0.6 adds the nice_mix expert (NCP-N8) as an additive NICE + fixed-perm
+#   variant, isolated behind its own class/branch; nice/realnvp/nsf/glow paths
+#   untouched. v0.5 added the image-RealNVP routing (Stage 1.4b-A) without
+#   touching the flat/NICE/NSF/Glow paths; realnvp_type defaults to 'flat'.
 # =============================================================================
 from __future__ import annotations
 import logging
@@ -39,7 +47,7 @@ import torch
 import torch.nn as nn
 
 from .conditioner import Conditioner
-from .flows.nice_layer import NICECoupling, DiagScale
+from .flows.nice_layer import NICECoupling, DiagScale, FixedPermute
 from .flows.realnvp_layer import RealNVPCoupling
 from .flows.nsf_layer import NSFCoupling
 from .flows.glow.squeeze import squeeze2x2, unsqueeze2x2
@@ -124,6 +132,33 @@ class DiagScaleWrapper(nn.Module):
 
     def inverse(self, y, h):
         return self.scale.inverse(y)
+
+
+class CondNICEMix(_BaseExpert):
+    """NCP-N8 ablation: additive NICE + fixed permutation mixing between
+    couplings. Identical to CondNICE except a FixedPermute is inserted between
+    successive NICECouplings (not after the last one, and before the final
+    DiagScaleWrapper). Additive-only -- NO exp(s), NO learned 1x1 -- so it stays
+    a distinct, NICE-flavoured expert (not RealNVP/Glow). Kept as a SEPARATE
+    class so plain 'nice' remains byte-identical and the frozen N0 baseline is
+    reproducible. Permutation log-det is 0, so encode/decode and the f64 logdet
+    sanity check carry over unchanged."""
+    def __init__(self, *, dim: int, h_dim: int, conditioner: Conditioner,
+                 hidden: int = 256, n_layers: int = 4, use_film: bool = True,
+                 film_hidden: int = 64, film_depth: int = 1,
+                 film_use_gelu: bool = False):
+        super().__init__(dim=dim, h_dim=h_dim, conditioner=conditioner)
+        for i in range(n_layers):
+            self.layers.append(NICECoupling(
+                dim=dim, hidden=hidden, h_dim=h_dim,
+                flip=bool(i % 2), use_film=use_film,
+                film_hidden=film_hidden, film_depth=film_depth,
+                film_use_gelu=film_use_gelu))
+            if i < n_layers - 1:
+                # fixed, deterministic per-position permutation (seed varies by i
+                # so layers don't share the same shuffle); log-det 0.
+                self.layers.append(FixedPermute(dim, seed=1000 + i))
+        self.layers.append(DiagScaleWrapper(dim))
 
 
 # ---- RealNVP ----------------------------------------------------------------
@@ -248,6 +283,7 @@ class CondGlow(_BaseExpert):
 
 EXPERTS = {
     "nice":    CondNICE,
+    "nice_mix": CondNICEMix,
     "realnvp": CondRealNVP,
     "nsf":     CondNSF,
     "glow":    CondGlow,
@@ -310,6 +346,13 @@ def build_expert(name: str, *, dim: int, h_dim: int,
         if n_layers is not None:
             ctor_kwargs["n_layers"] = n_layers
         return CondNICE(**ctor_kwargs)
+
+    if name == "nice_mix":
+        ctor_kwargs = dict(dim=dim, h_dim=h_dim, conditioner=conditioner,
+                           hidden=hidden, use_film=use_film, **film_kwargs)
+        if n_layers is not None:
+            ctor_kwargs["n_layers"] = n_layers
+        return CondNICEMix(**ctor_kwargs)
 
     if name == "realnvp":
         realnvp_type = kwargs.get("realnvp_type", "flat")

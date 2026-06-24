@@ -1,10 +1,15 @@
 # =============================================================================
-# STEP-1_4A v0.2 -- experiments.step_1_4a.config
+# STEP-1_4A v0.3 -- experiments.step_1_4a.config
 # Purpose: typed config for one conditional-base expert training run. Extends
 #          the Step-1.1 StepCfg with the conditional-base knobs. Frozen
 #          dataclass, sha256 run_tag.
 # CONVENTION: no silent defaults. Every invariant -> logger.error + raise.
 #             No fallback / mock / dummy / placeholder.
+# Changelog (v0.2 -> v0.3):
+#   * Accept expert='nice_mix' (NCP-N8 additive NICE + fixed-perm ablation) in
+#     the roster check. NEW field nice_n_layers (default 4, invariant >=1) ->
+#     NICE/nice_mix coupling depth; absorbed by hash()/run_tag() so depth sweeps
+#     land in distinct dirs. Default 4 = unchanged for existing nice runs.
 # Changelog (v0.1 -> v0.2):
 #   * early_stop_min_delta default 0.005 -> 0.001 (0.5% was too coarse on the
 #     NLL scale: ~16 nats at NLL=-3200, so real single-digit-nat gains were
@@ -56,6 +61,7 @@ class CBCfg:
     film_hidden: int = 128
     film_use_gelu: bool = True
     realnvp_n_couplings: int = 6
+    nice_n_layers: int = 4                # NICE / nice_mix coupling depth (NCP-N8)
     realnvp_s_max: float = 2.0
     # --- image RealNVP (Stage 1.4b-A) -------------------------------------
     realnvp_type: str = "flat"            # flat | image
@@ -93,8 +99,8 @@ class CBCfg:
     log_every: int = 50
 
     def __post_init__(self):
-        if self.expert not in ("nice", "realnvp", "nsf"):
-            logger.error("[CBCfg] expert must be nice/realnvp/nsf, got %r",
+        if self.expert not in ("nice", "realnvp", "nsf", "nice_mix"):
+            logger.error("[CBCfg] expert must be nice/realnvp/nsf/nice_mix, got %r",
                          self.expert)
             raise ValueError(f"expert {self.expert!r} not in active roster")
         if self.scale not in (1, 2, 4):
@@ -128,6 +134,10 @@ class CBCfg:
             logger.error("[CBCfg] realnvp_n_couplings must be >=1, got %s",
                          self.realnvp_n_couplings)
             raise ValueError("realnvp_n_couplings must be >=1")
+        if self.nice_n_layers < 1:
+            logger.error("[CBCfg] nice_n_layers must be >=1, got %s",
+                         self.nice_n_layers)
+            raise ValueError("nice_n_layers must be >=1")
         if self.realnvp_type not in ("flat", "image"):
             logger.error("[CBCfg] realnvp_type must be flat|image, got %r",
                          self.realnvp_type)

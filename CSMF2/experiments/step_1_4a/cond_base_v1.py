@@ -1,5 +1,5 @@
 # =============================================================================
-# STEP-1_4A v0.2 -- experiments.step_1_4a.cond_base
+# STEP-1_4A v0.1 -- experiments.step_1_4a.cond_base
 # Purpose: posterior-safe conditional base N(mu(h), sigma(h)) for a flow
 #          expert. Replaces the fixed N(0,I) base over the flow latent w with
 #          a conditional Gaussian whose params are read from h = cond(y).
@@ -10,19 +10,6 @@
 # Diagnostics (base-collapse surface, mirrors FiLM gamma->0):
 #   mu_std_across_y, log_sigma_std_across_y, base_shuffle_gap, base_alive
 #   base_effect_magnitude = mean KL( N(mu(h),sigma(h)) || N(0,I) )  [tracked]
-# Changelog (v0.1 -> v0.2, NCP-N1):
-#   * base_diagnostics now appends clamp-saturation diagnostics to the SAME
-#     return dict: fraction_at_sigma_max (the N2 gate metric) + _min,
-#     base_logsigma_{q05,q50,q95,std_overall}, and base_logsigma_{min,max} +
-#     saturation_eps for provenance. New kwarg eps=1e-3 (logsigma-space).
-#   * PURELY ADDITIVE: base_alive rule, base_shuffle_gap, n_y subsampling,
-#     tau_b return, and the base_kl() call are unchanged -- the N1 run stays
-#     consistent with the frozen N0 baseline. No verdict/boolean (N2 decides
-#     binding); no per-dim vector; no plots.
-# Update summary (v0.2):
-#   v0.2 answers ONE question for N2 -- "is the base pinned at the logsigma
-#   clamp?" -- via fraction_at_sigma_max, reusing the logsigma already computed
-#   (no extra forward). Everything the N0 contract reads is left intact.
 # Changelog (NEW in v0.1):
 #   * Introduced. ConditionalBase (mu/logsigma nets, logsigma clamp, zero
 #     init), base_logp, base_sample (eps->w), base_diagnostics, base_kl.
@@ -39,7 +26,7 @@ import torch
 import torch.nn as nn
 
 logger = logging.getLogger(__name__)
-__version__ = "0.2"
+__version__ = "0.1"
 __abbr__ = "STEP-1_4A"
 
 _LOG2PI = math.log(2.0 * math.pi)
@@ -104,17 +91,9 @@ def base_kl(mu, logsigma, sigma):
 
 @torch.no_grad()
 def base_diagnostics(base: ConditionalBase, cond, y, *, tau_b: float,
-                     n_y: int = 64, eps: float = 1e-3) -> dict:
+                     n_y: int = 64) -> dict:
     """Is the base actually conditional? Computes spread of mu/logsigma across
-    y, a shuffle gap, KL-to-N(0,I), and the base_alive flag.
-
-    NCP-N1 (v0.2): also reports clamp-saturation diagnostics appended to the
-    SAME return dict -- fraction_at_sigma_{max,min}, logsigma quantiles/std,
-    and the clamp bounds + eps used. Reuses the (mu, logsigma, sigma) already
-    computed (no extra forward). `eps` is the absolute logsigma-space tolerance
-    for "pinned at the clamp". Nothing above the appended block changes:
-    base_alive, base_shuffle_gap, n_y, tau_b, and the base_kl() call are
-    preserved exactly so this stays consistent with the frozen N0 baseline."""
+    y, a shuffle gap, KL-to-N(0,I), and the base_alive flag."""
     y_sel = y[:n_y]
     h = cond(y_sel)
     mu, logsigma, sigma = base.params(h)
@@ -139,28 +118,6 @@ def base_diagnostics(base: ConditionalBase, cond, y, *, tau_b: float,
         "base_alive": alive,
         "tau_b": tau_b,
     }
-    # --- NCP-N1 saturation diagnostics (appended; nothing above changed) ---
-    # Reuses logsigma from base.params(h) above -- no extra forward pass.
-    # logsigma is already clamped to [logsigma_min, logsigma_max] in params().
-    at_max = float(((base.logsigma_max - logsigma) < eps).float().mean())
-    at_min = float(((logsigma - base.logsigma_min) < eps).float().mean())
-    ls_flat = logsigma.reshape(-1)
-    q05, q50, q95 = torch.quantile(
-        ls_flat, torch.tensor([0.05, 0.50, 0.95], device=ls_flat.device)
-    ).tolist()
-    out.update({
-        "fraction_at_sigma_max": at_max,          # MAIN N2 gate metric
-        "fraction_at_sigma_min": at_min,
-        "base_logsigma_std_overall": float(ls_flat.std(unbiased=False)),
-        "base_logsigma_q05": float(q05),
-        "base_logsigma_q50": float(q50),
-        "base_logsigma_q95": float(q95),
-        "base_logsigma_min": float(base.logsigma_min),
-        "base_logsigma_max": float(base.logsigma_max),
-        "saturation_eps": float(eps),
-    })
-    logger.info("[CBase] mu_std=%.3e ls_std=%.3e KL=%.3e gap=%.3e alive=%s "
-                "frac@max=%.3f frac@min=%.3f",
-                mu_std, ls_std, out["base_effect_magnitude"], gap, alive,
-                at_max, at_min)
+    logger.info("[CBase] mu_std=%.3e ls_std=%.3e KL=%.3e gap=%.3e alive=%s",
+                mu_std, ls_std, out["base_effect_magnitude"], gap, alive)
     return out

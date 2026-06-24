@@ -1,5 +1,5 @@
 # =============================================================================
-# NCP-N0 v0.3 -- experiments.step_1_4a.freeze_baseline
+# NCP-N0 v0.9 -- experiments.step_1_4a.freeze_baseline
 # Purpose: Write ONE immutable, identity-verified evidence record for the
 #          existing clamp-2p0 NICE-CB run. Pure snapshot: no model/config/train
 #          edits, no optimizer, no checkpoint mutation. Defines the contract
@@ -7,6 +7,34 @@
 # CONVENTION: No fallback / mock / dummy / silent pass. Every failure path is
 #          logger.error + raise. Required (contract) fields missing -> raise;
 #          only optional-context fields may be recorded as "not_available".
+# Changelog (v0.8 -> v0.9):
+#   * Run the invertibility round-trip in FLOAT64 (cast the whole model to
+#     double for that block only, restore float32 before logdet). A float32
+#     forward floors the round-trip residual at ~1e-5, tripping the strict 1e-5
+#     gate on a genuinely invertible model (NICE-CB read 1.925e-5 post-v0.8).
+#     Full-model double cast is consistent (avoids the v0.6 float32-weight /
+#     float64-input mismatch); f32->f64->f32 weight round-trip is lossless. Gate
+#     stays 1e-5; the round-trip now reaches ~1e-13 and passes legitimately.
+# Changelog (v0.7 -> v0.8):
+#   * FIX invertibility recompute for CB-wrapped experts. encode(x,h) returns
+#     the raw flow latent w; decode(eps,h) expects standard-normal eps and
+#     internally does w=mu+sigma*eps. The check fed w straight into decode,
+#     double-applying the base -> ~1e2 Linf "non-invertible" false failure
+#     (NICE-CB N0 NO-GO at inv=1.475e2 while logdet passed -- logdet only uses
+#     encode, so it was unaffected). Now standardize w->eps via base.params(h)
+#     ((w-mu)/sigma) before decode; non-CB experts (no .base) decode the latent
+#     directly. Model was always invertible; only the audit round-trip was wrong.
+# Changelog (v0.6 -> v0.7):
+#   * Accept the PROVISIONAL_CLUSTER tier emitted by RECARGMIN-DIAG. The
+#     breakdown emits 5 tiers; TIER_RANK knew only 4, so tier_rank() raised on a
+#     valid breakdown. Ranked 3 (above PROVISIONAL, below STRONG); STRONG bumped
+#     3 -> 4. PROVISIONAL_CLUSTER counts as PROVISIONAL+ in beats_baseline (a
+#     concentrated cluster is a stronger signal than scattered provisional wins).
+# Update summary:
+#   v0.7 is a one-constant vocabulary fix: the consumer (this file) now knows
+#   every tier the producer (step_1_3a breakdown) can emit. No behavior change
+#   for FLAT/WEAK/PROVISIONAL/STRONG; small-N PROVISIONAL_CLUSTER results should
+#   still be read with the breakdown's own "confirm with seed 1" caveat.
 # Changelog (v0.5 -> v0.6):
 #   * Dtype fix: model/conditioner are float32 -- run the forward pass in
 #     float32 and cast to float64 ONLY at the invertibility diff and the logdet
@@ -64,7 +92,7 @@ from typing import Any
 
 logger = logging.getLogger("NCP-N0")
 
-__version__ = "0.6"
+__version__ = "0.9"
 __abbr__ = "NCP-N0"
 
 # --- expected baseline identity (verified against the saved config) ----------
@@ -75,7 +103,9 @@ EXPECT_BASE_LOGSIGMA_MAX_TOL = 1e-9
 INVERTIBILITY_GATE = 1e-5                 # max ||x - finv(f(x))||inf
 
 # RECARGMIN-DIAG tier ordering (reused by later steps; not applied during N0).
-TIER_RANK = {"FLAT": 0, "WEAK": 1, "PROVISIONAL": 2, "STRONG": 3}
+# PROVISIONAL_CLUSTER ranks above PROVISIONAL (wins concentrate = niche signal)
+# and below STRONG. Read small-N clusters with the breakdown's seed-confirm caveat.
+TIER_RANK = {"FLAT": 0, "WEAK": 1, "PROVISIONAL": 2, "PROVISIONAL_CLUSTER": 3, "STRONG": 4}
 
 
 # =============================================================================
@@ -384,14 +414,41 @@ def recompute_invertibility_and_logdet(run_dir: str, report: dict, device: str,
         run_dir, report, device, n_invert, n_logdet)
 
     # --- invertibility (model fwd in float32; diff in float64) ---
+    # NOTE (v0.8): for a CB-wrapped expert the two directions are NOT plain
+    # inverses. encode(x,h) -> w (the RAW flow latent the base scores), while
+    # decode(eps,h) FIRST maps eps -> w = mu(h)+sigma(h)*eps then inverts the
+    # flow. So the round-trip is decode(standardize(encode(x))), where
+    # standardize is the base inverse eps = (w - mu)/sigma. Feeding w straight
+    # into decode double-applies the base (~O(100) Linf error). cond_base has
+    # to_w (eps->w) but no inverse, so we standardize inline via base.params(h).
+    # NOTE (v0.9): run the round-trip in FLOAT64. A float32 forward floors the
+    # round-trip residual at ~1e-5 (deep-flow single-precision accumulation),
+    # which trips the strict 1e-5 gate even on a genuinely invertible model.
+    # Cast the whole model (weights AND activations) to double for this block
+    # only -- this is consistent (no float32-weight/float64-input mismatch, the
+    # v0.6 trap) -- then restore float32 before the logdet section. f32->f64->f32
+    # weight round-trip is lossless (every f32 is exact in f64). The conditioner
+    # is not invoked here (h precomputed), so its dtype is irrelevant in-block.
     with torch.no_grad():
-        enc = model.encode(xf_inv, h_inv)
-        z = enc[0] if isinstance(enc, tuple) else enc
-        x_rec = model.decode(z, h_inv)
-        if x_rec.shape != xf_inv.shape:
-            _die(f"decode shape {tuple(x_rec.shape)} != input {tuple(xf_inv.shape)}")
-        err = (xf_inv.double() - x_rec.double()).abs().amax(dim=1)  # per-sample Linf
+        model.double()
+        xf_d = xf_inv.double()
+        h_d = h_inv.double()
+        enc = model.encode(xf_d, h_d)
+        w = enc[0] if isinstance(enc, tuple) else enc
+        base = getattr(model, "base", None)
+        if base is not None and hasattr(base, "params"):
+            mu, _logsigma, sigma = base.params(h_d)     # diagonal Gaussian base
+            if not (torch.isfinite(mu).all() and torch.isfinite(sigma).all()):
+                _die("non-finite base params during invertibility recompute")
+            z = (w - mu) / sigma                        # w -> eps (base inverse)
+        else:
+            z = w                                       # non-CB expert: decode takes the latent directly
+        x_rec = model.decode(z, h_d)
+        if x_rec.shape != xf_d.shape:
+            _die(f"decode shape {tuple(x_rec.shape)} != input {tuple(xf_d.shape)}")
+        err = (xf_d - x_rec).abs().amax(dim=1)          # per-sample Linf, float64
         inv_max = float(err.max().item())
+        model.float()                                   # restore for the float32 logdet section
     inv_pass = inv_max < INVERTIBILITY_GATE
 
     # --- logdet sanity: analytic ldj vs numerical Jacobian slogdet (float64) ---
