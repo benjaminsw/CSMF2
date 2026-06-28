@@ -1,10 +1,18 @@
 # =============================================================================
-# STEP-1_1 v0.6 -- models.experts
-# Purpose: four conditional flow experts with a shared Conditioner. Each maps
+# STEP-1_1 v0.7 -- models.experts
+# Purpose: five conditional flow experts with a shared Conditioner. Each maps
 #          x -> z through a stack of coupling layers and returns (z, logdet).
 #          Base density: standard Normal N(0, I).
 # CONVENTION: .log_prob(x | y) returns shape (B,). .sample(n, y) returns x.
 #             No fallback / mock / pass. Failures raise with logger.error.
+# Changelog (v0.6 -> v0.7) [FLOWPP v0.1]:
+#   * NEW expert 'flowpp' (CondFlowpp): Glow backbone (squeeze/actnorm/inv1x1)
+#     with the logistic-mixture-CDF coupling instead of affine -- the Flow++
+#     candidate for Stage 1.1. CondGlow gains coupling_type ('affine' default,
+#     BYTE-IDENTICAL Glow path) + n_mixtures, forwarded to GlowStep; CondFlowpp
+#     is a thin subclass passing coupling_type='mix_logistic'. Registered in
+#     EXPERTS; build_expert routes 'flowpp' with flowpp_keys (glow keys +
+#     n_mixtures) and admits it to the v2-conditioner/FiLM roster.
 # Changelog (v0.5 -> v0.6):
 #   * NEW expert 'nice_mix' (CondNICEMix): additive NICE + FixedPermute mixing
 #     between couplings (NCP-N8 expressiveness ablation). Separate class so
@@ -39,7 +47,7 @@
 from __future__ import annotations
 import logging
 logger = logging.getLogger(__name__)
-__version__ = "0.4"
+__version__ = "0.7"
 __abbr__ = "STEP-1_1"
 
 import math
@@ -200,7 +208,8 @@ class CondGlow(_BaseExpert):
                  film_use_gelu: bool = True,
                  image_shape: tuple[int, int, int] = (1, 28, 28),
                  inv1x1_seed_base: int = 0,
-                 film_gain_init: float = 0.3):
+                 film_gain_init: float = 0.3,
+                 coupling_type: str = "affine", n_mixtures: int = 4):
         super().__init__(dim=dim, h_dim=h_dim, conditioner=conditioner)
         if not use_film:
             logger.error("[CondGlow] use_film=False unsupported (FiLM locked in v0.1)")
@@ -227,7 +236,8 @@ class CondGlow(_BaseExpert):
                 film_hidden=film_hidden, film_depth=film_depth,
                 film_use_gelu=film_use_gelu,
                 inv1x1_seed=inv1x1_seed_base * 1000 + i,
-                film_gain_init=film_gain_init))
+                film_gain_init=film_gain_init,
+                coupling_type=coupling_type, n_mixtures=n_mixtures))
 
     def _to_image(self, x_flat: torch.Tensor) -> torch.Tensor:
         if x_flat.dim() != 2 or x_flat.size(1) != self.dim:
@@ -281,12 +291,37 @@ class CondGlow(_BaseExpert):
             self.train()
 
 
+class CondFlowpp(CondGlow):
+    # FLOWPP v0.1: Glow backbone with logistic-mixture-CDF coupling. Reuses
+    # CondGlow verbatim (squeeze/unsqueeze wrap, init_actnorm walker) and only
+    # flips coupling_type -> 'mix_logistic'. n_mixtures (K) is the one extra
+    # hyperparameter. Everything else (conditioning, dequant path, backbone) is
+    # held identical to Glow so the coupling primitive is the lone variable.
+    def __init__(self, *, dim: int, h_dim: int, conditioner: Conditioner,
+                 hidden: int = 256, n_layers: int = 8, use_film: bool = True,
+                 s_max: float = 2.0, n_mixtures: int = 4,
+                 film_hidden: int = 128, film_depth: int = 2,
+                 film_use_gelu: bool = True,
+                 image_shape: tuple[int, int, int] = (1, 28, 28),
+                 inv1x1_seed_base: int = 0,
+                 film_gain_init: float = 0.3):
+        super().__init__(dim=dim, h_dim=h_dim, conditioner=conditioner,
+                         hidden=hidden, n_layers=n_layers, use_film=use_film,
+                         s_max=s_max, film_hidden=film_hidden,
+                         film_depth=film_depth, film_use_gelu=film_use_gelu,
+                         image_shape=image_shape,
+                         inv1x1_seed_base=inv1x1_seed_base,
+                         film_gain_init=film_gain_init,
+                         coupling_type="mix_logistic", n_mixtures=n_mixtures)
+
+
 EXPERTS = {
     "nice":    CondNICE,
     "nice_mix": CondNICEMix,
     "realnvp": CondRealNVP,
     "nsf":     CondNSF,
     "glow":    CondGlow,
+    "flowpp":  CondFlowpp,
 }
 
 
@@ -305,11 +340,14 @@ def build_expert(name: str, *, dim: int, h_dim: int,
 
     film_keys = {"film_hidden", "film_depth", "film_use_gelu"}
     glow_keys = {"s_max", "image_shape", "inv1x1_seed_base", "film_gain_init"}
+    # FLOWPP v0.1: flowpp shares the glow backbone keys and adds n_mixtures.
+    flowpp_keys = {"n_mixtures"}
     # IMG-RNVP v0.1: image RealNVP (Stage 1.4b-A) kwargs, realnvp-only.
     image_keys = {"realnvp_type", "image_n_couplings", "image_hidden",
                   "image_mask_type", "image_s_max"}
 
-    unknown = set(kwargs) - (film_keys | glow_keys | image_keys | {"n_layers"})
+    unknown = set(kwargs) - (film_keys | glow_keys | flowpp_keys
+                             | image_keys | {"n_layers"})
     if unknown:
         logger.error("[build_expert] unknown kwargs %s for expert=%r",
                      sorted(unknown), name)
@@ -323,12 +361,22 @@ def build_expert(name: str, *, dim: int, h_dim: int,
                          f"got {list(film_kwargs)}")
 
     glow_kwargs = {k: kwargs[k] for k in glow_keys if k in kwargs}
-    if glow_kwargs and name != "glow":
+    if glow_kwargs and name not in ("glow", "flowpp"):
         logger.error("[build_expert] glow_kwargs %s only supported for "
-                     "expert='glow', got expert=%r",
+                     "expert in {glow,flowpp}, got expert=%r",
                      list(glow_kwargs), name)
         raise ValueError(
-            f"glow_kwargs only supported for expert='glow'; got expert={name!r}")
+            f"glow_kwargs only supported for expert in {{glow,flowpp}}; "
+            f"got expert={name!r}")
+
+    flowpp_kwargs = {k: kwargs[k] for k in flowpp_keys if k in kwargs}
+    if flowpp_kwargs and name != "flowpp":
+        logger.error("[build_expert] flowpp_kwargs %s only supported for "
+                     "expert='flowpp', got expert=%r",
+                     list(flowpp_kwargs), name)
+        raise ValueError(
+            f"flowpp_kwargs only supported for expert='flowpp'; "
+            f"got expert={name!r}")
 
     image_kwargs = {k: kwargs[k] for k in image_keys if k in kwargs}
     if image_kwargs and name != "realnvp":
@@ -379,6 +427,14 @@ def build_expert(name: str, *, dim: int, h_dim: int,
         if n_layers is not None:
             ctor_kwargs["n_layers"] = n_layers
         return CondNSF(**ctor_kwargs)
+
+    if name == "flowpp":
+        ctor_kwargs = dict(dim=dim, h_dim=h_dim, conditioner=conditioner,
+                           hidden=hidden, use_film=use_film,
+                           **film_kwargs, **glow_kwargs, **flowpp_kwargs)
+        if n_layers is not None:
+            ctor_kwargs["n_layers"] = n_layers
+        return CondFlowpp(**ctor_kwargs)
 
     # glow
     ctor_kwargs = dict(dim=dim, h_dim=h_dim, conditioner=conditioner,

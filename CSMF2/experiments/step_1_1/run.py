@@ -1,5 +1,28 @@
 # =============================================================================
-# STEP-1_1 v0.18 -- experiments.step_1_1.run
+# STEP-1_1 v0.21 -- experiments.step_1_1.run
+# Changelog (v0.20 -> v0.21) [FLOWPP v0.1]:
+#   * Wire the flowpp expert: film_kwargs + a flowpp extra_kwargs pack
+#     (n_layers=flowpp_n_steps, s_max, image_shape, inv1x1_seed_base,
+#     film_gain_init, n_mixtures); hidden=flowpp_coupling_hidden. init_actnorm,
+#     the twin-logdet skip, and the per-epoch film_gain logging now fire for
+#     expert in {glow,flowpp} (flowpp reuses the Glow actnorm/film_gain). CLI
+#     gains --flowpp-n-steps/-coupling-hidden/-s-max/-n-mixtures + StepCfg
+#     wire-in. Non-flowpp paths unchanged.
+# Changelog (v0.19 -> v0.20) [GLOW-PHC v0.1, Phase C balance probe]:
+#   * NEW: per-epoch consistency-loss balance logging (cons_hist in report).
+#     Logs nll, raw_cons=||A(x_hat)-y||^2, weighted_cons=lambda*raw_cons, and
+#     ratio=weighted_cons/|nll| -- surfaces whether the consistency term is
+#     large enough to influence total loss (the open question after the
+#     lambda_cons=0.01 run, where the term was ~4 orders below NLL). Only
+#     active when lambda_cons>0; lambda_cons==0 path unchanged.
+# Changelog (v0.18 -> v0.19) [GLOW-PHC v0.1, Phase C]:
+#   * NEW: Glow-only forward-consistency loss, behind cfg.lambda_cons (CLI
+#     --lambda-cons, default 0.0 = OFF). When >0 and expert=='glow': draw
+#     z'~N(0,1), x_hat = inverse_logit(decode(z',h)), cons = ||A(x_hat) - y||^2
+#     (sum over pixels, mean over batch); total += lambda_cons * cons. A reuses
+#     data.degrade blur/downsample (autograd-safe). Non-finite -> error + raise.
+#   * Imports blur, downsample, inverse_logit from data.degrade. CLI flag +
+#     StepCfg wire-in added. lambda_cons==0 path is v0.18 runtime-identical.
 # Changelog (v0.17 -> v0.18):
 #   * NEW CLI: --lr (default 1e-3) now forwarded to StepCfg.lr. Previously lr
 #     was only a StepCfg field with no CLI flag, so every run used the 1e-3
@@ -89,7 +112,8 @@ from .sanity import (numeric_logdet_check, invertibility_check,
 from .diagnostics.fixed_z_diag import fixed_z_different_y
 from .diagnostics.cond_path_probe import cond_path_probe
 from ...common import cond_viz as cv
-from ...data.degrade import MNISTDegraded, dequantize_logit
+from ...data.degrade import (MNISTDegraded, dequantize_logit,
+                             blur, downsample, inverse_logit)
 from ...models.conditioner import Conditioner
 from ...models.experts import build_expert
 
@@ -315,7 +339,7 @@ def run(cfg: StepCfg) -> dict:
     # v0.8: film_kwargs now allowed for nice, realnvp, glow (build_expert
     # raises for nsf only). Glow + RealNVP also get their own param packs.
     film_kwargs: dict = {}
-    if cfg.expert in ("nice", "realnvp", "glow"):
+    if cfg.expert in ("nice", "realnvp", "glow", "flowpp"):
         film_kwargs = dict(film_hidden=cfg.film_hidden,
                            film_depth=cfg.film_depth,
                            film_use_gelu=cfg.film_use_gelu)
@@ -331,10 +355,23 @@ def run(cfg: StepCfg) -> dict:
             inv1x1_seed_base=cfg.seed,
             film_gain_init=cfg.glow_film_gain_init,    # v0.9
         )
+    elif cfg.expert == "flowpp":
+        # FLOWPP v0.1: same Glow backbone keys + n_mixtures (K). Reuses the
+        # glow_image_* dims (shared squeeze stack).
+        extra_kwargs.update(
+            n_layers=cfg.flowpp_n_steps,
+            s_max=cfg.flowpp_s_max,
+            image_shape=(cfg.glow_image_c, cfg.glow_image_h, cfg.glow_image_w),
+            inv1x1_seed_base=cfg.seed,
+            film_gain_init=cfg.glow_film_gain_init,
+            n_mixtures=cfg.flowpp_n_mixtures,
+        )
 
-    # Glow uses its own coupling_hidden (3-conv NN channels); other experts use flow_hidden.
-    hidden_for_build = (cfg.glow_coupling_hidden
-                        if cfg.expert == "glow" else cfg.flow_hidden)
+    # Glow/Flow++ use their own coupling_hidden (3-conv NN channels); other
+    # experts use flow_hidden.
+    hidden_for_build = (cfg.glow_coupling_hidden if cfg.expert == "glow"
+                        else cfg.flowpp_coupling_hidden if cfg.expert == "flowpp"
+                        else cfg.flow_hidden)
     expert = build_expert(cfg.expert, dim=cfg.dim, h_dim=cfg.h_dim,
                           conditioner=cond, hidden=hidden_for_build,
                           use_film=cfg.use_film,
@@ -346,7 +383,7 @@ def run(cfg: StepCfg) -> dict:
     # One pass over a single train batch before epoch 1. Each Actnorm sees
     # its own pre-actnorm activations and initialises s, b. Skipped for
     # non-Glow experts (no Actnorm in their layer stacks).
-    if cfg.expert == "glow":
+    if cfg.expert in ("glow", "flowpp"):
         x_init_img, y_init = next(iter(train_loader))
         x_init_img = x_init_img.to(device); y_init = y_init.to(device)
         x_init_logit, _ = dequantize_logit(x_init_img, generator=gen)
@@ -357,13 +394,13 @@ def run(cfg: StepCfg) -> dict:
     # SKIPPED for Glow: a dim-16 toy is incompatible with image-shape Glow
     # (squeeze requires (C,H,W) with C*H*W=dim and even H,W). The per-epoch
     # invertibility_check below covers correctness.
-    if cfg.expert == "glow":
+    if cfg.expert in ("glow", "flowpp"):
         logdet_rep = {"passed": True, "skipped": True,
                       "reason": "twin-flow logdet check incompatible with "
-                                "image-shape Glow; per-epoch "
+                                "image-shape Glow/Flow++; per-epoch "
                                 "invertibility_check covers correctness"}
-        logger.info("[run] logdet twin check SKIPPED for Glow: %s",
-                    logdet_rep["reason"])
+        logger.info("[run] logdet twin check SKIPPED for %s: %s",
+                    cfg.expert, logdet_rep["reason"])
     else:
         twin_cond_kwargs = dict(cond_kwargs)
         twin_cond = Conditioner(**twin_cond_kwargs).to(device)
@@ -397,6 +434,7 @@ def run(cfg: StepCfg) -> dict:
     test_nll_hist:  list[float] = []
     glow_film_gain_hist: list[list[float]] = []   # v0.9: Glow-only, list of per-step gains per epoch
     shuffle_hinge_hist: list[dict] = []            # v0.10: list of {"gap": float, "hinge": float} per epoch
+    cons_hist:         list[dict] = []             # v0.20: per-epoch {"nll","raw_cons","weighted_cons","ratio"}
     h_std_obs_hist:    list[dict] = []             # v0.12: per-epoch {"total":, "batch":}
     grad_norms_hist:   list[dict] = []             # v0.11: per-epoch {"cond": float, "film_gain": float}
     y_resid_alpha_hist: list[float] = []           # v0.13: per-epoch y_residual_alpha values
@@ -412,6 +450,8 @@ def run(cfg: StepCfg) -> dict:
     for epoch in range(cfg.epochs):
         expert.train(); cond.train()
         t0 = time.time(); nb = 0; nll_sum = 0.0
+        # v0.20: consistency-loss accumulators (used only when lambda_cons>0)
+        cons_raw_sum = 0.0; cons_w_sum = 0.0; n_cons = 0
         # v0.10: shuffle-hinge accumulators (used only when lambda > 0)
         hinge_sum = 0.0; gap_sum = 0.0; n_hinge = 0
         # v0.11: h.std accumulators + last-step grad-norm captures
@@ -469,6 +509,35 @@ def run(cfg: StepCfg) -> dict:
                 total = total + cfg.h_std_penalty_mu * h_pen
                 h_std_pen_sum += float(h_pen.item())
                 n_hstd += 1
+            # v0.19 (GLOW-PHC, Phase C): Glow-only forward-consistency loss.
+            # Draw z'~N(0,1), decode to a posterior sample, push through the
+            # SAME forward operator A as data.degrade, match y. Gated on the
+            # flag AND expert=='glow' (config enforces the pairing).
+            if cfg.lambda_cons > 0.0 and cfg.expert == "glow":
+                z_prime = torch.randn(x_flat.size(0), expert.dim,
+                                      generator=gen, device=device,
+                                      dtype=x_flat.dtype)
+                x_hat_logit = expert.decode(z_prime, h)        # (B, dim) logit
+                x_hat_pix = inverse_logit(x_hat_logit)         # (B, dim) [0,1]
+                x_hat_img = x_hat_pix.view(-1, cfg.glow_image_c,
+                                           cfg.glow_image_h, cfg.glow_image_w)
+                A_x_hat = downsample(blur(x_hat_img, cfg.blur_sigma),
+                                     cfg.scale)                # (B,1,h,w) = A(x)
+                if A_x_hat.shape != y_img.shape:
+                    logger.error("[run] consistency shape mismatch A(x_hat)=%s "
+                                 "y=%s at epoch=%d step=%d",
+                                 tuple(A_x_hat.shape), tuple(y_img.shape),
+                                 epoch, step)
+                    raise RuntimeError("consistency operator shape mismatch")
+                cons = ((A_x_hat - y_img) ** 2).flatten(1).sum(-1).mean()
+                if not torch.isfinite(cons):
+                    logger.error("[run] non-finite consistency loss at "
+                                 "epoch=%d step=%d", epoch, step)
+                    raise RuntimeError("non-finite consistency loss")
+                total = total + cfg.lambda_cons * cons
+                cons_raw_sum += float(cons.item())
+                cons_w_sum   += float((cfg.lambda_cons * cons).item())
+                n_cons       += 1
             h_std_obs_sum  += float(h_std_total.item())
             h_std_batch_sum += float(h_std_batch.item())
             # v0.12: per-50-step h log shows BOTH stats so we can see whether
@@ -532,7 +601,7 @@ def run(cfg: StepCfg) -> dict:
         # v0.9: log Glow's per-coupling film_gain values (mean/min/max).
         # Tells us whether the model leans into conditioning (gain grows) or
         # abandons it (gain decays toward 0). Stored in report["glow_film_gain_hist"].
-        if cfg.expert == "glow":
+        if cfg.expert in ("glow", "flowpp"):
             gains = []
             for layer in expert.layers:
                 if hasattr(layer, "coupling") and hasattr(layer.coupling,
@@ -541,8 +610,8 @@ def run(cfg: StepCfg) -> dict:
                                        .item()))
             if gains:
                 arr = torch.tensor(gains)
-                logger.info("[glow] film_gain mean=%.4f min=%.4f max=%.4f",
-                            float(arr.mean()), float(arr.min()),
+                logger.info("[%s] film_gain mean=%.4f min=%.4f max=%.4f",
+                            cfg.expert, float(arr.mean()), float(arr.min()),
                             float(arr.max()))
                 glow_film_gain_hist.append(gains)
 
@@ -554,6 +623,22 @@ def run(cfg: StepCfg) -> dict:
                         gap_mean, hinge_mean,
                         cfg.shuffle_loss_lambda, cfg.shuffle_loss_margin)
             shuffle_hinge_hist.append({"gap": gap_mean, "hinge": hinge_mean})
+
+        # v0.20: per-epoch consistency-loss balance log. nll here is the
+        # epoch-mean train NLL (= nll_sum/nb); ratio shows how large the
+        # weighted consistency term is RELATIVE to |NLL| (the whole point of
+        # the Phase C balance probe). Only logged when lambda_cons>0.
+        if cfg.lambda_cons > 0.0 and n_cons > 0:
+            nll_mean = nll_sum / max(nb, 1)
+            raw_cons_mean = cons_raw_sum / n_cons
+            w_cons_mean   = cons_w_sum   / n_cons
+            ratio = w_cons_mean / max(abs(nll_mean), 1e-12)
+            logger.info("[cons] nll=%.2f raw_cons=%.4f weighted_cons=%.4f "
+                        "ratio(w/|nll|)=%.3e lambda=%.4g",
+                        nll_mean, raw_cons_mean, w_cons_mean, ratio,
+                        cfg.lambda_cons)
+            cons_hist.append({"nll": nll_mean, "raw_cons": raw_cons_mean,
+                              "weighted_cons": w_cons_mean, "ratio": ratio})
 
         # v0.11/v0.12: per-epoch h.std stats. 'batch' is the across-batch std
         # averaged over dims -- the right metric for conditioning. 'total' is
@@ -643,7 +728,8 @@ def run(cfg: StepCfg) -> dict:
             # Glow stores FiLM inside layer.coupling.film1/film2 -- the v2
             # diagnostics block below covers the same conditioning health
             # checks (film_alive, logp_shuffle) using Glow's actual structure.
-            if cfg.expert != "glow":
+            # FLOWPP v0.1: flowpp shares Glow's nested-FiLM structure -> skip too.
+            if cfg.expert not in ("glow", "flowpp"):
                 _cond_gate_hook(expert, cond, test_loader, device, gen, plots,
                                 epoch, cg_history)
 
@@ -727,6 +813,7 @@ def run(cfg: StepCfg) -> dict:
         "cond_gate_history": cg_hist_save,
         "glow_film_gain_hist": glow_film_gain_hist,   # v0.9
         "shuffle_hinge_hist":  shuffle_hinge_hist,    # v0.10
+        "cons_hist":           cons_hist,             # v0.20
         "h_std_obs_hist":      h_std_obs_hist,        # v0.11
         "grad_norms_hist":     grad_norms_hist,       # v0.11
         "y_resid_alpha_hist":  y_resid_alpha_hist,    # v0.13
@@ -784,7 +871,8 @@ def run(cfg: StepCfg) -> dict:
 def _parse_args() -> tuple[StepCfg, bool]:
     p = argparse.ArgumentParser()
     p.add_argument("--expert",
-                   choices=["nice", "realnvp", "nsf", "glow"], default="nice",
+                   choices=["nice", "realnvp", "nsf", "glow", "flowpp"],
+                   default="nice",
                    help="Default 'nice'. v0.8: v2 conditioner supported for "
                         "nice / realnvp / glow. For nsf you MUST pass "
                         "--no-use-v2-conditioner.")
@@ -825,6 +913,13 @@ def _parse_args() -> tuple[StepCfg, bool]:
     p.add_argument("--glow-film-gain-init", type=float, default=0.3,
                    help="initial value of Glow's learnable per-coupling FiLM "
                         "gain (v0.5+; default 0.3). 0 reproduces v0.8 behaviour.")
+    # FLOWPP v0.1: Flow++ candidate (Glow backbone + logistic-mixture coupling)
+    p.add_argument("--flowpp-n-steps", type=int, default=8)
+    p.add_argument("--flowpp-coupling-hidden", type=int, default=256)
+    p.add_argument("--flowpp-s-max", type=float, default=2.0)
+    p.add_argument("--flowpp-n-mixtures", type=int, default=4,
+                   help="K logistics per coupling element (Flow++ mixture-CDF "
+                        "coupling). Default 4.")
     # v0.10: shuffle-gap hinge loss
     p.add_argument("--shuffle-loss-lambda", type=float, default=0.0,
                    help="hinge weight for the shuffle-gap auxiliary loss. "
@@ -848,6 +943,11 @@ def _parse_args() -> tuple[StepCfg, bool]:
                         "h = cnn_head(y) + alpha * Linear(y.flatten). "
                         "Default 0.0 = bypass DISABLED. Suggested rescue "
                         "value for Glow: 0.3.")
+    # v0.19 (GLOW-PHC, Phase C): Glow-only forward-consistency loss
+    p.add_argument("--lambda-cons", type=float, default=0.0,
+                   help="weight on the Glow-only forward-consistency loss "
+                        "lambda * ||A(decode(z'~N(0,1))) - y||^2. Default 0.0 "
+                        "= OFF. >0 requires --expert glow. Phase C start: 0.01.")
     # v0.14: FZDY fixed-z different-y diagnostic knobs
     p.add_argument("--fzdy-n-y", type=int, default=6,
                    help="distinct y per fixed-z grid (>=2). Default 6.")
@@ -877,11 +977,16 @@ def _parse_args() -> tuple[StepCfg, bool]:
                   glow_coupling_hidden=a.glow_coupling_hidden,
                   glow_s_max=a.glow_s_max,
                   glow_film_gain_init=a.glow_film_gain_init,
+                  flowpp_n_steps=a.flowpp_n_steps,
+                  flowpp_coupling_hidden=a.flowpp_coupling_hidden,
+                  flowpp_s_max=a.flowpp_s_max,
+                  flowpp_n_mixtures=a.flowpp_n_mixtures,
                   shuffle_loss_lambda=a.shuffle_loss_lambda,
                   shuffle_loss_margin=a.shuffle_loss_margin,
                   h_std_penalty_mu=a.h_std_penalty_mu,
                   h_std_target=a.h_std_target,
                   cond_y_residual_alpha_init=a.cond_y_residual_alpha_init,
+                  lambda_cons=a.lambda_cons,
                   fzdy_n_y=a.fzdy_n_y, fzdy_n_z=a.fzdy_n_z,
                   fzdy_tau=a.fzdy_tau)
     return cfg, a.resume

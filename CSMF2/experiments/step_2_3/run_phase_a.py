@@ -1,5 +1,5 @@
 # =============================================================================
-# STEP-2_3 v0.3 -- experiments.step_2_3.run_phase_a  (S2.3-A joint trainer)
+# STEP-2_3 v0.4 -- experiments.step_2_3.run_phase_a  (S2.3-A joint trainer)
 # Purpose: Stage 2.3-A -- the EXPERT-PRESSURE-FIRST falsifier. Experts UNFROZEN,
 #          all-expert MEAN consistency, soft gate present + LIGHTLY regularized
 #          (NOT gate-training), L0-normalized NLL + rec, GradNorm hook present
@@ -9,6 +9,12 @@
 # CONVENTION: no fallback/mock/silent-pass. Every failure path logger.error+raise.
 #          argmax is used ONLY for the rec_argmin REPORT (diagnostic), NEVER in
 #          the training loss (L_rec = mean_k rec_k, all experts, every batch).
+# Changelog (v0.3 -> v0.4, low-entropy probe enablement):
+#   * --entropy-lambda and --load-balance-lambda exposed as CLI flags (were
+#     cfg-default 0.01 only). 2.3-A pinned Neff~3.0 (gate never specialised); the
+#     probe lowers these (e.g. 0.001) to test whether anti-collapse held the gate
+#     uniform vs the gate genuinely cannot specialise. Each run records its actual
+#     lambdas in report.json (cfg block).
 # Changelog (v0.2 -> v0.3, after lr=1e-4/clip=1.0 ALSO diverged at epoch 6):
 #   * --rec-exclude CLI flag -> cfg.rec_exclude -> all_expert_consistency(exclude=).
 #     Fix D: drop NSF from the rec term (its spline inverse drifts non-invertible
@@ -62,7 +68,7 @@ from ..step_1_3.scores import per_expert_rec, make_z_bank
 from ...data.degrade import MNISTDegraded, dequantize_logit
 
 logger = logging.getLogger(__name__)
-__version__ = "0.3"
+__version__ = "0.4"
 __abbr__ = "STEP-2_3"
 
 
@@ -484,12 +490,21 @@ def main():
                         "Fix D: NSF spline-inverse drifts non-invertible under rec "
                         "pressure and needs no rec rescue. Excluded experts stay "
                         "full in NLL+gate+mixture; only the rec gradient skips them.")
+    p.add_argument("--entropy-lambda", type=float, default=0.01,
+                   help="gate anti-collapse entropy coefficient. 2.3-A default 0.01 "
+                        "pinned Neff~3.0 (gate never specialised). Lower (e.g. 0.001) "
+                        "to let the gate specialise without going fully unconstrained.")
+    p.add_argument("--load-balance-lambda", type=float, default=0.01,
+                   help="gate load-balance coefficient (avg per-expert usage toward "
+                        "uniform). Lower alongside --entropy-lambda for the probe.")
     a = p.parse_args()
     cfg = Stage23Cfg(expert_set=tuple(a.expert_set), scale=a.scale,
                      noise_sigma=a.noise_sigma, seed=a.seed, epochs=a.epochs,
                      out_root=a.out_root, phase="A", log_every=a.log_every,
                      lr=a.lr, grad_clip=a.grad_clip,
-                     rec_exclude=tuple(a.rec_exclude))
+                     rec_exclude=tuple(a.rec_exclude),
+                     entropy_lambda=a.entropy_lambda,
+                     load_balance_lambda=a.load_balance_lambda)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_phase_a(cfg, a.ckpt_dirs, device,
                   baseline_nsf_only_fwd_rel=a.baseline_nsf_only_fwd_rel,

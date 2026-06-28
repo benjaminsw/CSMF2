@@ -1,8 +1,23 @@
 # =============================================================================
-# STEP-1_1 v0.11 -- experiments.step_1_1.config
+# STEP-1_1 v0.13 -- experiments.step_1_1.config
 # Purpose: typed config for a single step_1_1 run. Frozen dataclass, sha256
 #          hash baked into run_tag for reproducibility.
 # CONVENTION: no silent defaults. Every invariant -> logger.error + raise.
+# Changelog (v0.12 -> v0.13) [FLOWPP v0.1]:
+#   * Accept expert='flowpp' (Flow++ candidate: Glow backbone + logistic-
+#     mixture-CDF coupling) in the roster check AND the use_v2_conditioner
+#     roster (flowpp inherits Glow's FiLM-v2 conditioning).
+#   * NEW flowpp fields: flowpp_n_steps, flowpp_coupling_hidden, flowpp_s_max,
+#     flowpp_n_mixtures (K). Invariants: n_steps>=1, s_max>0, n_mixtures>=1.
+#     flowpp reuses the glow_image_*/glow_squeeze/glow_n_levels backbone
+#     invariants (same squeeze stack) -- no new image fields.
+# Changelog (v0.11 -> v0.12) [GLOW-PHC v0.1, Phase C]:
+#   * NEW: lambda_cons (float, default 0.0). Weight on the Glow-only forward-
+#     consistency loss lambda_cons * ||A(decode(z'~N(0,1))) - y||^2 (sum over
+#     pixels, mean over batch). 0.0 = OFF (v0.11 runtime-identical).
+#   * Invariants: lambda_cons >= 0; AND lambda_cons > 0 requires expert=='glow'
+#     (no silent skip -- Phase C is scoped Glow-only to avoid touching the
+#     confirmed-good NICE/RealNVP roster). Both -> logger.error + raise.
 # Changelog (v0.10 -> v0.11):
 #   * Accept expert='nice_mix' (NCP-N8 additive NICE + fixed-perm ablation) in
 #     the roster check AND the use_v2_conditioner roster (nice_mix inherits
@@ -47,7 +62,7 @@ import hashlib
 import json
 from dataclasses import dataclass, asdict, field
 logger = logging.getLogger(__name__)
-__version__ = "0.10"
+__version__ = "0.13"
 __abbr__ = "STEP-1_1"
 
 
@@ -85,6 +100,12 @@ class StepCfg:
     glow_image_h: int = 28
     glow_image_w: int = 28
     glow_film_gain_init: float = 0.3   # v0.5: learnable FiLM gain init
+    # model -- Flow++-specific (v0.13; consumed only when expert='flowpp').
+    # Reuses the glow_image_*/glow_squeeze backbone; only the coupling differs.
+    flowpp_n_steps: int = 8
+    flowpp_coupling_hidden: int = 256
+    flowpp_s_max: float = 2.0
+    flowpp_n_mixtures: int = 4          # K logistics per coupling element
     # train
     lr: float = 1e-3
     epochs: int = 5
@@ -98,6 +119,8 @@ class StepCfg:
     h_std_target: float = 0.05         # active when h.std() < this value
     # model -- conditioner y-residual bypass (v0.8; default OFF)
     cond_y_residual_alpha_init: float = 0.0   # 0.0 = bypass disabled
+    # train -- Glow-only forward-consistency loss (v0.12, GLOW-PHC; default OFF)
+    lambda_cons: float = 0.0           # 0.0 = off; >0 requires expert=='glow'
     # diagnostics -- fixed-z different-y (v0.9; FZDY, Phase 3)
     fzdy_n_y: int = 6          # R: distinct y samples per grid (>=2)
     fzdy_n_z: int = 3          # K: fixed-z bank size (>=1)
@@ -120,9 +143,10 @@ class StepCfg:
             logger.error("[StepCfg] noise_sigma must be in {0.0, 0.05, 0.1}, got %s",
                          self.noise_sigma)
             raise ValueError(f"noise_sigma {self.noise_sigma} out of set")
-        if self.expert not in ("nice", "realnvp", "nsf", "glow", "nice_mix"):
-            logger.error("[StepCfg] expert must be nice/realnvp/nsf/glow/nice_mix, got %s",
-                         self.expert)
+        if self.expert not in ("nice", "realnvp", "nsf", "glow", "nice_mix",
+                               "flowpp"):
+            logger.error("[StepCfg] expert must be nice/realnvp/nsf/glow/"
+                         "nice_mix/flowpp, got %s", self.expert)
             raise ValueError(f"expert {self.expert!r} not recognised")
         if self.cond_width not in (64, 128):
             logger.error("[StepCfg] cond_width must be 64 or 128, got %s", self.cond_width)
@@ -146,10 +170,12 @@ class StepCfg:
                     f"use_v2_conditioner=True requires {req}; mismatch={mismatch}")
             # v0.4: v2 supported for nice / realnvp / glow. NSF still excluded.
             # nice_mix (NCP-N8) inherits NICE's FiLM-v2 conditioning -> allowed.
-            if self.expert not in ("nice", "realnvp", "glow", "nice_mix"):
+            # flowpp (FLOWPP v0.1) inherits Glow's FiLM-v2 conditioning -> allowed.
+            if self.expert not in ("nice", "realnvp", "glow", "nice_mix",
+                                   "flowpp"):
                 logger.error("[StepCfg] use_v2_conditioner=True supported for "
-                             "expert in {nice,realnvp,glow,nice_mix}, got %r",
-                             self.expert)
+                             "expert in {nice,realnvp,glow,nice_mix,flowpp}, "
+                             "got %r", self.expert)
                 raise ValueError(
                     f"use_v2_conditioner=True not supported for "
                     f"expert={self.expert!r}; valid: {{nice,realnvp,glow,nice_mix}}")
@@ -185,6 +211,20 @@ class StepCfg:
                          self.glow_film_gain_init)
             raise ValueError(
                 f"glow_film_gain_init must be >=0, got {self.glow_film_gain_init}")
+        # ---- Flow++-specific invariants (v0.13) --------------------------
+        if self.flowpp_n_steps < 1:
+            logger.error("[StepCfg] flowpp_n_steps must be >=1, got %s",
+                         self.flowpp_n_steps)
+            raise ValueError(f"flowpp_n_steps {self.flowpp_n_steps} < 1")
+        if self.flowpp_s_max <= 0.0:
+            logger.error("[StepCfg] flowpp_s_max must be > 0, got %s",
+                         self.flowpp_s_max)
+            raise ValueError(f"flowpp_s_max {self.flowpp_s_max} <= 0")
+        if self.flowpp_n_mixtures < 1:
+            logger.error("[StepCfg] flowpp_n_mixtures must be >=1, got %s",
+                         self.flowpp_n_mixtures)
+            raise ValueError(
+                f"flowpp_n_mixtures {self.flowpp_n_mixtures} < 1")
         # ---- RealNVP-specific invariants ---------------------------------
         if self.realnvp_n_couplings < 1:
             logger.error("[StepCfg] realnvp_n_couplings must be >=1, got %s",
@@ -224,6 +264,16 @@ class StepCfg:
             raise ValueError(
                 f"cond_y_residual_alpha_init must be >=0, got "
                 f"{self.cond_y_residual_alpha_init}")
+        # ---- consistency-loss invariants (v0.12, GLOW-PHC) ---------------
+        if self.lambda_cons < 0.0:
+            logger.error("[StepCfg] lambda_cons must be >=0, got %s",
+                         self.lambda_cons)
+            raise ValueError(f"lambda_cons must be >=0, got {self.lambda_cons}")
+        if self.lambda_cons > 0.0 and self.expert != "glow":
+            logger.error("[StepCfg] lambda_cons>0 is Glow-only (Phase C), "
+                         "got expert=%r", self.expert)
+            raise ValueError(
+                f"lambda_cons>0 requires expert=='glow', got {self.expert!r}")
         # ---- fixed-z different-y diagnostic invariants (v0.9) ------------
         if self.fzdy_n_y < 2:
             logger.error("[StepCfg] fzdy_n_y must be >=2 (need variation), "
