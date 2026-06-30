@@ -1,0 +1,42 @@
+# =============================================================================
+# base_nsf.yaml -- base-expert training config (NSF) for mnist_seqref.
+# Stage 1 of the staged pipeline: train NSF as a full reconstructor from scratch.
+# Independent tree: all paths are relative to the repo root /home/benjamin/CSMFII.
+# =============================================================================
+abbr: SEQREF-BASE
+version: "0.1"
+expert: nsf                 # one of: nsf | realnvp | nice
+
+# --- degradation cell (MUST match across base / refiner / eval) --------------
+cell:
+  data_root: ./data         # where torchvision MNIST lives / downloads
+  blur_sigma: 1.0
+  scale: 4                  # {1,2,4}; 1 = no downsample
+  noise_sigma: 0.10         # {0.0, 0.05, 0.10}
+
+# --- training ----------------------------------------------------------------
+train:
+  seed: 0                   # seed index 0/1/2 -> RNG 2026/2027/2028 (project convention)
+  epochs: 150
+  batch_size: 128
+  lr: 0.0005
+  early_stop_min_delta: 0.001   # ~3 nats; coarser values miss keep-best on this NLL scale
+  keep_best_checkpoint: true
+
+# --- NSF architecture (fill from the copied base-expert code's expected keys) -
+model:
+  dim: 784
+  # e.g. n_flow_steps, n_bins, hidden, tail_bound, film: true, ...
+  # NOTE: NSF decode MUST run in float64 (RQ-spline inverse stability) -- ensure
+  # the ported model honors this; it is the documented f64 spline-decode fix.
+
+# --- conditional base (optional; density enhancement, posterior-safe) --------
+conditional_base:
+  enabled: false            # CB is density-only (no reconstruction gain) -- off by default here
+  logsigma_min: -2.0
+  logsigma_max: 2.0
+
+# --- output ------------------------------------------------------------------
+output:
+  # run dir auto-named: results/bases/nsf/nsf_s<scale>_n<noise>_seed<seed>_<cfghash>/
+  root: ./mnist_seqref/results/bases/nsf
