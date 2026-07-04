@@ -1,10 +1,17 @@
 # =============================================================================
-# STEP-1_1 v0.4 -- models.experts
+# STEP-1_1 v0.5 -- models.experts
+# LIFETIME: KEEP
 # Purpose: four conditional flow experts with a shared Conditioner. Each maps
 #          x -> z through a stack of coupling layers and returns (z, logdet).
 #          Base density: standard Normal N(0, I).
 # CONVENTION: .log_prob(x | y) returns shape (B,). .sample(n, y) returns x.
 #             No fallback / mock / pass. Failures raise with logger.error.
+# Changelog (v0.4 -> v0.5):
+#   * SEQREF-XATTN v0.1: CondNICE/CondRealNVP + build_expert gain cond_mode
+#     ("film" default | "xattn") and xattn_cfg. For "xattn": self.cond is a
+#     YTokenizer (needs xattn_cfg["y_hw"]); conditioner must be None; NSF
+#     rejects xattn. _BaseExpert.sample handles 3-D h (token) conditioning.
+#   * cond_mode="film" byte-identical to v0.4. LIFETIME header added.
 # Changelog (v0.3 -> v0.4):
 #   * CondGlow accepts film_gain_init (default 0.3) and forwards to GlowStep
 #     -> AffineCoupling2D. Drives the residual-FiLM contribution introduced
@@ -18,13 +25,14 @@
 # Changelog (NEW in v0.1):
 #   * Introduced. CondNICE, CondRealNVP, CondNSF; FiLM by default.
 # Update summary:
-#   v0.4 surfaces the Glow conditioning-rescue knob (film_gain_init) so cfg
-#   can sweep it. Default 0.3 matches the value used in v0.3's audit fix.
+#   v0.5 wires the experimental cross-attention branch (SEQREF-XATTN v0.1)
+#   through the expert constructors and build_expert validation; the FiLM and
+#   concat paths, NSF, and Glow are untouched.
 # =============================================================================
 from __future__ import annotations
 import logging
 logger = logging.getLogger(__name__)
-__version__ = "0.4"
+__version__ = "0.5"
 __abbr__ = "STEP-1_1"
 
 import math
@@ -35,8 +43,7 @@ from .conditioner import Conditioner
 from .flows.nice_layer import NICECoupling, DiagScale
 from .flows.realnvp_layer import RealNVPCoupling
 from .flows.nsf_layer import NSFCoupling
-from .flows.glow.squeeze import squeeze2x2, unsqueeze2x2
-from .flows.glow.glow_step import GlowStep
+from .flows.xattn_injector import YTokenizer
 
 
 def _gaussian_logprob(z: torch.Tensor) -> torch.Tensor:
@@ -85,9 +92,33 @@ class _BaseExpert(nn.Module):
             logger.error("[Expert.sample] expected y_one (1,1,H,W), got %s",
                          tuple(y_one.shape))
             raise ValueError("y_one must have batch=1")
-        h = self.cond(y_one).expand(n, -1)
+        h = self.cond(y_one)
+        h = h.expand(n, -1, -1) if h.dim() == 3 else h.expand(n, -1)
         z = torch.randn(n, self.dim, device=y_one.device, dtype=y_one.dtype)
         return self.decode(z, h)
+
+
+def _init_xattn_cond(expert, cond_mode: str, xattn_cfg: dict | None,
+                     conditioner, cls_name: str) -> None:
+    # SEQREF-XATTN v0.1: for cond_mode="xattn", replace the Conditioner with a
+    # YTokenizer so _BaseExpert.log_prob/sample stay unchanged (h = cond(y)).
+    if cond_mode == "film":
+        return
+    if cond_mode != "xattn":
+        logger.error("[%s] cond_mode must be 'film'|'xattn', got %r",
+                     cls_name, cond_mode)
+        raise ValueError(f"invalid cond_mode {cond_mode!r}")
+    if conditioner is not None:
+        logger.error("[%s] cond_mode='xattn' requires conditioner=None "
+                     "(YTokenizer replaces it)", cls_name)
+        raise ValueError("cond_mode='xattn' requires conditioner=None")
+    if not xattn_cfg or "y_hw" not in xattn_cfg:
+        logger.error("[%s] cond_mode='xattn' requires xattn_cfg with y_hw",
+                     cls_name)
+        raise ValueError("cond_mode='xattn' requires xattn_cfg['y_hw']")
+    expert.cond = YTokenizer(y_hw=int(xattn_cfg["y_hw"]),
+                             patch=int(xattn_cfg.get("patch", 1)),
+                             d_model=int(xattn_cfg.get("d_model", 64)))
 
 
 # ---- NICE -------------------------------------------------------------------
@@ -95,14 +126,20 @@ class CondNICE(_BaseExpert):
     def __init__(self, *, dim: int, h_dim: int, conditioner: Conditioner,
                  hidden: int = 256, n_layers: int = 4, use_film: bool = True,
                  film_hidden: int = 64, film_depth: int = 1,
-                 film_use_gelu: bool = False):
+                 film_use_gelu: bool = False,
+                 film_output_form: str = "affine",
+                 cond_mode: str = "film",
+                 xattn_cfg: dict | None = None):
         super().__init__(dim=dim, h_dim=h_dim, conditioner=conditioner)
+        _init_xattn_cond(self, cond_mode, xattn_cfg, conditioner, "CondNICE")
         for i in range(n_layers):
             self.layers.append(NICECoupling(
                 dim=dim, hidden=hidden, h_dim=h_dim,
                 flip=bool(i % 2), use_film=use_film,
                 film_hidden=film_hidden, film_depth=film_depth,
-                film_use_gelu=film_use_gelu))
+                film_use_gelu=film_use_gelu,
+                film_output_form=film_output_form,
+                cond_mode=cond_mode, xattn_cfg=xattn_cfg))
         self.layers.append(DiagScaleWrapper(dim))
 
 
@@ -124,14 +161,20 @@ class CondRealNVP(_BaseExpert):
     def __init__(self, *, dim: int, h_dim: int, conditioner: Conditioner,
                  hidden: int = 256, n_layers: int = 6, use_film: bool = True,
                  film_hidden: int = 64, film_depth: int = 1,
-                 film_use_gelu: bool = False):
+                 film_use_gelu: bool = False,
+                 film_output_form: str = "affine",
+                 cond_mode: str = "film",
+                 xattn_cfg: dict | None = None):
         super().__init__(dim=dim, h_dim=h_dim, conditioner=conditioner)
+        _init_xattn_cond(self, cond_mode, xattn_cfg, conditioner, "CondRealNVP")
         for i in range(n_layers):
             self.layers.append(RealNVPCoupling(
                 dim=dim, hidden=hidden, h_dim=h_dim,
                 flip=bool(i % 2), use_film=use_film,
                 film_hidden=film_hidden, film_depth=film_depth,
-                film_use_gelu=film_use_gelu))
+                film_use_gelu=film_use_gelu,
+                film_output_form=film_output_form,
+                cond_mode=cond_mode, xattn_cfg=xattn_cfg))
 
 
 # ---- NSF --------------------------------------------------------------------
@@ -260,10 +303,11 @@ def build_expert(name: str, *, dim: int, h_dim: int,
                      name, list(EXPERTS.keys()))
         raise ValueError(f"unknown expert {name!r}")
 
-    film_keys = {"film_hidden", "film_depth", "film_use_gelu"}
+    film_keys = {"film_hidden", "film_depth", "film_use_gelu", "film_output_form"}
+    xattn_keys = {"cond_mode", "xattn_cfg"}
     glow_keys = {"s_max", "image_shape", "inv1x1_seed_base", "film_gain_init"}
 
-    unknown = set(kwargs) - (film_keys | glow_keys | {"n_layers"})
+    unknown = set(kwargs) - (film_keys | glow_keys | xattn_keys | {"n_layers"})
     if unknown:
         logger.error("[build_expert] unknown kwargs %s for expert=%r",
                      sorted(unknown), name)
@@ -275,6 +319,14 @@ def build_expert(name: str, *, dim: int, h_dim: int,
                      ", got %s", list(film_kwargs))
         raise ValueError(f"film_kwargs not supported for expert='nsf'; "
                          f"got {list(film_kwargs)}")
+
+    xattn_kwargs = {k: kwargs[k] for k in xattn_keys if k in kwargs}
+    if xattn_kwargs.get("cond_mode", "film") == "xattn" and name not in (
+            "nice", "realnvp"):
+        logger.error("[build_expert] cond_mode='xattn' only for nice/realnvp, "
+                     "got %r", name)
+        raise ValueError(
+            f"cond_mode='xattn' only supported for nice/realnvp, got {name!r}")
 
     glow_kwargs = {k: kwargs[k] for k in glow_keys if k in kwargs}
     if glow_kwargs and name != "glow":
@@ -288,14 +340,16 @@ def build_expert(name: str, *, dim: int, h_dim: int,
 
     if name == "nice":
         ctor_kwargs = dict(dim=dim, h_dim=h_dim, conditioner=conditioner,
-                           hidden=hidden, use_film=use_film, **film_kwargs)
+                           hidden=hidden, use_film=use_film,
+                           **film_kwargs, **xattn_kwargs)
         if n_layers is not None:
             ctor_kwargs["n_layers"] = n_layers
         return CondNICE(**ctor_kwargs)
 
     if name == "realnvp":
         ctor_kwargs = dict(dim=dim, h_dim=h_dim, conditioner=conditioner,
-                           hidden=hidden, use_film=use_film, **film_kwargs)
+                           hidden=hidden, use_film=use_film,
+                           **film_kwargs, **xattn_kwargs)
         if n_layers is not None:
             ctor_kwargs["n_layers"] = n_layers
         return CondRealNVP(**ctor_kwargs)

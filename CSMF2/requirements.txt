@@ -1,4 +1,0 @@
-# EXP-SCAFFOLD + EXP-DASH runtime (monitoring install).
-# Full training stack -> requirements-project.txt
-flask>=3.0
-pyyaml>=6.0
