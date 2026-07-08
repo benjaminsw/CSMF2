@@ -1,11 +1,18 @@
 # =============================================================================
-# SEQREF-EXPERTS v0.6 -- src.base_experts  (was STEP-1_1 v0.4)
+# SEQREF-EXPERTS v0.7 -- src.base_experts  (was STEP-1_1 v0.4)
 # LIFETIME: KEEP
 # Purpose: conditional flow experts with a shared Conditioner. Each maps
 #          x -> z through a stack of coupling layers and returns (z, logdet).
 #          Base density: standard Normal N(0, I).
 # CONVENTION: .log_prob(x | y) returns shape (B,). .sample(n, y) returns x.
 #             No fallback / mock / pass. Failures raise with logger.error.
+# Changelog (v0.6 -> v0.7, SEQREF-NICER3):
+#   * CondNICE gains use_permute (default False) and post_init_std (default
+#     None). use_permute=True interleaves FixedPermute (seed 7770+i, fixed,
+#     arm/seed-invariant) between additive couplings; DiagScale stays last.
+#   * build_expert: post_init_std now legal for {'realnvp','nice'};
+#     use_permute legal for 'nice' ONLY. Explicit raise otherwise.
+#     Defaults preserve v0.6 models exactly.
 # Changelog (v0.5 -> v0.6, SEQREF-SMAX):
 #   * CondRealNVP gains s_max (default 2.0) and post_init_std (default 0.0)
 #     kwargs, threaded to every RealNVPCoupling. Defaults preserve v0.5.
@@ -19,15 +26,14 @@
 # Changelog (v0.2 -> v0.3):
 #   * CondGlow expert; RealNVP/NICE thread FiLM kwargs.
 # Update summary:
-#   v0.6 makes the SEQREF-SMAX levers config-reachable for flat RealNVP only,
-#   with hard validation so no other expert (esp. realnvp_image, NICE) can pick
-#   them up implicitly. All defaults unchanged: an untouched config builds the
-#   identical model as v0.5.
+#   v0.7 wires SEQREF-NICER3: FixedPermute (R3, the single A/B difference)
+#   and the post_init_std carry-over become config-reachable for NICE, with
+#   the same hard-gating discipline as SMAX. RealNVP paths untouched.
 # =============================================================================
 from __future__ import annotations
 import logging
 logger = logging.getLogger(__name__)
-__version__ = "0.6"
+__version__ = "0.7"
 __abbr__ = "SEQREF-EXPERTS"
 
 import math
@@ -35,7 +41,7 @@ import torch
 import torch.nn as nn
 
 from .conditioner import Conditioner
-from .flows.nice_layer import NICECoupling, DiagScale
+from .flows.nice_layer import NICECoupling, DiagScale, FixedPermute
 from .flows.realnvp_layer import RealNVPCoupling
 from .flows.realnvp_image_layer import RealNVPImageCoupling
 from .flows.nsf_layer import NSFCoupling
@@ -94,8 +100,15 @@ class _BaseExpert(nn.Module):
 
 # ---- NICE -------------------------------------------------------------------
 class CondNICE(_BaseExpert):
+    # SEQREF-NICER3: use_permute=True (R3) interleaves FixedPermute between
+    # couplings (n_layers-1 permutes; DiagScale stays last). Permute seeds are
+    # 7770+i -- fixed constants, invariant across arms and run seeds so paired
+    # A/B runs and multi-seed runs share identical permutations.
+    _PERMUTE_SEED_BASE = 7770
+
     def __init__(self, *, dim: int, h_dim: int, conditioner: Conditioner,
                  hidden: int = 256, n_layers: int = 4, use_film: bool = True,
+                 use_permute: bool = False, post_init_std: float | None = None,
                  film_hidden: int = 64, film_depth: int = 1,
                  film_use_gelu: bool = False):
         super().__init__(dim=dim, h_dim=h_dim, conditioner=conditioner)
@@ -103,8 +116,12 @@ class CondNICE(_BaseExpert):
             self.layers.append(NICECoupling(
                 dim=dim, hidden=hidden, h_dim=h_dim,
                 flip=bool(i % 2), use_film=use_film,
+                post_init_std=post_init_std,
                 film_hidden=film_hidden, film_depth=film_depth,
                 film_use_gelu=film_use_gelu))
+            if use_permute and i < n_layers - 1:
+                self.layers.append(FixedPermute(dim,
+                                                seed=self._PERMUTE_SEED_BASE + i))
         self.layers.append(DiagScaleWrapper(dim))
 
 
@@ -288,20 +305,28 @@ def build_expert(name: str, *, dim: int, h_dim: int,
 
     film_keys = {"film_hidden", "film_depth", "film_use_gelu"}
     realnvp_keys = {"s_max", "post_init_std"}
+    nice_keys = {"use_permute", "post_init_std"}
     glow_only_keys = {"image_shape", "inv1x1_seed_base", "film_gain_init"}
 
-    unknown = set(kwargs) - (film_keys | realnvp_keys | glow_only_keys | {"n_layers"})
+    unknown = set(kwargs) - (film_keys | realnvp_keys | nice_keys
+                             | glow_only_keys | {"n_layers"})
     if unknown:
         logger.error("[build_expert] unknown kwargs %s for expert=%r",
                      sorted(unknown), name)
         raise ValueError(f"unknown kwargs {sorted(unknown)} for expert={name!r}")
 
-    # SEQREF-SMAX validation: s_max legal for realnvp/glow; post_init_std realnvp only.
-    if "post_init_std" in kwargs and name != "realnvp":
-        logger.error("[build_expert] post_init_std only supported for "
-                     "expert='realnvp', got expert=%r", name)
+    # SEQREF-SMAX/NICER3 validation: s_max -> realnvp/glow;
+    # post_init_std -> realnvp/nice; use_permute -> nice only.
+    if "post_init_std" in kwargs and name not in ("realnvp", "nice"):
+        logger.error("[build_expert] post_init_std only supported for expert in"
+                     " ('realnvp','nice'), got expert=%r", name)
         raise ValueError(
-            f"post_init_std only supported for expert='realnvp'; got {name!r}")
+            f"post_init_std only supported for ('realnvp','nice'); got {name!r}")
+    if "use_permute" in kwargs and name != "nice":
+        logger.error("[build_expert] use_permute only supported for "
+                     "expert='nice', got expert=%r", name)
+        raise ValueError(
+            f"use_permute only supported for expert='nice'; got {name!r}")
     if "s_max" in kwargs and name not in ("realnvp", "glow"):
         logger.error("[build_expert] s_max only supported for expert in "
                      "('realnvp','glow'), got expert=%r "
@@ -326,11 +351,20 @@ def build_expert(name: str, *, dim: int, h_dim: int,
 
     realnvp_kwargs = ({k: float(kwargs[k]) for k in realnvp_keys if k in kwargs}
                       if name == "realnvp" else {})
+    nice_kwargs = {}
+    if name == "nice":
+        if "use_permute" in kwargs:
+            nice_kwargs["use_permute"] = bool(kwargs["use_permute"])
+        if "post_init_std" in kwargs:
+            nice_kwargs["post_init_std"] = (
+                None if kwargs["post_init_std"] is None
+                else float(kwargs["post_init_std"]))
     n_layers = kwargs.get("n_layers")
 
     if name == "nice":
         ctor_kwargs = dict(dim=dim, h_dim=h_dim, conditioner=conditioner,
-                           hidden=hidden, use_film=use_film, **film_kwargs)
+                           hidden=hidden, use_film=use_film,
+                           **film_kwargs, **nice_kwargs)
         if n_layers is not None:
             ctor_kwargs["n_layers"] = n_layers
         return CondNICE(**ctor_kwargs)

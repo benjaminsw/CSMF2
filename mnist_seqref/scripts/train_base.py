@@ -1,9 +1,15 @@
-# SEQREF-TRNBASE v0.6 -- train_base
+# SEQREF-TRNBASE v0.7 -- train_base
 # LIFETIME: KEEP
 # Phase 2: train one expert (NSF/RealNVP/NICE) as full reconstructor. Logit-space
 # NLL, val early-stop, keep-best. Test-0 (sigma=0,scale=1) auto-segregated.
 # No fallback/mock/pass. Failures logger.error + raise. recon_grid RAISES on
 # decode failure (no silent skip) until f64 NSF decode is ported.
+# Changelog (v0.6 -> v0.7, SEQREF-NICER3):
+#   * Expert-specific model keys generalised to a map:
+#     realnvp -> {s_max, post_init_std}; nice -> {use_permute, post_init_std}.
+#     Keys present for the wrong expert -> explicit raise (unchanged policy).
+#     use_permute cast to bool, numeric keys to float. Defaults preserved.
+#   * s_clamp probe unchanged (realnvp only; nice writes nan columns).
 # Changelog (v0.5 -> v0.6, SEQREF-SMAX):
 #   * _build threads model.s_max / model.post_init_std for expert='realnvp'
 #     ONLY; explicit raise if present for any other expert. Defaults preserved
@@ -19,11 +25,10 @@
 # Changelog (v0.2 -> v0.3):
 #   * recon_grid posterior PIXEL-mean; recon metrics in csv/status.
 # Update summary:
-#   v0.6 is the SEQREF-SMAX enabler: the two Run-1 levers become config keys
-#   (realnvp-flat only, hard-gated), and the s_max ceiling diagnostic
-#   (s_clamp_frac) is logged every epoch so the s_max=3.0 retrain can show
-#   whether the ceiling stops binding. No rec-loss term exists in this file:
-#   Run 1 is lambda_rec=0 by construction.
+#   v0.7 extends the SMAX hard-gating pattern to NICE for SEQREF-NICER3:
+#   use_permute (R3, the A/B variable) and post_init_std (carry-over, both
+#   arms) become config keys for expert='nice' only. RealNVP behaviour is
+#   byte-identical to v0.6. No rec-loss term exists in this file.
 from __future__ import annotations
 import argparse
 import logging
@@ -49,10 +54,16 @@ from mnist_seqref.src.train_utils import (setup_logger, seed_from_index,
                                           sha256_file)
 
 logger = setup_logger("mnist_seqref.train_base")
-__version__ = "0.6"
+__version__ = "0.7"
 
 _FILM_KEYS = ("film_hidden", "film_depth", "film_use_gelu")
-_REALNVP_KEYS = ("s_max", "post_init_std")   # SEQREF-SMAX levers, realnvp only
+# Expert-specific model keys (SEQREF-SMAX + SEQREF-NICER3). A key listed for
+# one expert raises if present in the config of any other expert.
+_EXPERT_KEYS = {
+    "realnvp": ("s_max", "post_init_std"),
+    "nice":    ("use_permute", "post_init_std"),
+}
+_BOOL_KEYS = ("use_permute",)
 _RECON_N_POST = 16
 
 
@@ -90,14 +101,17 @@ def _build(cfg: dict, device: str):
         logger.error("[train_base] film_* keys not allowed for nsf: %s",
                      [k for k in _FILM_KEYS if k in m])
         raise ValueError("film_* keys not allowed for nsf")
-    # SEQREF-SMAX: s_max / post_init_std are realnvp-flat-only config keys.
-    smax_present = [k for k in _REALNVP_KEYS if k in m]
-    if smax_present and expert != "realnvp":
-        logger.error("[train_base] %s only allowed for expert='realnvp', got %r",
-                     smax_present, expert)
-        raise ValueError(f"{smax_present} only allowed for expert='realnvp'")
-    for k in smax_present:
-        kw[k] = float(m[k])
+    # SEQREF-SMAX/NICER3: expert-specific model keys, hard-gated.
+    allowed = set(_EXPERT_KEYS.get(expert, ()))
+    all_special = {k for keys in _EXPERT_KEYS.values() for k in keys}
+    misplaced = [k for k in all_special if k in m and k not in allowed]
+    if misplaced:
+        logger.error("[train_base] keys %s not allowed for expert=%r "
+                     "(allowed: %s)", misplaced, expert, sorted(allowed))
+        raise ValueError(f"keys {misplaced} not allowed for expert={expert!r}")
+    for k in allowed:
+        if k in m:
+            kw[k] = bool(m[k]) if k in _BOOL_KEYS else float(m[k])
     model = build_expert(expert, dim=dim, h_dim=h_dim, conditioner=cond,
                          hidden=int(m.get("hidden", 256)),
                          use_film=bool(m.get("use_film", True)), **kw).to(device)
