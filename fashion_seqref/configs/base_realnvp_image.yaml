@@ -1,0 +1,42 @@
+# SEQREF-CFG-BASE v0.1 -- base_realnvp_image
+# LIFETIME: KEEP
+# ARM B (R2 test): RealNVP-IMAGE (checkerboard CNN coupling) + the SAME
+# conservative CCR as Arm A (base_realnvp v0.3). Only architecture varies.
+expert: realnvp_image
+
+cell:
+  data_root: ./fashion_seqref/data
+  blur_sigma: 1.0
+  scale: 4
+  noise_sigma: 0.10
+
+train:
+  seed: 0
+  epochs: 100
+  batch_size: 128
+  lr: 0.0003
+  grad_clip: 5.0
+  early_stop_min_delta: 0.001
+  keep_best_checkpoint: true
+
+model:
+  dim: 784
+  h_dim: 256
+  hidden: 256
+  n_layers: 6
+  use_film: true
+  cond_width: 128
+  cond_use_v2: true
+  film_hidden: 128
+  film_depth: 2
+  film_use_gelu: true
+
+ccr:
+  shuffle_loss_lambda: 0.001
+  shuffle_loss_margin: 0.5
+  h_std_penalty_mu: 10.0
+  h_std_target: 0.05
+  cond_y_residual_alpha_init: 0.3
+
+output:
+  root: ./fashion_seqref/results/bases/realnvp_image
