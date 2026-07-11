@@ -9,6 +9,17 @@
 # Gates: PRE-REGISTERED module constants (stage-2 two-tier vs x1); early stop
 # patience 15 on val_dpsnr (K=8); keep-best on val_dpsnr.
 # No fallback/mock/pass; frozen chain asserted grad-free each epoch.
+# Changelog (TRNFM v0.1-fseq -> v0.2-fseq, SEQREF-FSEQ W3 / P7):
+#   * chained_channel config key: frozen STAGE-2 checkpoint applied to
+#     x1 (inputs [y_up, x1, A^T r1]) as an extra conditioning channel --
+#     distinct cache keys (train/val_chained); mutually exclusive with
+#     arm_b_expert_channel (which applies a stage-1 refiner to x0 and
+#     would be WRONG for a proposal trained on x1); sha recorded in
+#     status.json. Raise on conflict/missing checkpoint.
+# Changelog (TRNFM v0.1 -> v0.1-fseq, SEQREF-FSEQ W2):
+#   * fashion_seqref fork; dataset construction via degrade.make_degraded
+#     with REQUIRED cell.dataset key ({mnist, fashion_mnist}; raise on
+#     absent/unknown). No other logic changes.
 # Changelog (v0.1):
 #   * Initial. Reuses BASEIO caches, METRIC v0.2, GATEUPD; TRNREF-style
 #     schema/plots/grid + k-sweep columns and curve.
@@ -25,7 +36,7 @@ import torch
 import yaml
 from torch.utils.data import DataLoader, TensorDataset
 
-from fashion_seqref.src.degrade import MNISTDegraded
+from fashion_seqref.src.degrade import make_degraded
 from fashion_seqref.src.metrics import psnr as _psnr, ssim as _ssim, fwd_rel as _fwd_rel
 from fashion_seqref.src.refiners.base_io import (FrozenBase, FrozenStage1,
                                                precompute_split,
@@ -88,7 +99,13 @@ def main():
     base = FrozenBase(cfg["base"]["run_dir"], device)
     stage1 = FrozenStage1(cfg["stage1"]["run_dir"], device)
     arm_b = cfg.get("arm_b_expert_channel")
-    arm = "B" if arm_b else "A"
+    chained = cfg.get("chained_channel")
+    if arm_b and chained:
+        logger.error("[train_fm] arm_b_expert_channel and chained_channel are "
+                     "mutually exclusive")
+        raise ValueError("arm_b_expert_channel and chained_channel are "
+                         "mutually exclusive")
+    arm = "B" if (arm_b or chained) else "A"
     n_post = int(cfg["base"].get("n_post", 16))
     chash = cfg_hash(cfg)
     run_dir = os.path.join(cfg["output"]["root"],
@@ -104,9 +121,9 @@ def main():
     dk = dict(sigma=base.blur_sigma, scale=base.scale,
               noise_sigma=float(cell["noise_sigma"]))
     bs = int(cfg["train"]["batch_size"])
-    tl = DataLoader(MNISTDegraded(cell["data_root"], split="train", **dk),
+    tl = DataLoader(make_degraded(cell.get("dataset"), cell["data_root"], split="train", **dk),
                     batch_size=bs, shuffle=False, num_workers=2)
-    vl = DataLoader(MNISTDegraded(cell["data_root"], split="val", **dk),
+    vl = DataLoader(make_degraded(cell.get("dataset"), cell["data_root"], split="val", **dk),
                     batch_size=bs, shuffle=False, num_workers=2)
     cache_dir = os.path.join(cfg["output"]["root"], "_cache")
     trX, trY, trX0, trIn0 = precompute_split(base, tl, n_post=n_post,
@@ -123,7 +140,20 @@ def main():
     vaX1, vaCond = precompute_stage2(stage1, base, vaX, vaY, vaX0, vaIn0,
                                      batch_size=bs, cache_dir=cache_dir,
                                      split_name="val")
-    if arm == "B":
+    if chained:
+        # W3: frozen STAGE-2 checkpoint applied to x1 (NOT x0) -- the NICE
+        # proposal was trained on x1; feeding x0 would be the wrong regime.
+        # Distinct split_name keys the cache separately from the x0 caches.
+        nice2 = FrozenStage1(chained["run_dir"], device)
+        trXN, _ = precompute_stage2(nice2, base, trX, trY, trX1, trIn0,
+                                    batch_size=bs, cache_dir=cache_dir,
+                                    split_name="train_chained")
+        vaXN, _ = precompute_stage2(nice2, base, vaX, vaY, vaX1, vaIn0,
+                                    batch_size=bs, cache_dir=cache_dir,
+                                    split_name="val_chained")
+        trCond = torch.cat([trCond, trXN], dim=1)
+        vaCond = torch.cat([vaCond, vaXN], dim=1)
+    if arm_b:
         rnvp = FrozenStage1(arm_b["run_dir"], device)
         trXR, _ = precompute_stage2(rnvp, base, trX, trY, trX0, trIn0,
                                     batch_size=bs, cache_dir=cache_dir,
@@ -310,7 +340,10 @@ def main():
         "cfg_hash": chash, "k_train": k_train, "k_official": _K_OFFICIAL,
         "base_checkpoint_sha256": base.checkpoint_sha256,
         "stage1_sha256": stage1.checkpoint_sha256,
-        "arm_b_source_sha256": (rnvp.checkpoint_sha256 if arm == "B" else None),
+        "arm_b_source_sha256": (rnvp.checkpoint_sha256 if arm_b else None),
+        "chained_channel_source_sha256": (nice2.checkpoint_sha256 if chained
+                                          else None),
+        "chained_channel_run_dir": (chained["run_dir"] if chained else None),
         "chain_frozen": True, "budget_form": "g_dx",
         "best_epoch": best_epoch,
         "best_val_dpsnr": float(m_dpsnr),

@@ -1,9 +1,14 @@
-# SEQREF-TRNBASE v0.7 -- train_base
+# SEQREF-TRNBASE v0.8 -- train_base
 # LIFETIME: KEEP
 # Phase 2: train one expert (NSF/RealNVP/NICE) as full reconstructor. Logit-space
 # NLL, val early-stop, keep-best. Test-0 (sigma=0,scale=1) auto-segregated.
 # No fallback/mock/pass. Failures logger.error + raise. recon_grid RAISES on
 # decode failure (no silent skip) until f64 NSF decode is ported.
+# Changelog (v0.7 -> v0.8, SEQREF-FSEQ W2):
+#   * Dataset construction via degrade.make_degraded with REQUIRED
+#     cell.dataset key ({mnist, fashion_mnist}; absent/unknown -> raise, no
+#     silent default). Recorded cell block now includes the dataset key.
+#     No other logic changes.
 # Changelog (v0.6 -> v0.7, SEQREF-NICER3):
 #   * Expert-specific model keys generalised to a map:
 #     realnvp -> {s_max, post_init_std}; nice -> {use_permute, post_init_std}.
@@ -44,7 +49,7 @@ import torch.nn.functional as F
 import yaml
 from torch.utils.data import DataLoader
 
-from fashion_seqref.src.degrade import (MNISTDegraded, dequantize_logit,
+from fashion_seqref.src.degrade import (make_degraded, dequantize_logit,
                                       inverse_logit)
 from fashion_seqref.src.conditioner import Conditioner
 from fashion_seqref.src.base_experts import build_expert
@@ -302,8 +307,8 @@ def main():
 
     root = cell["data_root"]
     dk = dict(sigma=blur_sigma, scale=scale, noise_sigma=noise_sigma)
-    tr = MNISTDegraded(root, split="train", **dk)
-    va = MNISTDegraded(root, split="val", **dk)
+    tr = make_degraded(cell.get("dataset"), root, split="train", **dk)
+    va = make_degraded(cell.get("dataset"), root, split="val", **dk)
     bs = int(cfg["train"]["batch_size"])
     tl = DataLoader(tr, batch_size=bs, shuffle=True, num_workers=2, drop_last=True)
     vl = DataLoader(va, batch_size=bs, shuffle=False, num_workers=2)
@@ -400,7 +405,7 @@ def main():
         "cfg_hash": chash, "test0": test0, "best_epoch": best_epoch,
         "best_val_nll": best_val, "checkpoint_path": ckpt_path,
         "best_checkpoint_sha256": sha256_file(ckpt_path),
-        "cell": {"scale": scale, "blur_sigma": blur_sigma, "noise_sigma": noise_sigma},
+        "cell": {"dataset": cell.get("dataset"), "scale": scale, "blur_sigma": blur_sigma, "noise_sigma": noise_sigma},
         "n_params": n_params, "device": device,
         "torch_version": torch.__version__,
         "recon_mode": "posterior_pixel_mean", "recon_n_post": _RECON_N_POST,

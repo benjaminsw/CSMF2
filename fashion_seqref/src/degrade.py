@@ -1,9 +1,18 @@
 # =============================================================================
-# STEP-1_1 v0.3 -- data.degrade
+# STEP-1_1 v0.4 -- data.degrade
 # Purpose: deterministic MNIST degradation pipeline y = Ax + n, with
 #          A = Downsample_s o Gauss_blur(sigma). Returns (x_clean, y_degraded).
 # CONVENTION: NLL = LOSS (lower = better). No fallback / mock / pass.
 #             Any failure -> logger.error(...) + raise.
+# Changelog (v0.3 -> v0.4, SEQREF-FSEQ W1+W2):
+#   * Dataset generalisation: shared _VisionDegraded base (all v0.3 logic,
+#     parameterised by TV_DATASET); MNISTDegraded now subclasses it
+#     (byte-identical behaviour); NEW FashionMNISTDegraded
+#     (torchvision.datasets.FashionMNIST; same 60k/10k splits, same
+#     SPLIT_SEED partition, identical interface).
+#   * NEW make_degraded(dataset, root, ...) factory: dataset REQUIRED, one of
+#     {"mnist","fashion_mnist"}; absent/unknown -> logger.error + raise (no
+#     silent default). Training scripts construct datasets ONLY through this.
 # Changelog (v0.2 -> v0.3):
 #   * NEW (Test-0 / identity task): blur(sigma=0.0) is the IDENTITY (a
 #     Gaussian with sigma->0 is a delta kernel). This is an explicit,
@@ -34,6 +43,9 @@
 #   * Supports scale in {2, 4} and noise_sigma in {0.0, 0.05, 0.1}.
 #   * Logit-dequantization helpers (for flows trained in logit space).
 # Update summary:
+#   v0.4 generalises the degraded dataset across torchvision sources: one
+#   shared base class, MNIST unchanged, FashionMNIST added, and a mandatory
+#   dataset-key factory so no script can silently train on the wrong data.
 #   v0.3 adds the identity task (y=x) via sigma=0 (delta-blur) and scale=1
 #   (no downsample). This is the Test-0 sanity check: if an expert cannot
 #   learn y=x, the fault is the implementation, not the inverse problem.
@@ -43,7 +55,7 @@ from __future__ import annotations
 import logging
 import traceback
 logger = logging.getLogger(__name__)
-__version__ = "0.3"
+__version__ = "0.4"
 __abbr__ = "STEP-1_1"
 
 import math
@@ -159,21 +171,31 @@ def _build_split_indices(split: str) -> tuple[bool, list[int] | None]:
     raise ValueError(f"unknown split {split!r}; valid: {VALID_SPLITS}")
 
 
-class MNISTDegraded(Dataset):
+class _VisionDegraded(Dataset):
+    # Shared degraded-dataset logic; subclasses set TV_DATASET. The 55k/5k
+    # SPLIT_SEED partition applies identically (both MNIST and FashionMNIST
+    # ship 60k train / 10k test).
+    TV_DATASET = None
+
     def __init__(self, root: str, *, split: str, sigma: float, scale: int,
                  noise_sigma: float, download: bool = True):
+        cls = type(self).__name__
+        if type(self).TV_DATASET is None:
+            logger.error("[%s] TV_DATASET unset -- use a concrete subclass",
+                         cls)
+            raise TypeError("_VisionDegraded is abstract; use a subclass")
         if split not in VALID_SPLITS:
-            logger.error("[MNISTDegraded] invalid split %r (valid: %s)",
-                         split, VALID_SPLITS)
+            logger.error("[%s] invalid split %r (valid: %s)", cls, split,
+                         VALID_SPLITS)
             raise ValueError(f"invalid split {split!r}; valid: {VALID_SPLITS}")
 
         use_train_set, subset_idx = _build_split_indices(split)
         try:
-            self.base = datasets.MNIST(root=root, train=use_train_set,
-                                       download=download,
-                                       transform=transforms.ToTensor())
+            self.base = type(self).TV_DATASET(root=root, train=use_train_set,
+                                              download=download,
+                                              transform=transforms.ToTensor())
         except Exception:
-            logger.error("[MNISTDegraded] failed to load MNIST from %s\n%s",
+            logger.error("[%s] failed to load dataset from %s\n%s", cls,
                          root, traceback.format_exc())
             raise
         self.split = split
@@ -192,3 +214,27 @@ class MNISTDegraded(Dataset):
         y = degrade(x, sigma=self.sigma, scale=self.scale,
                     noise_sigma=self.noise_sigma)
         return x.squeeze(0), y.squeeze(0)
+
+
+class MNISTDegraded(_VisionDegraded):
+    TV_DATASET = datasets.MNIST
+
+
+class FashionMNISTDegraded(_VisionDegraded):
+    TV_DATASET = datasets.FashionMNIST
+
+
+DATASETS = {"mnist": MNISTDegraded, "fashion_mnist": FashionMNISTDegraded}
+
+
+def make_degraded(dataset: str | None, root: str, *, split: str, sigma: float,
+                  scale: int, noise_sigma: float,
+                  download: bool = True) -> _VisionDegraded:
+    # W2: dataset key REQUIRED; absent/unknown -> raise (no silent default).
+    if dataset not in DATASETS:
+        logger.error("[make_degraded] cell.dataset required, one of %s, "
+                     "got %r", sorted(DATASETS), dataset)
+        raise ValueError(f"cell.dataset required, one of "
+                         f"{sorted(DATASETS)}, got {dataset!r}")
+    return DATASETS[dataset](root, split=split, sigma=sigma, scale=scale,
+                             noise_sigma=noise_sigma, download=download)

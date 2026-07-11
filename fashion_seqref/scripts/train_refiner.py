@@ -9,6 +9,10 @@
 #   DIAGNOSTIC:  y_gap_dpsnr > 0, atr_gap_dpsnr > 0 (evidence, required
 #                non-contradictory for 3-seed promotion)
 # No NLL, no lambda_rec. No fallback/mock/pass; failures logger.error + raise.
+# Changelog (TRNREF v0.4 -> v0.4-fseq, SEQREF-FSEQ W2):
+#   * fashion_seqref fork; dataset construction via degrade.make_degraded
+#     with REQUIRED cell.dataset key ({mnist, fashion_mnist}; raise on
+#     absent/unknown). No other logic changes.
 # Changelog (v0.3 -> v0.4, SEQREF-REFINE2):
 #   * Stage-2 support: optional cfg.stage1.run_dir loads a FROZEN trained
 #     stage-1 refiner (base_io.FrozenStage1). Cached base tensors transform to
@@ -52,7 +56,7 @@ import torch.nn as nn
 import yaml
 from torch.utils.data import DataLoader, TensorDataset
 
-from fashion_seqref.src.degrade import MNISTDegraded
+from fashion_seqref.src.degrade import make_degraded
 from fashion_seqref.src.metrics import psnr as _psnr, ssim as _ssim, fwd_rel as _fwd_rel
 from fashion_seqref.src.refiners.base_io import (FrozenBase, FrozenStage1,
                                                precompute_split,
@@ -67,7 +71,7 @@ from fashion_seqref.src.train_utils import (setup_logger, seed_from_index,
 logger = setup_logger("fashion_seqref.train_refiner")
 __version__ = "0.4"
 
-# Pre-registered gate constants (locked before any x2 numbers, 2026-07-09)
+# Pre-registered gate constants (locked before any x2 numbers, Ben 2026-07-09)
 _GATE_DPSNR = 0.3          # stage-1 & stage-2 HARD threshold (aggregate dB)
 _GATE2_MEANINGFUL = 0.1    # stage-2 MEANINGFUL tier
 _GATE2_PCT = 0.55          # stage-2 MEANINGFUL: % samples improved
@@ -255,9 +259,9 @@ def main():
               noise_sigma=float(cell["noise_sigma"]))
     root = cell["data_root"]
     bs = int(cfg["train"]["batch_size"])
-    tl = DataLoader(MNISTDegraded(root, split="train", **dk), batch_size=bs,
+    tl = DataLoader(make_degraded(cell.get("dataset"), root, split="train", **dk), batch_size=bs,
                     shuffle=False, num_workers=2)
-    vl = DataLoader(MNISTDegraded(root, split="val", **dk), batch_size=bs,
+    vl = DataLoader(make_degraded(cell.get("dataset"), root, split="val", **dk), batch_size=bs,
                     shuffle=False, num_workers=2)
     cache_dir = os.path.join(cfg["output"]["root"], "_cache")
     trX, trY, trX0, trIn = precompute_split(base, tl, n_post=n_post,
