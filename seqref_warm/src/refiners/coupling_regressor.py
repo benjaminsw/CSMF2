@@ -1,4 +1,4 @@
-# SEQREF-CPLREG v0.2 -- refiners.coupling_regressor
+# SEQREF-CPLREG v0.3 -- refiners.coupling_regressor
 # LIFETIME: KEEP
 # Purpose: Level-1 coupling-as-regressor refiner. dx = stack(x0_flat | h) - x0_flat
 #          where the stack is the expert's coupling blocks used as a plain
@@ -8,6 +8,14 @@
 #            nice    -> additive NICECoupling stack + DiagScale (no permute)
 #          Near-identity at init (small post init + DiagScale zeros) -> dx ~= 0.
 #          Gate lives in gated_update.GatedUpdate (owned by CplRegRefiner).
+# v0.3 (SEQREF-SPGATE V1): gate_mode in {scalar, spatial}. spatial adds a
+#     SpatialGate head reading the RAW 3-channel input stream (the same raw
+#     conditioning inputs as C, NOT the pooled conditioner features h, which
+#     cannot produce a pixel map): Conv(3->16)->ReLU->Conv(16->1)->sigmoid
+#     * g_max, no hard-coded spatial size. Init: last conv weight zero, bias
+#     = logit(g_init/g_max) -> uniform g == g_init at startup. Param names
+#     gate_spatial.* (FRESH(new) under warm start -- expected, recorded).
+#     Scalar path byte-identical to v0.2.
 # CONVENTION: no fallback/mock/pass. Warm-start is PARTIAL + AUDITED: load
 #             shape-compatible tensors by name, fresh-init the rest, log every
 #             tensor, raise if loaded numel fraction < min_loaded_fraction (0.8).
@@ -30,6 +38,7 @@
 #   (conditioning + feature layers), never the wrong-scale output heads.
 from __future__ import annotations
 import fnmatch
+import math
 import logging
 
 import torch
@@ -40,7 +49,7 @@ from ..flows.nice_layer import NICECoupling, DiagScale
 from .gated_update import GatedUpdate
 
 logger = logging.getLogger("seqref_warm.refiners.coupling_regressor")
-__version__ = "0.2"
+__version__ = "0.3"
 __abbr__ = "SEQREF-CPLREG"
 
 DEFAULT_EXCLUDE = ("layers.*.post.*", "layers.*.scale.log_s", "gate.*")
@@ -97,6 +106,31 @@ class _DiagScaleWrap(nn.Module):
         return y
 
 
+class SpatialGate(nn.Module):
+    # Per-pixel soft gate from the raw input stream (B,3,H,W) -> (B,1,H,W).
+    # Convolutions preserve whatever spatial size is supplied.
+    def __init__(self, *, g_max: float, g_init: float, width: int = 16):
+        super().__init__()
+        if not (0.0 < g_init < g_max):
+            logger.error("[SpatialGate] need 0 < g_init < g_max, got "
+                         "g_init=%r g_max=%r", g_init, g_max)
+            raise ValueError("need 0 < g_init < g_max")
+        self.g_max = float(g_max)
+        self.conv1 = nn.Conv2d(3, width, 3, padding=1)
+        self.conv2 = nn.Conv2d(width, 1, 3, padding=1)
+        nn.init.zeros_(self.conv2.weight)
+        with torch.no_grad():
+            p = g_init / g_max
+            self.conv2.bias.fill_(math.log(p / (1.0 - p)))
+
+    def forward(self, inp: torch.Tensor) -> torch.Tensor:
+        g = self.g_max * torch.sigmoid(self.conv2(torch.relu(self.conv1(inp))))
+        if not torch.isfinite(g).all():
+            logger.error("[SpatialGate] non-finite g")
+            raise ValueError("non-finite g")
+        return g
+
+
 class CplRegRefiner(nn.Module):
     # dx = couplings(x0_flat, h) - x0_flat ; x1, g = gate(x0, dx, h).
     def __init__(self, *, flavor: str, dim: int = 784, h_dim: int = 256,
@@ -105,7 +139,8 @@ class CplRegRefiner(nn.Module):
                  film_hidden: int = 128, film_depth: int = 2,
                  film_use_gelu: bool = True,
                  s_max: float = 4.0, post_init_std: float = 1e-3,
-                 g_max: float = 0.5, g_init: float = 0.05):
+                 g_max: float = 0.5, g_init: float = 0.05,
+                 gate_mode: str = "scalar"):
         super().__init__()
         if flavor not in _FLAVORS:
             logger.error("[CplRegRefiner] flavor must be in %s, got %r",
@@ -132,7 +167,15 @@ class CplRegRefiner(nn.Module):
                     film_hidden=film_hidden, film_depth=film_depth,
                     film_use_gelu=film_use_gelu))
             self.layers.append(_DiagScaleWrap(dim))
-        self.gate = GatedUpdate(h_dim, g_max=g_max, g_init=g_init)
+        if gate_mode not in ("scalar", "spatial"):
+            logger.error("[CplRegRefiner] gate_mode must be scalar|spatial, "
+                         "got %r", gate_mode)
+            raise ValueError(f"invalid gate_mode {gate_mode!r}")
+        self.gate_mode = gate_mode
+        if gate_mode == "scalar":
+            self.gate = GatedUpdate(h_dim, g_max=g_max, g_init=g_init)
+        else:
+            self.gate_spatial = SpatialGate(g_max=g_max, g_init=g_init)
         self.g_max = g_max
 
     def delta(self, x0: torch.Tensor, h: torch.Tensor) -> torch.Tensor:
@@ -151,9 +194,25 @@ class CplRegRefiner(nn.Module):
     def forward(self, inp: torch.Tensor, x0: torch.Tensor
                 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # inp: (B,3,28,28) = [y_up, x0, Aᵀr0]; returns (x1, dx, g).
+        if inp.shape[0] != x0.shape[0] or inp.shape[-2:] != x0.shape[-2:]:
+            logger.error("[CplRegRefiner] inp/x0 shape mismatch: %s vs %s",
+                         tuple(inp.shape), tuple(x0.shape))
+            raise ValueError("inp/x0 shape mismatch")
+        if x0[0].numel() != self.dim:
+            logger.error("[CplRegRefiner] x0 numel per sample %d != dim %d",
+                         x0[0].numel(), self.dim)
+            raise ValueError("x0 numel per sample != dim")
         h = self.cond(inp)
         dx = self.delta(x0, h)
-        x1, g = self.gate(x0, dx, h)
+        if self.gate_mode == "scalar":
+            x1, g = self.gate(x0, dx, h)
+        else:
+            g = self.gate_spatial(inp)
+            if g.shape != dx.shape:
+                logger.error("[CplRegRefiner] gate/dx shape mismatch: %s vs "
+                             "%s", tuple(g.shape), tuple(dx.shape))
+                raise ValueError("gate/dx shape mismatch")
+            x1 = x0 + g * dx
         return x1, dx, g
 
 
