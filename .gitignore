@@ -57,3 +57,5 @@ seqref_mri/.venv_mri/
 
 !.gitignore
 !seqref_mri/requirements_lock.txt
+
+data/
