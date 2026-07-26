@@ -1,58 +1,92 @@
-# SEQREF-METRIC v0.2 -- metrics
+# SEQREF-METRIC v0.3 -- metrics
 # LIFETIME: KEEP
-# Pixel-space reconstruction metrics: mse, psnr, fwd_rel (||A x_hat - y|| / ||y||),
-# ssim. No fallback/mock/pass. Failures logger.error + raise.
-# Changelog (v0.1 -> v0.2, SEQREF-REFINE):
-#   * NEW ssim(x_hat, x_true): pure-torch SSIM, 11x11 Gaussian window
-#     (sigma=1.5), data_range=1.0, standard C1/C2 (K1=0.01, K2=0.03).
-#     Shape/range validated; non-finite -> raise. Required by train_refiner
-#     (val_ssim_x0/x1, val_dssim).
-# Changelog (v0.1):
-#   * mse/psnr (pixel [0,1]) + fwd_rel via forward_operator.A_forward.
+# Magnitude-space reconstruction metrics for the MRI cell: mse, psnr, ssim,
+# each with REQUIRED explicit data_range (no silent [0,1]/L=1 assumption)
+# and per-sample variants. No fallback/mock/pass; failures logger.error +
+# raise.
+# Changelog (v0.2 -> v0.3, SEQREF-I2):
+#   * psnr/ssim take REQUIRED keyword data_range (finite, > 0, validated);
+#     the implicit MAX_I = 1 / L = 1 pixel assumption is removed. The MRI
+#     data-range CONVENTION is provisional at I2 (HDF5 file-attr `max`,
+#     label provisional-I2-file-attr-max) and is verified+locked at the
+#     section-6 metric-sanity check.
+#   * Semantics defined: mse/psnr/ssim return the BATCH-REDUCED float
+#     (mean over samples for psnr/ssim); *_per_sample return (B,) tensors.
+#   * Inputs validated as magnitudes: finite and non-negative required.
+#   * fwd_rel REMOVED (S1 REBUILD verdict): superseded by the locked 3.11
+#     k-space consistency in forward_operator.MaskedFourierOperator
+#     .consistency(); the old blur/scale A_forward import no longer exists.
+# Changelog (v0.1 -> v0.2, SEQREF-REFINE): added pure-torch SSIM (11x11
+#   Gaussian window, sigma 1.5). Mechanics INHERIT (S1) -- unchanged here.
+# Changelog (v0.1): mse/psnr + fwd_rel (now removed).
 # Update summary:
-#   v0.2 adds SSIM as the third HARD-metric family for the refiner gate
-#   tracking (PSNR / fwd_rel / SSIM). mse/psnr/fwd_rel byte-identical to v0.1.
+#   v0.3 makes the data range an explicit, validated parameter with a
+#   recorded provisional convention, defines reduction semantics, and
+#   removes the MNIST-operator dependency.
 from __future__ import annotations
 import logging
-import math
 import torch
 import torch.nn.functional as F
-from .forward_operator import A_forward
 
 logger = logging.getLogger("seqref_mri.metrics")
-__version__ = "0.2"
+__version__ = "0.3"
+__abbr__ = "SEQREF-METRIC"
 _EPS = 1e-12
 
 
-def mse(x_hat: torch.Tensor, x_true: torch.Tensor) -> float:
+def _validate_pair(x_hat, x_true, data_range, fn):
+    if x_hat.dim() != 4 or x_hat.size(1) != 1 or x_hat.shape != x_true.shape:
+        logger.error("[metrics.%s] expected matching (B,1,H,W), got %s vs %s",
+                     fn, tuple(x_hat.shape), tuple(x_true.shape))
+        raise ValueError(f"{fn} expects matching (B,1,H,W)")
+    for name, t in (("x_hat", x_hat), ("x_true", x_true)):
+        if not torch.isfinite(t).all():
+            logger.error("[metrics.%s] non-finite %s", fn, name)
+            raise ValueError(f"{fn}: non-finite {name}")
+        if t.min().item() < 0.0:
+            logger.error("[metrics.%s] %s has negative values -- magnitude "
+                         "inputs required", fn, name)
+            raise ValueError(f"{fn}: {name} not a magnitude (negative values)")
+    dr = float(data_range)
+    if not (dr == dr and dr not in (float("inf"), float("-inf"))) or dr <= 0.0:
+        logger.error("[metrics.%s] data_range must be finite and > 0, got %r",
+                     fn, data_range)
+        raise ValueError(f"{fn}: data_range must be finite and > 0")
+    return dr
+
+
+def mse_per_sample(x_hat: torch.Tensor, x_true: torch.Tensor
+                   ) -> torch.Tensor:
+    # (B,) per-sample MSE. Shape/finite validation only (mse is range-free).
     if x_hat.shape != x_true.shape:
-        logger.error("[metrics.mse] shape %s != %s", tuple(x_hat.shape), tuple(x_true.shape))
+        logger.error("[metrics.mse] shape %s != %s", tuple(x_hat.shape),
+                     tuple(x_true.shape))
         raise ValueError("mse shape mismatch")
-    return float(((x_hat - x_true) ** 2).mean())
+    for name, t in (("x_hat", x_hat), ("x_true", x_true)):
+        if not torch.isfinite(t).all():
+            logger.error("[metrics.mse] non-finite %s", name)
+            raise ValueError(f"mse: non-finite {name}")
+    return ((x_hat - x_true) ** 2).flatten(1).mean(dim=1)
 
 
-def psnr(x_hat: torch.Tensor, x_true: torch.Tensor) -> float:
-    # x in [0,1] => MAX_I = 1.
-    m = mse(x_hat, x_true)
-    if m <= 0.0:
-        return float("inf")
-    return float(10.0 * torch.log10(torch.tensor(1.0 / m)))
+def mse(x_hat: torch.Tensor, x_true: torch.Tensor) -> float:
+    # Batch-reduced (mean over samples).
+    return float(mse_per_sample(x_hat, x_true).mean())
 
 
-def fwd_rel(x_hat: torch.Tensor, y: torch.Tensor, blur_sigma: float,
-            scale: int) -> float:
-    # ||A x_hat - y|| / ||y||. x_hat: (B,1,H,W) pixel space.
-    if x_hat.dim() != 4 or x_hat.size(1) != 1:
-        logger.error("[metrics.fwd_rel] expected x_hat (B,1,H,W), got %s",
-                     tuple(x_hat.shape))
-        raise ValueError("fwd_rel expects (B,1,H,W)")
-    ax = A_forward(x_hat, blur_sigma, scale)
-    if ax.shape != y.shape:
-        logger.error("[metrics.fwd_rel] A(x_hat) %s != y %s", tuple(ax.shape), tuple(y.shape))
-        raise ValueError("fwd_rel A(x_hat)/y shape mismatch")
-    num = torch.linalg.vector_norm(ax - y)
-    den = torch.linalg.vector_norm(y) + _EPS
-    return float(num / den)
+def psnr_per_sample(x_hat: torch.Tensor, x_true: torch.Tensor, *,
+                    data_range: float) -> torch.Tensor:
+    # (B,) per-sample PSNR with REQUIRED explicit data_range.
+    dr = _validate_pair(x_hat, x_true, data_range, "psnr")
+    m = mse_per_sample(x_hat, x_true).clamp_min(_EPS)
+    return 10.0 * torch.log10(torch.tensor(dr, dtype=m.dtype,
+                                           device=m.device) ** 2 / m)
+
+
+def psnr(x_hat: torch.Tensor, x_true: torch.Tensor, *,
+         data_range: float) -> float:
+    # Batch-reduced (mean of per-sample PSNR).
+    return float(psnr_per_sample(x_hat, x_true, data_range=data_range).mean())
 
 
 # ---- SSIM (v0.2) -------------------------------------------------------------
@@ -70,12 +104,11 @@ def _ssim_window(device, dtype) -> torch.Tensor:
     return w.view(1, 1, _SSIM_WIN, _SSIM_WIN)
 
 
-def ssim(x_hat: torch.Tensor, x_true: torch.Tensor) -> float:
-    # Mean SSIM over batch. x: (B,1,H,W) in [0,1], data_range=1.
-    if x_hat.dim() != 4 or x_hat.size(1) != 1 or x_hat.shape != x_true.shape:
-        logger.error("[metrics.ssim] expected matching (B,1,H,W), got %s vs %s",
-                     tuple(x_hat.shape), tuple(x_true.shape))
-        raise ValueError("ssim expects matching (B,1,H,W)")
+def ssim_per_sample(x_hat: torch.Tensor, x_true: torch.Tensor, *,
+                    data_range: float) -> torch.Tensor:
+    # (B,) per-sample mean-SSIM with REQUIRED explicit data_range:
+    # C1=(K1*L)^2, C2=(K2*L)^2, L=data_range. Mechanics unchanged (INHERIT).
+    L = _validate_pair(x_hat, x_true, data_range, "ssim")
     if x_hat.size(-1) < _SSIM_WIN or x_hat.size(-2) < _SSIM_WIN:
         logger.error("[metrics.ssim] image smaller than window %d: %s",
                      _SSIM_WIN, tuple(x_hat.shape))
@@ -89,12 +122,19 @@ def ssim(x_hat: torch.Tensor, x_true: torch.Tensor) -> float:
     s1_sq = _f(x_hat * x_hat) - mu1_sq
     s2_sq = _f(x_true * x_true) - mu2_sq
     s12 = _f(x_hat * x_true) - mu12
-    C1 = _SSIM_K1 ** 2
-    C2 = _SSIM_K2 ** 2
+    C1 = (_SSIM_K1 * L) ** 2
+    C2 = (_SSIM_K2 * L) ** 2
     ssim_map = ((2 * mu12 + C1) * (2 * s12 + C2)) / \
                ((mu1_sq + mu2_sq + C1) * (s1_sq + s2_sq + C2))
-    val = ssim_map.mean()
-    if not torch.isfinite(val):
+    vals = ssim_map.flatten(1).mean(dim=1)
+    if not torch.isfinite(vals).all():
         logger.error("[metrics.ssim] non-finite SSIM")
         raise ValueError("non-finite SSIM")
-    return float(val)
+    return vals
+
+
+def ssim(x_hat: torch.Tensor, x_true: torch.Tensor, *,
+         data_range: float) -> float:
+    # Batch-reduced (mean of per-sample SSIM).
+    return float(ssim_per_sample(x_hat, x_true,
+                                 data_range=data_range).mean())

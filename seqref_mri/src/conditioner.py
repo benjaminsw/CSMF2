@@ -1,37 +1,28 @@
 # =============================================================================
-# STEP-1_1 v0.5 -- models.conditioner
+# STEP-1_1 v0.6 -- models.conditioner
 # Purpose: shared conditioner c_eta(y) + FiLM head used by every expert.
 # CONVENTION: NaN/shape errors -> logger.error + raise. No silent fallback.
-# Changelog (v0.4 -> v0.5):
-#   * NEW (Glow rescue): optional y-residual bypass in Conditioner.
-#     When y_residual_alpha_init > 0:
-#         h = cnn_head(y) + alpha * Linear(y.flatten(1))
-#     alpha is a learnable nn.Parameter. The linear bypass cannot collapse
-#     to a constant because it's a direct linear function of y -- only by
-#     driving alpha to zero, which itself receives gradient.
-#   * Default y_residual_alpha_init=0.0 -> bypass disabled -> v0.4 byte-identical.
-#   * Requires y_input_size kwarg when enabled (size of flattened y, e.g.
-#     14*14 for scale=2). Raises if missing.
-# Changelog (v0.3 -> v0.4):
-#   * FiLMHead last-Linear init depends on output_form.
-# Changelog (v0.2 -> v0.3):
-#   * FiLMHead gains output_form kwarg.
-# Changelog (v0.1 -> v0.2):
-#   * Conditioner gains use_v2 kwarg.
-# Changelog (NEW in v0.1):
-#   * Introduced.
+# Changelog (v0.5 -> v0.6, SEQREF-I2 paired channel-contract rebuild):
+#   * in_channels is now a REQUIRED kwarg (no default): the MRI conditioning
+#     stack is the locked 3-channel [|x0|, Re(A^H r), Im(A^H r)] (EXEC 3.8),
+#     so the silent single-channel Conv2d(1, ...) assumption is removed.
+#     Input validation checks (B, in_channels, H, W).
+#   * y-residual bypass unchanged and still default-OFF (EXEC 3.9 DISABLED);
+#     when enabled, y_input_size = in_channels * H * W of the flattened input.
+# Changelog (v0.4 -> v0.5): optional y-residual bypass (Glow rescue),
+#   default OFF, byte-identical to v0.4 when disabled.
+# Changelog (v0.3 -> v0.4): FiLMHead last-Linear init depends on output_form.
+# Changelog (v0.2 -> v0.3): FiLMHead output_form kwarg.
+# Changelog (v0.1 -> v0.2): Conditioner use_v2 kwarg.
 # Update summary:
-#   v0.5 provides an architectural escape from the conditioner-collapse
-#   attractor: a learnable, linear bypass from y direct to h. The CNN can
-#   still be optimized into constant output, but the bypass cannot (it is
-#   linear in y by construction). Default OFF -- only activated when
-#   y_residual_alpha_init > 0 via cfg.
+#   v0.6 lands the conditioner half of the paired I2 channel-contract
+#   rebuild: input channel count is explicit, required, and validated; the
+#   3-channel MRI value comes from the cell, never from a default.
 # =============================================================================
 from __future__ import annotations
 import logging
-import traceback
 logger = logging.getLogger(__name__)
-__version__ = "0.5"
+__version__ = "0.6"
 __abbr__ = "STEP-1_1"
 
 import torch
@@ -40,19 +31,22 @@ import torch.nn.functional as F
 
 
 class Conditioner(nn.Module):
-    # y (B,1,h,w) -> h (B, h_dim). Same architecture for x2 and x4 via adaptive pool.
+    # y (B, in_channels, h, w) -> h (B, h_dim). Same architecture for any
+    # spatial size via adaptive pool. in_channels REQUIRED (v0.6).
     # use_v2 (default False) preserves v0.1 head:  Linear(w*16, h_dim).
-    # use_v2=True activates v2 head:               Linear(w*16, h_dim) -> GELU -> Linear(h_dim, h_dim).
-    # v0.5: optional y-residual bypass. When y_residual_alpha_init > 0:
-    #     h = cnn_head(y) + alpha * Linear(y.flatten(1))
-    #   provides a DIRECT linear function of y that the CNN cannot
-    #   "collapse" via training. Used to rescue Glow's conditioner from
-    #   the constant-output attractor (audited v0.11-v0.12).
-    def __init__(self, *, width: int = 64, h_dim: int = 128,
+    # use_v2=True activates v2 head: Linear(w*16, h_dim) -> GELU -> Linear.
+    # v0.5 bypass (default OFF, EXEC 3.9 DISABLED): when
+    # y_residual_alpha_init > 0: h = cnn_head(y) + alpha * Linear(y.flatten(1))
+    def __init__(self, *, in_channels: int, width: int = 64, h_dim: int = 128,
                  use_v2: bool = False,
                  y_residual_alpha_init: float = 0.0,
                  y_input_size: int | None = None):
         super().__init__()
+        if not isinstance(in_channels, int) or in_channels < 1:
+            logger.error("[Conditioner] in_channels must be a positive int "
+                         "(REQUIRED, no default), got %r", in_channels)
+            raise ValueError(
+                f"in_channels must be a positive int, got {in_channels!r}")
         if width not in (64, 128):
             logger.error("[Conditioner] width must be 64 or 128, got %s", width)
             raise ValueError(f"width must be 64 or 128, got {width}")
@@ -60,8 +54,8 @@ class Conditioner(nn.Module):
             logger.error("[Conditioner] h_dim must be positive, got %s", h_dim)
             raise ValueError(f"h_dim must be positive, got {h_dim}")
         if y_residual_alpha_init < 0.0:
-            logger.error("[Conditioner] y_residual_alpha_init must be >=0, got %s",
-                         y_residual_alpha_init)
+            logger.error("[Conditioner] y_residual_alpha_init must be >=0, "
+                         "got %s", y_residual_alpha_init)
             raise ValueError(
                 f"y_residual_alpha_init must be >=0, got {y_residual_alpha_init}")
         if y_residual_alpha_init > 0.0 and (y_input_size is None
@@ -70,15 +64,17 @@ class Conditioner(nn.Module):
                          "y_input_size (positive int), got %s", y_input_size)
             raise ValueError(
                 "y_residual_alpha_init>0 requires positive y_input_size")
+        self.in_channels = in_channels
         self.width = width
         self.h_dim = h_dim
         self.use_v2 = bool(use_v2)
         self.y_residual_enabled = (y_residual_alpha_init > 0.0)
         w = width
         if not self.use_v2:
-            # v0.1 head -- byte-identical to legacy
+            # v0.1 head -- byte-identical to legacy apart from in_channels
             self.net = nn.Sequential(
-                nn.Conv2d(1, w // 2, 3, padding=1), nn.ReLU(inplace=True),
+                nn.Conv2d(in_channels, w // 2, 3, padding=1),
+                nn.ReLU(inplace=True),
                 nn.Conv2d(w // 2, w, 3, padding=1), nn.ReLU(inplace=True),
                 nn.Conv2d(w, w, 3, padding=1),      nn.ReLU(inplace=True),
                 nn.AdaptiveAvgPool2d(4),
@@ -89,7 +85,8 @@ class Conditioner(nn.Module):
         else:
             # v0.2 head -- Linear -> GELU -> Linear
             self.net = nn.Sequential(
-                nn.Conv2d(1, w // 2, 3, padding=1), nn.ReLU(inplace=True),
+                nn.Conv2d(in_channels, w // 2, 3, padding=1),
+                nn.ReLU(inplace=True),
                 nn.Conv2d(w // 2, w, 3, padding=1), nn.ReLU(inplace=True),
                 nn.Conv2d(w, w, 3, padding=1),      nn.ReLU(inplace=True),
                 nn.AdaptiveAvgPool2d(4),
@@ -99,21 +96,21 @@ class Conditioner(nn.Module):
                 nn.GELU(),
                 nn.Linear(h_dim, h_dim),
             )
-        # v0.5: y-residual bypass.
+        # v0.5: y-residual bypass (default OFF).
         if self.y_residual_enabled:
             self.y_residual_proj = nn.Linear(y_input_size, h_dim)
-            # default Kaiming-uniform init is fine for the projection.
-            # alpha is a LEARNABLE scalar; bounded below 0 only via grad.
             self.y_residual_alpha = nn.Parameter(
                 torch.tensor(float(y_residual_alpha_init)))
 
     def forward(self, y: torch.Tensor) -> torch.Tensor:
-        if y.dim() != 4 or y.size(1) != 1:
-            logger.error("[Conditioner] expected (B,1,H,W), got %s", tuple(y.shape))
-            raise ValueError(f"expected (B,1,H,W), got {tuple(y.shape)}")
+        if y.dim() != 4 or y.size(1) != self.in_channels:
+            logger.error("[Conditioner] expected (B,%d,H,W), got %s",
+                         self.in_channels, tuple(y.shape))
+            raise ValueError(
+                f"expected (B,{self.in_channels},H,W), got {tuple(y.shape)}")
         h = self.net(y)
         if self.y_residual_enabled:
-            y_flat = y.flatten(1)            # (B, H*W)
+            y_flat = y.flatten(1)            # (B, in_channels*H*W)
             h = h + self.y_residual_alpha * self.y_residual_proj(y_flat)
         if not torch.isfinite(h).all():
             logger.error("[Conditioner] non-finite h (any NaN=%s, Inf=%s)",
@@ -124,15 +121,9 @@ class Conditioner(nn.Module):
 
 class FiLMHead(nn.Module):
     # h (B, h_dim) -> (gamma, beta) each (B, feat_width).
-    # output_form='affine'   (default; legacy)
-    #     gamma = 1 + tanh(raw_gamma)   -- intended for z' = gamma*z + beta.
-    #     Initialised so gamma ~= 1, beta ~= 0 (identity at init).
-    # output_form='residual' (Glow)
-    #     gamma is returned RAW (no 1+tanh).  Caller does
-    #         z' = z * (1 + gain * gamma_raw) + gain * beta
-    #     This makes the conditioning contribution first-order in the FiLM
-    #     weights even when downstream layers are zero-init; the caller owns
-    #     the 'gain' parameter to scale the effect.
+    # output_form='affine' (default): gamma = 1 + tanh(raw), identity at init.
+    # output_form='residual' (Glow): raw gamma; caller does
+    #   z' = z * (1 + gain * gamma_raw) + gain * beta.
     def __init__(self, h_dim: int, feat_width: int, hidden: int = 64,
                  *, depth: int = 1, use_gelu: bool = False,
                  output_form: str = "affine"):
@@ -156,18 +147,8 @@ class FiLMHead(nn.Module):
                 layers.append(nn.ReLU(inplace=True))
             in_dim = hidden
         last = nn.Linear(in_dim, 2 * feat_width)
-        # v0.4: init depends on output_form.
-        #   'affine'   -> zero-init so FiLM is identity (gamma=1, beta=0). The
-        #                 downstream coupling NN provides the necessary
-        #                 non-identity behaviour as it trains.
-        #   'residual' -> small-normal init so (gamma_raw, beta) are non-zero
-        #                 at step 0. Without this, the chain
-        #                   cond -> film(h) -> coupling -> NLL
-        #                 has two zero-inits in series (film.last AND
-        #                 coupling.conv3), so the gradient w.r.t. either
-        #                 vanishes -- a second-order vanishing problem the
-        #                 residual form was supposed to break, but couldn't,
-        #                 because film.last itself was zero-init.
+        # v0.4: init depends on output_form ('affine' zero-init identity;
+        # 'residual' small-normal so the chain has first-order gradient).
         if output_form == "affine":
             nn.init.zeros_(last.weight)
             nn.init.zeros_(last.bias)
@@ -182,15 +163,13 @@ class FiLMHead(nn.Module):
         out = self.mlp(h)
         gamma_raw, beta = out.chunk(2, dim=-1)
         if self.output_form == "affine":
-            gamma = 1.0 + torch.tanh(gamma_raw)          # range (0, 2), centred at 1
+            gamma = 1.0 + torch.tanh(gamma_raw)      # range (0,2), centred 1
             return gamma, beta
-        # residual form: return raw values; caller handles (1 + gain * gamma_raw)
         return gamma_raw, beta
 
 
 class ConcatInjector(nn.Module):
-    # Alternative to FiLM for the ablation: project h and concat to features.
-    # Used when cfg.use_film is False.
+    # Alternative to FiLM for the ablation: project h and residual-add.
     def __init__(self, h_dim: int, feat_width: int):
         super().__init__()
         self.proj = nn.Linear(h_dim, feat_width)
@@ -198,7 +177,6 @@ class ConcatInjector(nn.Module):
         nn.init.zeros_(self.proj.bias)
 
     def forward(self, feat: torch.Tensor, h: torch.Tensor) -> torch.Tensor:
-        # feat: (B, W), h: (B, h_dim) -> (B, W) via residual add of projected h.
         if feat.shape[0] != h.shape[0]:
             logger.error("[ConcatInjector] batch mismatch feat=%s h=%s",
                          feat.shape, h.shape)

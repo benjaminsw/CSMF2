@@ -1,4 +1,4 @@
-# SEQREF-CPLREG v0.3 -- refiners.coupling_regressor
+# SEQREF-CPLREG v0.4 -- refiners.coupling_regressor
 # LIFETIME: KEEP
 # Purpose: Level-1 coupling-as-regressor refiner. dx = stack(x0_flat | h) - x0_flat
 #          where the stack is the expert's coupling blocks used as a plain
@@ -8,6 +8,18 @@
 #            nice    -> additive NICECoupling stack + DiagScale (no permute)
 #          Near-identity at init (small post init + DiagScale zeros) -> dx ~= 0.
 #          Gate lives in gated_update.GatedUpdate (owned by CplRegRefiner).
+# v0.4 (SEQREF-I2 paired channel-contract rebuild):
+#     * dim REQUIRED (silent 784 MNIST default removed; raise if absent).
+#       MRI state is the complex two-channel image (EXEC 3.14): x0 is
+#       (B,2,H,W), dim = flattened state numel (2*96*96 = 18432 at the
+#       locked cell, subject to the section-6 memory smoke).
+#     * in_channels REQUIRED on RefinerConditioner / SpatialGate /
+#       CplRegRefiner. Channel semantics REPLACED: the legacy
+#       [y_up, x0, Aᵀr0] stack has NO MRI analogue -- the conditioning
+#       input is the LOCKED 3.8 stack [|x0|, Re(Aᴴr), Im(Aᴴr)] assembled
+#       by refiners.channel_assembly (provenance-gated normalization).
+#     * Spatial contract comments updated 28x28 -> cell-supplied H,W.
+#       Architecture (stacks, gate, warm-start audit) unchanged: INHERIT.
 # v0.3 (SEQREF-SPGATE V1): gate_mode in {scalar, spatial}. spatial adds a
 #     SpatialGate head reading the RAW 3-channel input stream (the same raw
 #     conditioning inputs as C, NOT the pooled conditioner features h, which
@@ -49,7 +61,7 @@ from ..flows.nice_layer import NICECoupling, DiagScale
 from .gated_update import GatedUpdate
 
 logger = logging.getLogger("seqref_mri.refiners.coupling_regressor")
-__version__ = "0.3"
+__version__ = "0.4"
 __abbr__ = "SEQREF-CPLREG"
 
 DEFAULT_EXCLUDE = ("layers.*.post.*", "layers.*.scale.log_s", "gate.*")
@@ -58,20 +70,28 @@ _FLAVORS = ("realnvp", "nice")
 
 
 class RefinerConditioner(nn.Module):
-    # [y_up, x0, Aᵀr0] (B,3,28,28) -> h (B, h_dim). Mirrors Conditioner v2 head
-    # (STEP-1_1 v0.5) except in_channels=3 and no y-residual bypass. Tensor
-    # names match Conditioner ("net.N.*") so shape-compatible base-expert
-    # conditioner weights (net.2 onward) can warm-start; net.0 (1ch vs 3ch)
-    # fresh-inits by design.
-    def __init__(self, *, width: int = 128, h_dim: int = 256):
+    # LOCKED 3.8 stack [|x0|, Re(Aᴴr), Im(Aᴴr)] (B,in_channels,H,W) -> h
+    # (B, h_dim); assembled by refiners.channel_assembly (provenance-gated).
+    # Mirrors Conditioner v2 head; no y-residual bypass. Tensor names match
+    # Conditioner ("net.N.*") so shape-compatible base-expert conditioner
+    # weights (net.2 onward) can warm-start; net.0 fresh-inits by design.
+    # v0.4: in_channels REQUIRED (no default).
+    def __init__(self, *, in_channels: int, width: int = 128,
+                 h_dim: int = 256):
         super().__init__()
+        if not isinstance(in_channels, int) or in_channels < 1:
+            logger.error("[RefinerConditioner] in_channels must be a positive "
+                         "int (REQUIRED), got %r", in_channels)
+            raise ValueError(
+                f"in_channels must be a positive int, got {in_channels!r}")
         if width not in (64, 128):
             logger.error("[RefinerConditioner] width must be 64/128, got %s", width)
             raise ValueError(f"width must be 64 or 128, got {width}")
         w = width
+        self.in_channels = in_channels
         self.h_dim = h_dim
         self.net = nn.Sequential(
-            nn.Conv2d(3, w // 2, 3, padding=1), nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels, w // 2, 3, padding=1), nn.ReLU(inplace=True),
             nn.Conv2d(w // 2, w, 3, padding=1), nn.ReLU(inplace=True),
             nn.Conv2d(w, w, 3, padding=1),      nn.ReLU(inplace=True),
             nn.AdaptiveAvgPool2d(4),
@@ -83,10 +103,11 @@ class RefinerConditioner(nn.Module):
         )
 
     def forward(self, inp: torch.Tensor) -> torch.Tensor:
-        if inp.dim() != 4 or inp.size(1) != 3:
-            logger.error("[RefinerConditioner] expected (B,3,H,W), got %s",
-                         tuple(inp.shape))
-            raise ValueError(f"expected (B,3,H,W), got {tuple(inp.shape)}")
+        if inp.dim() != 4 or inp.size(1) != self.in_channels:
+            logger.error("[RefinerConditioner] expected (B,%d,H,W), got %s",
+                         self.in_channels, tuple(inp.shape))
+            raise ValueError(
+                f"expected (B,{self.in_channels},H,W), got {tuple(inp.shape)}")
         h = self.net(inp)
         if not torch.isfinite(h).all():
             logger.error("[RefinerConditioner] non-finite h")
@@ -109,14 +130,20 @@ class _DiagScaleWrap(nn.Module):
 class SpatialGate(nn.Module):
     # Per-pixel soft gate from the raw input stream (B,3,H,W) -> (B,1,H,W).
     # Convolutions preserve whatever spatial size is supplied.
-    def __init__(self, *, g_max: float, g_init: float, width: int = 16):
+    def __init__(self, *, in_channels: int, g_max: float, g_init: float,
+                 width: int = 16):
         super().__init__()
+        if not isinstance(in_channels, int) or in_channels < 1:
+            logger.error("[SpatialGate] in_channels must be a positive int "
+                         "(REQUIRED), got %r", in_channels)
+            raise ValueError(
+                f"in_channels must be a positive int, got {in_channels!r}")
         if not (0.0 < g_init < g_max):
             logger.error("[SpatialGate] need 0 < g_init < g_max, got "
                          "g_init=%r g_max=%r", g_init, g_max)
             raise ValueError("need 0 < g_init < g_max")
         self.g_max = float(g_max)
-        self.conv1 = nn.Conv2d(3, width, 3, padding=1)
+        self.conv1 = nn.Conv2d(in_channels, width, 3, padding=1)
         self.conv2 = nn.Conv2d(width, 1, 3, padding=1)
         nn.init.zeros_(self.conv2.weight)
         with torch.no_grad():
@@ -133,7 +160,8 @@ class SpatialGate(nn.Module):
 
 class CplRegRefiner(nn.Module):
     # dx = couplings(x0_flat, h) - x0_flat ; x1, g = gate(x0, dx, h).
-    def __init__(self, *, flavor: str, dim: int = 784, h_dim: int = 256,
+    def __init__(self, *, flavor: str, dim: int, in_channels: int,
+                 h_dim: int = 256,
                  hidden: int = 256, n_layers: int | None = None,
                  cond_width: int = 128,
                  film_hidden: int = 128, film_depth: int = 2,
@@ -146,9 +174,15 @@ class CplRegRefiner(nn.Module):
             logger.error("[CplRegRefiner] flavor must be in %s, got %r",
                          _FLAVORS, flavor)
             raise ValueError(f"flavor must be in {_FLAVORS}, got {flavor!r}")
+        if not isinstance(dim, int) or dim < 1:
+            logger.error("[CplRegRefiner] dim is REQUIRED from the cell "
+                         "(positive int; no MNIST default), got %r", dim)
+            raise ValueError(f"dim must be a positive int, got {dim!r}")
         self.flavor = flavor
         self.dim = dim
-        self.cond = RefinerConditioner(width=cond_width, h_dim=h_dim)
+        self.in_channels = in_channels
+        self.cond = RefinerConditioner(in_channels=in_channels,
+                                       width=cond_width, h_dim=h_dim)
         self.layers = nn.ModuleList()
         if flavor == "realnvp":
             nl = 6 if n_layers is None else int(n_layers)
@@ -175,11 +209,13 @@ class CplRegRefiner(nn.Module):
         if gate_mode == "scalar":
             self.gate = GatedUpdate(h_dim, g_max=g_max, g_init=g_init)
         else:
-            self.gate_spatial = SpatialGate(g_max=g_max, g_init=g_init)
+            self.gate_spatial = SpatialGate(in_channels=in_channels,
+                                            g_max=g_max, g_init=g_init)
         self.g_max = g_max
 
     def delta(self, x0: torch.Tensor, h: torch.Tensor) -> torch.Tensor:
-        # x0: (B,1,28,28) -> dx (B,1,28,28). Regressor pass, no ldj use.
+        # x0: (B,2,H,W) two-channel complex state (EXEC 3.14) -> dx same
+        # shape. Regressor pass, no ldj use. numel per sample must equal dim.
         z = x0.flatten(1)
         out = z
         for layer in self.layers:
@@ -193,7 +229,12 @@ class CplRegRefiner(nn.Module):
 
     def forward(self, inp: torch.Tensor, x0: torch.Tensor
                 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        # inp: (B,3,28,28) = [y_up, x0, Aᵀr0]; returns (x1, dx, g).
+        # inp: (B,in_channels,H,W) = LOCKED 3.8 stack [|x0|,Re(Aᴴr),Im(Aᴴr)]
+        # (normalized, locked-I7 provenance); returns (x1, dx, g).
+        if inp.dim() != 4 or inp.size(1) != self.in_channels:
+            logger.error("[CplRegRefiner] inp expected (B,%d,H,W), got %s",
+                         self.in_channels, tuple(inp.shape))
+            raise ValueError("inp channel count != in_channels")
         if inp.shape[0] != x0.shape[0] or inp.shape[-2:] != x0.shape[-2:]:
             logger.error("[CplRegRefiner] inp/x0 shape mismatch: %s vs %s",
                          tuple(inp.shape), tuple(x0.shape))
