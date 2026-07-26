@@ -1,0 +1,189 @@
+seqref_mri/scripts/train_refiner.py:85:#   * seqref_mri fork; dataset construction via degrade.make_degraded
+seqref_mri/scripts/train_refiner.py:131:from seqref_mri.src.degrade import make_degraded
+seqref_mri/scripts/train_refiner.py:166:    m = ((x_hat - x_true) ** 2).flatten(1).mean(dim=1).clamp_min(1e-12)
+seqref_mri/scripts/train_refiner.py:196:    gf = g.flatten() if g.ndim == 1 else g.flatten(1)
+seqref_mri/scripts/train_refiner.py:201:        within_std = float(g.flatten(1).std(dim=1).median())
+seqref_mri/scripts/train_refiner.py:202:        per_sample_mean = g.flatten(1).mean(dim=1)
+seqref_mri/scripts/train_refiner.py:247:    fwd_x1 = _fwd_rel(x1c, y, base.blur_sigma, base.scale)
+seqref_mri/scripts/train_refiner.py:249:    delta_l2 = float(dx.flatten(1).norm(dim=1).mean())
+seqref_mri/scripts/train_refiner.py:250:    delta_linf = float(dx.flatten(1).abs().max(dim=1).values.mean())
+seqref_mri/scripts/train_refiner.py:252:    delta_tgt_l2 = float((dx - tgt).flatten(1).norm(dim=1).mean())
+seqref_mri/scripts/train_refiner.py:276:             (apply_gate(g, dx).flatten(1).pow(2).mean(dim=1).sqrt()
+seqref_mri/scripts/train_refiner.py:354:    ps_std = g.flatten(1).std(dim=1).numpy()
+seqref_mri/scripts/train_refiner.py:355:    ps_cov10 = (g.flatten(1) > 0.10 * g_max).float().mean(1).numpy()
+seqref_mri/scripts/train_refiner.py:388:    ratio = (app.flatten(1).pow(2).mean(1).sqrt()
+seqref_mri/scripts/train_refiner.py:397:        gf = g.flatten(1)
+seqref_mri/scripts/train_refiner.py:421:    ps_g = (g if g.ndim == 1 else g.flatten(1).mean(dim=1)).numpy()
+seqref_mri/scripts/train_refiner.py:535:                           f"{float(base.cfg['cell']['noise_sigma']):.2f}_"
+seqref_mri/scripts/train_refiner.py:542:    dk = dict(sigma=base.blur_sigma, scale=base.scale,
+seqref_mri/scripts/train_refiner.py:543:              noise_sigma=float(cell["noise_sigma"]))
+seqref_mri/scripts/train_refiner.py:546:    tl = DataLoader(make_degraded(cell.get("dataset"), root, split="train", **dk), batch_size=bs,
+seqref_mri/scripts/train_refiner.py:548:    vl = DataLoader(make_degraded(cell.get("dataset"), root, split="val", **dk), batch_size=bs,
+seqref_mri/scripts/train_refiner.py:572:    fwd_x0 = _fwd_rel(vaX0, vaY, base.blur_sigma, base.scale)
+seqref_mri/scripts/train_refiner.py:582:                          dim=int(r.get("dim", 784)),
+seqref_mri/scripts/train_refiner.py:640:            res = (trX - trX0).flatten(1)
+seqref_mri/scripts/train_base.py:8:#   * Dataset construction via degrade.make_degraded with REQUIRED
+seqref_mri/scripts/train_base.py:52:from seqref_mri.src.degrade import (make_degraded, dequantize_logit,
+seqref_mri/scripts/train_base.py:129:    # PIXEL space. Returns (x_hat (B,1,28,28), sample_pixel_std scalar). RAISES on
+seqref_mri/scripts/train_base.py:152:def _val_recon(model, loader, device, blur_sigma, scale, n_post):
+seqref_mri/scripts/train_base.py:162:        tot_fwd += _fwd_rel(x_hat, y, blur_sigma, scale) * b
+seqref_mri/scripts/train_base.py:178:    model.encode(x_logit.flatten(1), h)
+seqref_mri/scripts/train_base.py:190:    # x_pix: (B,1,28,28) in [0,1]. logit-dequantize, flatten, -(logprob+ldj).
+seqref_mri/scripts/train_base.py:192:    x_flat = x_logit.flatten(1)
+seqref_mri/scripts/train_base.py:201:    x_flat = x_logit.flatten(1)
+seqref_mri/scripts/train_base.py:253:def _recon_grid(model, loader, device, out_png, blur_sigma, scale, n_post, k=8):
+seqref_mri/scripts/train_base.py:297:    scale = int(cell["scale"]); blur_sigma = float(cell["blur_sigma"])
+seqref_mri/scripts/train_base.py:298:    noise_sigma = float(cell["noise_sigma"])
+seqref_mri/scripts/train_base.py:299:    test0 = (blur_sigma == 0.0 and scale == 1)
+seqref_mri/scripts/train_base.py:303:                           scale=scale, noise_sigma=noise_sigma,
+seqref_mri/scripts/train_base.py:309:    dk = dict(sigma=blur_sigma, scale=scale, noise_sigma=noise_sigma)
+seqref_mri/scripts/train_base.py:310:    tr = make_degraded(cell.get("dataset"), root, split="train", **dk)
+seqref_mri/scripts/train_base.py:311:    va = make_degraded(cell.get("dataset"), root, split="val", **dk)
+seqref_mri/scripts/train_base.py:378:    v_mse, v_psnr, v_fwd, v_sstd = _val_recon(model, vl, device, blur_sigma,
+seqref_mri/scripts/train_base.py:401:                blur_sigma, scale, _RECON_N_POST)
+seqref_mri/scripts/train_base.py:408:        "cell": {"dataset": cell.get("dataset"), "scale": scale, "blur_sigma": blur_sigma, "noise_sigma": noise_sigma},
+seqref_mri/scripts/_diag/alpha_sweep.py:29:from seqref_mri.src.degrade import make_degraded
+seqref_mri/scripts/_diag/alpha_sweep.py:68:    dk = dict(sigma=base.blur_sigma, scale=base.scale,
+seqref_mri/scripts/_diag/alpha_sweep.py:69:              noise_sigma=float(cell["noise_sigma"]))
+seqref_mri/scripts/_diag/alpha_sweep.py:71:    vl = DataLoader(make_degraded(cell.get("dataset"), cell["data_root"],
+seqref_mri/scripts/_diag/alpha_sweep.py:81:    model = TR.CplRegRefiner(flavor=r["flavor"], dim=int(r.get("dim", 784)),
+seqref_mri/scripts/_diag/alpha_sweep.py:122:        fwd = TR._fwd_rel(xa, vaY.cpu(), base.blur_sigma, base.scale)
+seqref_mri/scripts/_diag/seed_aggregate.py:48:    from seqref_mri.src.degrade import MNISTDegraded
+seqref_mri/scripts/_diag/seed_aggregate.py:57:    model = CplRegRefiner(flavor=r["flavor"], dim=int(r.get("dim", 784)),
+seqref_mri/scripts/_diag/seed_aggregate.py:74:    ds = MNISTDegraded(cell["data_root"], split="val", sigma=base.blur_sigma,
+seqref_mri/scripts/_diag/seed_aggregate.py:76:                       noise_sigma=float(cell["noise_sigma"]))
+seqref_mri/scripts/_diag/seed_aggregate.py:91:        x0_draws = torch.stack(draws)                       # (P,B,1,28,28)
+seqref_mri/scripts/_diag/seed_aggregate.py:93:        inp = refiner_inputs(y, x0_mean, base.blur_sigma, base.scale)
+seqref_mri/scripts/_diag/seed_aggregate.py:95:        corr = (g.view(-1, 1, 1, 1) * dx).unsqueeze(0)      # shared (1,B,1,28,28)
+seqref_mri/scripts/_diag/check_conditioning.py:21:from seqref_mri.src.degrade import MNISTDegraded, dequantize_logit
+seqref_mri/scripts/_diag/check_conditioning.py:50:    scale = int(cell["scale"]); blur = float(cell["blur_sigma"])
+seqref_mri/scripts/_diag/check_conditioning.py:51:    ds = MNISTDegraded(cell["data_root"], split="val", sigma=blur, scale=scale,
+seqref_mri/scripts/_diag/check_conditioning.py:52:                       noise_sigma=float(cell["noise_sigma"]))
+seqref_mri/scripts/_diag/check_conditioning.py:78:    _, ldj = model.encode(x_logit.flatten(1), h)
+seqref_mri/scripts/_diag/ws_audit.py:48:                          dim=int(r.get("dim", 784)),
+seqref_mri/scripts/_diag/cell_baselines.py:5:# split as training (make_degraded -> _VisionDegraded; no shortcuts).
+seqref_mri/scripts/_diag/cell_baselines.py:23:from seqref_mri.src.degrade import make_degraded
+seqref_mri/scripts/_diag/cell_baselines.py:55:                            f"s{args.scale}_n{args.noise_sigma:.2f}.json")
+seqref_mri/scripts/_diag/cell_baselines.py:58:    report = {"cell": {"blur_sigma": args.blur_sigma, "scale": args.scale,
+seqref_mri/scripts/_diag/cell_baselines.py:59:                       "noise_sigma": args.noise_sigma, "split": "val"},
+seqref_mri/scripts/_diag/cell_baselines.py:62:        ds = make_degraded(ds_name, args.data_root, split="val",
+seqref_mri/scripts/_diag/cell_baselines.py:63:                           sigma=args.blur_sigma, scale=args.scale,
+seqref_mri/scripts/_diag/cell_baselines.py:64:                           noise_sigma=args.noise_sigma)
+seqref_mri/scripts/_diag/cell_baselines.py:78:                        "fwd_rel": _fwd_rel(x_hat, y, args.blur_sigma,
+seqref_mri/scripts/_diag/cell_baselines.py:86:    print(f"=== cell baselines: s{c['scale']} / n{c['noise_sigma']:.2f} / "
+seqref_mri/scripts/_diag/cell_baselines.py:87:          f"blur {c['blur_sigma']} / split val ===")
+seqref_mri/scripts/_diag/eval_noise.py:24:from seqref_mri.src.degrade import make_degraded
+seqref_mri/scripts/_diag/eval_noise.py:64:    scale = int(cell["scale"]); blur_sigma = float(cell["blur_sigma"])
+seqref_mri/scripts/_diag/eval_noise.py:67:    va = make_degraded(cell.get("dataset"), cell["data_root"], split="val",
+seqref_mri/scripts/_diag/eval_noise.py:68:                       sigma=blur_sigma, scale=scale,
+seqref_mri/scripts/_diag/eval_noise.py:69:                       noise_sigma=float(cell["noise_sigma"]))
+seqref_mri/scripts/_diag/eval_noise.py:88:        mse, psnr, fwd, pstd = _val_recon(model, vl, device, blur_sigma,
+seqref_mri/scripts/_diag/fm_ungated_probe.py:27:from seqref_mri.src.degrade import MNISTDegraded
+seqref_mri/scripts/_diag/fm_ungated_probe.py:41:    m = ((x_hat - x_true) ** 2).flatten(1).mean(dim=1).clamp_min(1e-12)
+seqref_mri/scripts/_diag/fm_ungated_probe.py:60:    dk = dict(sigma=base.blur_sigma, scale=base.scale,
+seqref_mri/scripts/_diag/fm_ungated_probe.py:61:              noise_sigma=float(cell["noise_sigma"]))
+seqref_mri/scripts/_diag/fm_ungated_probe.py:63:    vl = DataLoader(MNISTDegraded(cell["data_root"], split="val", **dk),
+seqref_mri/scripts/_diag/fm_ungated_probe.py:103:    fwd_x1 = _fwd_rel(vaX1, vaY, base.blur_sigma, base.scale)
+seqref_mri/scripts/_diag/fm_ungated_probe.py:106:    cosv = F.cosine_similarity(dx.flatten(1), oracle.flatten(1), dim=1)
+seqref_mri/scripts/_diag/fm_ungated_probe.py:114:                     "fwd": _fwd_rel(x2, vaY, base.blur_sigma, base.scale),
+seqref_mri/scripts/_diag/grad_diag.py:27:from seqref_mri.src.degrade import make_degraded
+seqref_mri/scripts/_diag/grad_diag.py:67:    dk = dict(sigma=base.blur_sigma, scale=base.scale,
+seqref_mri/scripts/_diag/grad_diag.py:68:              noise_sigma=float(cell["noise_sigma"]))
+seqref_mri/scripts/_diag/grad_diag.py:69:    vl = DataLoader(make_degraded(cell.get("dataset"), cell["data_root"],
+seqref_mri/scripts/_diag/grad_diag.py:80:    model = TR.CplRegRefiner(flavor=r["flavor"], dim=int(r.get("dim", 784)),
+seqref_mri/scripts/train_fm_refiner.py:20:#   * seqref_mri fork; dataset construction via degrade.make_degraded
+seqref_mri/scripts/train_fm_refiner.py:39:from seqref_mri.src.degrade import make_degraded
+seqref_mri/scripts/train_fm_refiner.py:66:    m = ((x_hat - x_true) ** 2).flatten(1).mean(dim=1).clamp_min(1e-12)
+seqref_mri/scripts/train_fm_refiner.py:113:                           f"{float(base.cfg['cell']['noise_sigma']):.2f}_"
+seqref_mri/scripts/train_fm_refiner.py:121:    dk = dict(sigma=base.blur_sigma, scale=base.scale,
+seqref_mri/scripts/train_fm_refiner.py:122:              noise_sigma=float(cell["noise_sigma"]))
+seqref_mri/scripts/train_fm_refiner.py:124:    tl = DataLoader(make_degraded(cell.get("dataset"), cell["data_root"], split="train", **dk),
+seqref_mri/scripts/train_fm_refiner.py:126:    vl = DataLoader(make_degraded(cell.get("dataset"), cell["data_root"], split="val", **dk),
+seqref_mri/scripts/train_fm_refiner.py:190:    fwd_x1 = _fwd_rel(vaX1, vaY, base.blur_sigma, base.scale)
+seqref_mri/scripts/train_fm_refiner.py:237:        fwd_x2 = _fwd_rel(x2o, vaY, base.blur_sigma, base.scale)
+seqref_mri/scripts/train_fm_refiner.py:281:    m_ssim = _ssim(x2c, vaX); m_fwd = _fwd_rel(x2c, vaY, base.blur_sigma,
+seqref_mri/src/flows/realnvp_image_layer.py:4:# (B,1,28,28), CNN produces s,t from [x*mask, mask] (2 input channels),
+seqref_mri/src/flows/realnvp_image_layer.py:7:# Flat (B,784) in/out to match _BaseExpert.encode/decode contract.
+seqref_mri/src/flows/realnvp_image_layer.py:27:    # (1,1,28,28) mask; parity 0 -> (i+j) even = 1, parity 1 -> odd = 1.
+seqref_mri/src/flows/realnvp_image_layer.py:36:    # ldj = sum((1-m)*s). inverse exact. Flat (B,784) interface.
+seqref_mri/src/flows/realnvp_image_layer.py:44:            logger.error("[RNVPImg] dim must be %d (28x28), got %d", _HW * _HW, dim)
+seqref_mri/src/flows/realnvp_image_layer.py:69:        inp = torch.cat([x_img * m, m.expand_as(x_img)], dim=1)   # (B,2,28,28)
+seqref_mri/src/flows/realnvp_image_layer.py:75:        out = self.post(f)                                         # (B,2,28,28)
+seqref_mri/src/flows/realnvp_image_layer.py:90:        ldj = (um * s).flatten(1).sum(dim=-1)
+seqref_mri/src/flows/realnvp_image_layer.py:94:        return y_img.flatten(1), ldj
+seqref_mri/src/flows/realnvp_image_layer.py:107:        return x_img.flatten(1)
+seqref_mri/src/flows/nsf_layer.py:14:#     unbounded logit-space MNIST inputs.
+seqref_mri/src/flows/nsf_layer.py:33:#   MNIST vector. Matches the WP0 goal "same conditioner, same degradation
+seqref_mri/src/metrics.py:42:def fwd_rel(x_hat: torch.Tensor, y: torch.Tensor, blur_sigma: float,
+seqref_mri/src/metrics.py:49:    ax = A_forward(x_hat, blur_sigma, scale)
+seqref_mri/src/train_utils.py:54:def make_run_dir(root: str, *, expert: str, scale: int, noise_sigma: float,
+seqref_mri/src/train_utils.py:59:        name = f"{expert}_s{scale}_n{noise_sigma:.2f}_seed{seed_index}_{cfg_hash_hex}"
+seqref_mri/src/base_experts.py:194:    # squeeze/unsqueeze. Default image_shape is (1, 28, 28); override for non-MNIST.
+seqref_mri/src/base_experts.py:249:        return z_img.flatten(1), ldj
+seqref_mri/src/base_experts.py:258:        return x_img.flatten(1)
+seqref_mri/src/forward_operator.py:17:def A_forward(x: torch.Tensor, blur_sigma: float, scale: int) -> torch.Tensor:
+seqref_mri/src/forward_operator.py:21:    return downsample(blur(x, blur_sigma), scale)
+seqref_mri/src/forward_operator.py:24:def A_adjoint(r: torch.Tensor, blur_sigma: float, scale: int,
+seqref_mri/src/forward_operator.py:33:        y = A_forward(x, blur_sigma, scale)
+seqref_mri/src/degrade.py:3:# Purpose: deterministic MNIST degradation pipeline y = Ax + n, with
+seqref_mri/src/degrade.py:9:#     parameterised by TV_DATASET); MNISTDegraded now subclasses it
+seqref_mri/src/degrade.py:10:#     (byte-identical behaviour); NEW FashionMNISTDegraded
+seqref_mri/src/degrade.py:11:#     (torchvision.datasets.FashionMNIST; same 60k/10k splits, same
+seqref_mri/src/degrade.py:13:#   * NEW make_degraded(dataset, root, ...) factory: dataset REQUIRED, one of
+seqref_mri/src/degrade.py:23:#     in {1,2,4}; scale=1 keeps y at native 28x28.
+seqref_mri/src/degrade.py:24:#   * Net effect: degrade(sigma=0, scale=1, noise_sigma=0) yields y == x,
+seqref_mri/src/degrade.py:28:#   * NEW: train/val/test split. The 60k MNIST training set is partitioned
+seqref_mri/src/degrade.py:30:#     MNIST test set is untouched and used only for final reporting.
+seqref_mri/src/degrade.py:31:#   * MNISTDegraded REQUIRES `split: {"train","val","test"}`. The old
+seqref_mri/src/degrade.py:41:#   * Introduced. Provides MNISTDegraded (torch Dataset), gaussian blur (fixed
+seqref_mri/src/degrade.py:43:#   * Supports scale in {2, 4} and noise_sigma in {0.0, 0.05, 0.1}.
+seqref_mri/src/degrade.py:47:#   shared base class, MNIST unchanged, FashionMNIST added, and a mandatory
+seqref_mri/src/degrade.py:106:def degrade(x: torch.Tensor, *, sigma: float, scale: int, noise_sigma: float,
+seqref_mri/src/degrade.py:108:    # x: (B,1,28,28). Returns y: (B,1,28/scale,28/scale).
+seqref_mri/src/degrade.py:110:    if noise_sigma < 0.0:
+seqref_mri/src/degrade.py:111:        logger.error("[degrade] noise_sigma must be >= 0, got %.4f", noise_sigma)
+seqref_mri/src/degrade.py:112:        raise ValueError(f"noise_sigma must be >= 0, got {noise_sigma}")
+seqref_mri/src/degrade.py:113:    if noise_sigma > 0.0:
+seqref_mri/src/degrade.py:115:                          device=y.device, dtype=y.dtype) * noise_sigma
+seqref_mri/src/degrade.py:137:           torch.log(z) - torch.log1p(-z)).flatten(1).sum(-1)
+seqref_mri/src/degrade.py:170:    logger.error("[MNISTDegraded] unknown split %r", split)
+seqref_mri/src/degrade.py:176:    # SPLIT_SEED partition applies identically (both MNIST and FashionMNIST
+seqref_mri/src/degrade.py:181:                 noise_sigma: float, download: bool = True):
+seqref_mri/src/degrade.py:205:        self.noise_sigma = noise_sigma
+seqref_mri/src/degrade.py:212:        x, _ = self.base[real_idx]               # (1,28,28) in [0,1]
+seqref_mri/src/degrade.py:213:        x = x.unsqueeze(0)                       # (1,1,28,28)
+seqref_mri/src/degrade.py:215:                    noise_sigma=self.noise_sigma)
+seqref_mri/src/degrade.py:219:class MNISTDegraded(_VisionDegraded):
+seqref_mri/src/degrade.py:220:    TV_DATASET = datasets.MNIST
+seqref_mri/src/degrade.py:223:class FashionMNISTDegraded(_VisionDegraded):
+seqref_mri/src/degrade.py:224:    TV_DATASET = datasets.FashionMNIST
+seqref_mri/src/degrade.py:227:DATASETS = {"mnist": MNISTDegraded, "fashion_mnist": FashionMNISTDegraded}
+seqref_mri/src/degrade.py:230:def make_degraded(dataset: str | None, root: str, *, split: str, sigma: float,
+seqref_mri/src/degrade.py:231:                  scale: int, noise_sigma: float,
+seqref_mri/src/degrade.py:235:        logger.error("[make_degraded] cell.dataset required, one of %s, "
+seqref_mri/src/degrade.py:240:                             noise_sigma=noise_sigma, download=download)
+seqref_mri/src/refiners/gated_update.py:44:        # x_prev, dx: (B,1,28,28); h: (B, h_dim). Returns (x_new, g (B,)).
+seqref_mri/src/refiners/coupling_regressor.py:61:    # [y_up, x0, Aᵀr0] (B,3,28,28) -> h (B, h_dim). Mirrors Conditioner v2 head
+seqref_mri/src/refiners/coupling_regressor.py:136:    def __init__(self, *, flavor: str, dim: int = 784, h_dim: int = 256,
+seqref_mri/src/refiners/coupling_regressor.py:182:        # x0: (B,1,28,28) -> dx (B,1,28,28). Regressor pass, no ldj use.
+seqref_mri/src/refiners/coupling_regressor.py:183:        z = x0.flatten(1)
+seqref_mri/src/refiners/coupling_regressor.py:188:        dx = (out - z).view_as(x0)
+seqref_mri/src/refiners/coupling_regressor.py:196:        # inp: (B,3,28,28) = [y_up, x0, Aᵀr0]; returns (x1, dx, g).
+seqref_mri/src/refiners/base_io.py:22:#   * v0.1.1 bug-fix folded in: A_adjoint call passes image_hw=(28,28).
+seqref_mri/src/refiners/base_io.py:75:        self.blur_sigma = float(cell["blur_sigma"])
+seqref_mri/src/refiners/base_io.py:119:        # y: (B,1,h,w) float32. f64 posterior pixel-mean -> float32 (B,1,28,28).
+seqref_mri/src/refiners/base_io.py:136:def refiner_inputs(y: torch.Tensor, x0: torch.Tensor, blur_sigma: float,
+seqref_mri/src/refiners/base_io.py:138:    # Returns (B,3,28,28) = [y_up, x0, Aᵀr0], float32. r0 = y - A(x0).
+seqref_mri/src/refiners/base_io.py:143:    r0 = y - A_forward(x0, blur_sigma, scale)
+seqref_mri/src/refiners/base_io.py:144:    atr0 = A_adjoint(r0, blur_sigma, scale, (28, 28))
+seqref_mri/src/refiners/base_io.py:177:        inp = refiner_inputs(y, x0, base.blur_sigma, base.scale)
+seqref_mri/src/refiners/base_io.py:208:            flavor=r["flavor"], dim=int(r.get("dim", 784)),
+seqref_mri/src/refiners/base_io.py:263:                              base.blur_sigma, base.scale)
+seqref_mri/src/adjoint_check.py:19:def adjoint_preflight(blur_sigma: float, scale: int,
+seqref_mri/src/adjoint_check.py:28:    lhs = (A_forward(x, blur_sigma, scale) * r).sum()
+seqref_mri/src/adjoint_check.py:29:    rhs = (x * A_adjoint(r, blur_sigma, scale, image_hw)).sum()
+seqref_mri/src/adjoint_check.py:36:                blur_sigma, scale, image_hw, rel)
+seqref_mri/src/adjoint_check.py:54:        adjoint_preflight(a.blur_sigma, a.scale, (a.hw, a.hw), tol=a.tol)
+seqref_mri/src/conditioner.py:8:#         h = cnn_head(y) + alpha * Linear(y.flatten(1))
+seqref_mri/src/conditioner.py:47:    #     h = cnn_head(y) + alpha * Linear(y.flatten(1))
+seqref_mri/src/conditioner.py:116:            y_flat = y.flatten(1)            # (B, H*W)
