@@ -1,4 +1,4 @@
-# SEQREF-CPLREG v0.4 -- refiners.coupling_regressor
+# SEQREF-CPLREG v0.5 -- refiners.coupling_regressor
 # LIFETIME: KEEP
 # Purpose: Level-1 coupling-as-regressor refiner. dx = stack(x0_flat | h) - x0_flat
 #          where the stack is the expert's coupling blocks used as a plain
@@ -8,6 +8,11 @@
 #            nice    -> additive NICECoupling stack + DiagScale (no permute)
 #          Near-identity at init (small post init + DiagScale zeros) -> dx ~= 0.
 #          Gate lives in gated_update.GatedUpdate (owned by CplRegRefiner).
+# v0.5 (bugfix, pre-formal-I2): SpatialGate returns (B,1,H,W) but the
+#     locked state is two-channel (B,2,H,W); the v0.4 exact-shape check made
+#     every spatial-gate forward raise. Now g must be (B,1,H,W) and
+#     broadcasts across the Re/Im channels in x1 = x0 + g * dx. (Latent on
+#     the MRI path -- scalar-first is locked -- but introduced by v0.4.)
 # v0.4 (SEQREF-I2 paired channel-contract rebuild):
 #     * dim REQUIRED (silent 784 MNIST default removed; raise if absent).
 #       MRI state is the complex two-channel image (EXEC 3.14): x0 is
@@ -61,7 +66,7 @@ from ..flows.nice_layer import NICECoupling, DiagScale
 from .gated_update import GatedUpdate
 
 logger = logging.getLogger("seqref_mri.refiners.coupling_regressor")
-__version__ = "0.4"
+__version__ = "0.5"
 __abbr__ = "SEQREF-CPLREG"
 
 DEFAULT_EXCLUDE = ("layers.*.post.*", "layers.*.scale.log_s", "gate.*")
@@ -249,11 +254,13 @@ class CplRegRefiner(nn.Module):
             x1, g = self.gate(x0, dx, h)
         else:
             g = self.gate_spatial(inp)
-            if g.shape != dx.shape:
-                logger.error("[CplRegRefiner] gate/dx shape mismatch: %s vs "
-                             "%s", tuple(g.shape), tuple(dx.shape))
-                raise ValueError("gate/dx shape mismatch")
-            x1 = x0 + g * dx
+            want = (dx.shape[0], 1, dx.shape[2], dx.shape[3])
+            if tuple(g.shape) != want:
+                logger.error("[CplRegRefiner] spatial gate shape %s != %s "
+                             "(B,1,H,W broadcasting over state channels)",
+                             tuple(g.shape), want)
+                raise ValueError("spatial gate must be (B,1,H,W)")
+            x1 = x0 + g * dx      # broadcasts over the 2 state channels
         return x1, dx, g
 
 

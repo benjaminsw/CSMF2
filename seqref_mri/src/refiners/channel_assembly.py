@@ -1,5 +1,5 @@
 # =============================================================================
-# SEQREF-I2 v0.1 -- src.refiners.channel_assembly
+# SEQREF-I2 v0.2 -- src.refiners.channel_assembly
 # LIFETIME: KEEP
 # Purpose: the locked 3.8 conditioning-channel contract, implemented as TWO
 #   separated steps (review amendment):
@@ -21,6 +21,9 @@
 #   scales for all three channels; the gate makes that impossibility a
 #   structural error instead of a silent contract violation.
 # CONVENTION: logger.error + raise on every failure path. No fallback.
+# Changelog (v0.1 -> v0.2, bugfix): _as_complex_state checks dim() >= 3
+#   before reading shape[-3] (malformed low-dim tensors raised an
+#   uncontrolled IndexError instead of the convention error).
 # Changelog (NEW in v0.1):
 #   * Introduced ChannelScales, assemble_raw_channels, normalize_channels,
 #     model_channels.
@@ -39,7 +42,7 @@ from ..forward_operator import MaskedFourierOperator
 
 logger = logging.getLogger("seqref_mri.refiners.channel_assembly")
 
-__version__ = "0.1"
+__version__ = "0.2"
 __abbr__ = "SEQREF-I2"
 
 _NORM_EPS = 1e-8              # EXEC 3.8, locked
@@ -78,7 +81,7 @@ def _as_complex_state(x0: torch.Tensor) -> torch.Tensor:
     # Accepts complex (..., H, W) or two-channel real (..., 2, H, W).
     if torch.is_complex(x0):
         return x0
-    if x0.shape[-3] == 2:
+    if x0.dim() >= 3 and x0.shape[-3] == 2:
         return torch.complex(x0[..., 0, :, :], x0[..., 1, :, :])
     logger.error("[assemble] x0 must be complex (...,H,W) or two-channel "
                  "(...,2,H,W), got %s dtype %s", tuple(x0.shape), x0.dtype)

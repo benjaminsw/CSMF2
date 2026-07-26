@@ -1,5 +1,5 @@
 # =============================================================================
-# SEQREF-I2 v0.1 -- scripts._diag.i2_baseline
+# SEQREF-I2 v0.2 -- scripts._diag.i2_baseline
 # LIFETIME: DIAGNOSTIC
 # Purpose: I2 evidence run. Sections:
 #   self_tests        contract smoke tests (run FIRST, cheap, CPU):
@@ -35,6 +35,13 @@
 # Invocation (repo root, venv active):
 #   python -m seqref_mri.scripts._diag.i2_baseline \
 #       --data-root seqref_mri/data/fastmri [--smoke N]
+# Changelog (v0.1 -> v0.2):
+#   * Smoke runs (--smoke) PERMIT a dirty tree, prominently recorded as
+#     "PROVISIONAL -- NOT FORMAL EVIDENCE"; formal runs still hard-require
+#     a clean tree. (v0.1's unconditional gate made pre-commit smokes
+#     impossible, forcing fix-commit churn.)
+#   * NEW self-test: spatial-gate forward on the two-channel state --
+#     inp (B,3,H,W), x0 (B,2,H,W) -> g (B,1,H,W) broadcast, x1 (B,2,H,W).
 # Changelog (NEW in v0.1): Introduced.
 # Update summary: produces the 3.13 zero-filled baseline and the I2
 #   evidence set under the adopted framing (identity checks labelled;
@@ -71,7 +78,7 @@ from seqref_mri.src.refiners.coupling_regressor import CplRegRefiner
 
 logger = logging.getLogger("seqref_mri.i2_baseline")
 
-__version__ = "0.1"
+__version__ = "0.2"
 __abbr__ = "SEQREF-I2"
 
 DATA_RANGE_LABEL = "provisional-I2-file-attr-max"
@@ -84,8 +91,10 @@ def _fail(msg: str) -> None:
     raise RuntimeError(msg)
 
 
-def provenance(argv: list[str]) -> dict:
-    # NO FALLBACK; formal evidence requires clean git provenance.
+def provenance(argv: list[str], *, allow_dirty: bool) -> dict:
+    # Formal evidence requires clean git provenance (raise on dirty).
+    # allow_dirty=True ONLY for smoke runs: dirty state is then RECORDED
+    # prominently, never hidden -- smoke output is not formal evidence.
     try:
         commit = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"],
                                 capture_output=True, text=True,
@@ -96,8 +105,11 @@ def provenance(argv: list[str]) -> dict:
     except Exception as e:
         logger.error("[i2] git provenance unobtainable: %r", e)
         raise RuntimeError(f"git provenance unobtainable: {e!r}") from e
-    if dirty:
+    if dirty and not allow_dirty:
         _fail("working tree DIRTY -- commit before the formal I2 run")
+    if dirty:
+        logger.warning("[i2] DIRTY TREE PERMITTED (smoke): output is "
+                       "PROVISIONAL -- NOT FORMAL EVIDENCE")
     import seqref_mri.src.refiners.channel_assembly as ca
     import seqref_mri.src.metrics as me
     import seqref_mri.src.conditioner as co
@@ -168,6 +180,18 @@ def self_tests() -> dict:
     if ch.shape != (3, 96, 96):
         _fail(f"model_channels shape {tuple(ch.shape)} != (3,96,96)")
     out["model_accepts_locked_scales"] = True
+
+    # spatial-gate broadcast over the two-channel state (v0.2)
+    m = CplRegRefiner(flavor="nice", dim=2 * 96 * 96, in_channels=3,
+                      h_dim=64, hidden=64, n_layers=1, gate_mode="spatial")
+    inp = torch.rand(2, 3, 96, 96)
+    x0_state = torch.rand(2, 2, 96, 96)
+    x1, dx, g = m(inp, x0_state)
+    if tuple(g.shape) != (2, 1, 96, 96):
+        _fail(f"spatial gate shape {tuple(g.shape)} != (2,1,96,96)")
+    if tuple(x1.shape) != (2, 2, 96, 96) or tuple(dx.shape) != (2, 2, 96, 96):
+        _fail("spatial-gate x1/dx shape wrong on two-channel state")
+    out["spatial_gate_broadcasts_2ch_state"] = True
     return out
 
 
@@ -332,7 +356,11 @@ def main() -> None:
 
     facts: dict = {"script": f"{__abbr__} v{__version__} i2_baseline",
                    "smoke_limit": a.smoke}
-    facts["provenance"] = provenance(sys.argv)
+    facts["provenance"] = provenance(sys.argv,
+                                     allow_dirty=(a.smoke is not None))
+    if facts["provenance"]["git_dirty"]:
+        facts["EVIDENCE_STATUS"] = ("PROVISIONAL -- dirty tree permitted "
+                                    "for smoke; NOT formal evidence")
     facts["self_tests"] = self_tests()
     ds = FastMRISliceDataset(a.data_root, split="val", mode="eval")
     bl = run_baseline(ds, device, a.smoke)
@@ -340,7 +368,7 @@ def main() -> None:
     bl.pop("_arrays")
     facts["baseline"] = bl
     facts["provisional_stats"] = provisional_stats(ds, device)
-    facts["verdict"] = ("PASS (smoke)" if a.smoke else "PASS")
+    facts["verdict"] = ("PASS (smoke, provisional)" if a.smoke else "PASS")
 
     with open(tmp / "facts.json", "w") as f:
         json.dump(facts, f, indent=2)
