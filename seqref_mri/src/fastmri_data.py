@@ -1,5 +1,5 @@
 # =============================================================================
-# SEQREF-I1 v0.2 -- src.fastmri_data
+# SEQREF-I1 v0.3 -- src.fastmri_data
 # LIFETIME: KEEP
 # Purpose: fastMRI single-coil knee slice dataset for the seqref_mri campaign.
 #   Implements the S3-locked conventions ONLY (EXEC 3.2/3.3/3.7/3.10/3.14):
@@ -29,6 +29,11 @@
 #   re-pickled to workers each epoch, so the value propagates. Using
 #   persistent_workers=True without a worker-side epoch update is an ERROR
 #   and is the caller's responsibility to avoid.
+# Changelog (v0.2 -> v0.3, SEQREF-I3):
+#   * Each item's meta now carries file_attr_max = the HDF5 file-level `max`
+#     attribute (REQUIRED present, finite, > 0 -- no fallback), read in the
+#     same h5 open as the kspace slice. Consumed by the I3 base-normalization
+#     (D2: state/target divided by it; metrics then use data_range = 1.0).
 # Changelog (v0.1 -> v0.2, pre-deployment review fixes):
 #   * Split-dir resolver: accepts BOTH <root>/singlecoil_<split> and the
 #     established extraction layout <root>/knee_singlecoil_<split>/
@@ -63,7 +68,7 @@ from torch.utils.data import Dataset
 
 logger = logging.getLogger("seqref_mri.fastmri_data")
 
-__version__ = "0.2"
+__version__ = "0.3"
 __abbr__ = "SEQREF-I1"
 
 CELL_HW = 96                      # EXEC 3.1: 96x96 self-consistent problem
@@ -231,6 +236,16 @@ class FastMRISliceDataset(Dataset):
         path, slice_index = self.index[i]
         with h5py.File(path, "r") as h:
             k_full = np.asarray(h["kspace"][slice_index])
+            if "max" not in h.attrs:
+                logger.error("[data] %s: file attr 'max' MISSING (required "
+                             "for D2 normalization; no fallback)", path.name)
+                raise KeyError(f"{path.name}: file attr 'max' missing")
+            file_attr_max = float(h.attrs["max"])
+        if not (file_attr_max == file_attr_max and
+                abs(file_attr_max) != float("inf")) or file_attr_max <= 0.0:
+            logger.error("[data] %s: file attr 'max' = %r not finite/>0",
+                         path.name, file_attr_max)
+            raise ValueError(f"{path.name}: bad file attr 'max'")
         if k_full.dtype != np.complex64:
             logger.error("[data] %s slice %d kspace dtype %s != complex64",
                          path.name, slice_index, k_full.dtype)
@@ -259,7 +274,8 @@ class FastMRISliceDataset(Dataset):
             "target_mag": target_mag,
             "meta": {"file": path.relative_to(self.data_root).as_posix(),
                      "slice_index": slice_index, "split": self.split,
-                     "mode": self.mode, "mask_seed": seed},
+                     "mode": self.mode, "mask_seed": seed,
+                     "file_attr_max": file_attr_max},
         }
 
     # ESC crop for competence checks (I1 report): centre-crop of the
