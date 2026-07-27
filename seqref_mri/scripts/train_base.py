@@ -1,5 +1,5 @@
 # =============================================================================
-# SEQREF-TB-MRI v0.3 -- scripts.train_base
+# SEQREF-TB-MRI v0.5 -- scripts.train_base
 # LIFETIME: KEEP
 # Purpose: MRI base-expert trainer (NICE / RealNVP / NSF) on the locked cell.
 #   REBUILDS the MNIST train_base per the S1 ledger; nothing here imports
@@ -26,6 +26,38 @@
 #   * Timing recorded per epoch, SPLIT: t_data / t_fb / t_val / t_sample.
 # CONVENTION: logger.error + raise. No fallback/mock/silent pass.
 # Exposes run_training(cfg) for the I3 pilot (importable, no subprocess).
+# Changelog (v0.4 -> v0.5, NICEXT protocol fixes):
+#   * Run-dir hash uses the source checkpoint SHA256 + epoch, not the
+#     filename (basename "best.pt" collides across sources).
+#   * Source checkpoint FULLY LOCKED: every unchanged NICEXT field
+#     (train_slices, val_slices, batch, lr, seed_index, n_post,
+#     subset_seed, test0) must match the source cfg; only epochs/output/
+#     init metadata are exempt. Source epoch must be a non-negative int.
+#   * --init-sha256: computed SHA must equal the declared SHA --
+#     comparing proves the INTENDED checkpoint was used, not merely
+#     which one was. (Mandatory with --init-from since the v0.5 patch.)
+#   * --init-sha256 MANDATORY whenever --init-from is used (and vice
+#     versa): optional verification gets skipped; smoke and formal both
+#     carry the declared hash. TOCTOU closed: file re-hashed after
+#     torch.load. Competence block lists qualifying_epochs. --epochs
+#     must be a positive int (best_rec can never remain None).
+#   * Two-threshold outcome recorded: best.pt saves init metadata;
+#     facts carry best_epoch + best_val (full metrics) + a competence
+#     block (floors 31.53/0.691; passed = any epoch meets BOTH) --
+#     PSNR-only interpretation prevented at the record level.
+# Changelog (v0.3 -> v0.4, NICEXT continuation support):
+#   * --init-from CKPT: WEIGHTS-ONLY initialization from a saved best.pt.
+#     Strict validation before loading: blob keys present, expert match,
+#     architecture fields (n_layers/hidden/h_dim/cond_width/nsf_B) must
+#     equal the current cfg -- no locked field is silently reset; strict
+#     state-dict load. Full sha256 + source epoch recorded in facts under
+#     "init"; absolute path NEVER persisted (basename only).
+#   * Epoch identity preserved: training continues at source_epoch + 1
+#     (e.g. ep29 best.pt -> epochs 30..30+added-1); set_epoch uses the
+#     ABSOLUTE epoch, so the train-mask schedule extends rather than
+#     repeats. --epochs means ADDED epochs when --init-from is given.
+#   * Optimizer is FRESH Adam by design (checkpoints store no optimizer
+#     state) -- recorded limitation, per the NICEXT declaration.
 # Changelog (v0.2 -> v0.3, pre-deployment review fixes):
 #   * CUDA synchronization at EVERY GPU timing boundary (t_fb, t_sample,
 #     validation total, epoch total): async kernels no longer shift work
@@ -71,7 +103,7 @@ from seqref_mri.src.train_utils import (setup_logger, seed_from_index,
 
 logger = setup_logger("seqref_mri.train_base")
 
-__version__ = "0.3"
+__version__ = "0.5"
 __abbr__ = "SEQREF-TB-MRI"
 
 DIM = 2 * CELL_HW * CELL_HW          # 18432 -- flattened two-channel state
@@ -185,7 +217,64 @@ def _validate(model, loader, device: str, n_post: int, *, test0: bool
             "t_sample_s": t_sample}
 
 
+def _load_init_weights(model, cfg: dict) -> dict:
+    # NICEXT continuation: weights-only, strictly validated.
+    p = Path(cfg["init_from"])
+    if not p.is_file():
+        _fail(f"--init-from checkpoint missing: {p}")
+    import hashlib
+    sha = hashlib.sha256(p.read_bytes()).hexdigest()
+    blob = torch.load(p, map_location="cpu")
+    for key in ("model", "cfg", "epoch"):
+        if key not in blob:
+            _fail(f"--init-from checkpoint lacks '{key}'")
+    scfg = blob["cfg"]
+    if scfg.get("expert") != cfg["expert"]:
+        _fail(f"--init-from expert {scfg.get('expert')!r} != {cfg['expert']!r}")
+    # EVERY unchanged field locked -- architecture AND protocol; only
+    # epochs / output location / init metadata are intentionally exempt.
+    for k in ("n_layers", "hidden", "h_dim", "cond_width",
+              "train_slices", "val_slices", "batch", "lr",
+              "seed_index", "n_post", "subset_seed", "test0"):
+        if scfg.get(k) != cfg.get(k):
+            _fail(f"--init-from cfg[{k!r}]={scfg.get(k)!r} != current "
+                  f"{cfg.get(k)!r} -- locked field mismatch")
+    if cfg["expert"] == "nsf" and scfg.get("nsf_B") != cfg.get("nsf_B"):
+        _fail("--init-from nsf_B mismatch")
+    source_epoch = blob["epoch"]
+    if type(source_epoch) is not int or source_epoch < 0:
+        _fail(f"--init-from invalid source epoch: {source_epoch!r}")
+    declared_sha = cfg["init_sha256"]
+    import re
+    if not re.fullmatch(r"[0-9a-fA-F]{64}", declared_sha):
+        _fail("--init-sha256 must be exactly 64 hexadecimal characters")
+    declared_sha = declared_sha.lower()
+    if sha != declared_sha:
+        _fail(f"--init-from SHA mismatch: computed {sha} != declared "
+              f"{declared_sha} -- wrong checkpoint")
+    # TOCTOU: re-hash after torch.load consumed the file
+    if hashlib.sha256(p.read_bytes()).hexdigest() != sha:
+        _fail("--init-from checkpoint changed during loading")
+    try:
+        model.load_state_dict(blob["model"], strict=True)
+    except Exception as e:
+        _fail(f"--init-from strict state-dict load FAILED: {e!r}")
+    logger.info("[train_base] init-from %s (epoch %d, sha %s...)",
+                p.name, blob["epoch"], sha[:12])
+    return {"init_from_name": p.name, "init_from_dir": p.parent.name,
+            "init_from_sha256": sha, "init_from_epoch": source_epoch,
+            "declared_sha_verified": True,
+            "optimizer": "FRESH Adam (checkpoint stores no optimizer "
+                         "state; declared limitation)"}
+
+
 def run_training(cfg: dict) -> dict:
+    if type(cfg.get("epochs")) is not int or cfg["epochs"] <= 0:
+        _fail("--epochs must be a positive integer")
+    if cfg.get("init_from") and not cfg.get("init_sha256"):
+        _fail("--init-sha256 is required whenever --init-from is used")
+    if cfg.get("init_sha256") and not cfg.get("init_from"):
+        _fail("--init-sha256 requires --init-from")
     # cfg keys: data_root, expert, epochs, train_slices, val_slices, batch,
     # lr, seed_index, n_layers, hidden, h_dim, cond_width, nsf_B, n_post,
     # out_root, test0(bool), subset_seed
@@ -216,13 +305,23 @@ def run_training(cfg: dict) -> dict:
         model = build_expert(cfg["expert"], dim=DIM, h_dim=cfg["h_dim"],
                              conditioner=cond, hidden=cfg["hidden"],
                              use_film=True, **expert_kwargs)
+    init_rec = None
+    if cfg.get("init_from"):
+        init_rec = _load_init_weights(model, cfg)
     model = model.to(device)
     n_params = sum(p.numel() for p in model.parameters())
     opt = torch.optim.Adam(model.parameters(), lr=cfg["lr"])
 
-    ch = cfg_hash({k: v for k, v in cfg.items() if k != "out_root"})
+    hash_cfg = {k: v for k, v in cfg.items()
+                if k not in ("out_root", "init_from", "init_sha256")}
+    if init_rec is not None:
+        # path-free AND collision-free: SHA + epoch identify the source
+        hash_cfg["init_from_sha256"] = init_rec["init_from_sha256"]
+        hash_cfg["init_from_epoch"] = init_rec["init_from_epoch"]
+    ch = cfg_hash(hash_cfg)
     # persisted config: NO absolute paths (stale after staging renames)
-    persisted_cfg = {k: v for k, v in cfg.items() if k != "out_root"}
+    persisted_cfg = {k: v for k, v in cfg.items()
+                     if k not in ("out_root", "init_from", "init_sha256")}
     persisted_cfg["out_root_rel"] = "runs"
     run_dir = make_run_dir(cfg["out_root"], expert=cfg["expert"],
                            accel=ACCELERATION,
@@ -236,9 +335,12 @@ def run_training(cfg: dict) -> dict:
                            collate_fn=_collate)
     tr_indices = (tr.indices if isinstance(tr, Subset)
                   else list(range(len(tr_full))))
+    # epoch identity: continuation starts at source_epoch + 1; --epochs
+    # means ADDED epochs in that case. set_epoch gets ABSOLUTE numbers.
+    start_epoch = (init_rec["init_from_epoch"] + 1) if init_rec else 0
     history = []
-    best_psnr = -1e9
-    for epoch in range(cfg["epochs"]):
+    best_rec = None
+    for epoch in range(start_epoch, start_epoch + cfg["epochs"]):
         _sync(device)
         t_epoch0 = time.perf_counter()
         tr_full.set_epoch(epoch)          # enforced fresh-mask policy
@@ -280,11 +382,12 @@ def run_training(cfg: dict) -> dict:
                     val["nll"], val["psnr"], val["ssim"],
                     val["consistency_mean"], t_data, t_fb,
                     val["t_val_non_sample_s"], val["t_sample_s"])
-        if val["psnr"] > best_psnr:
-            best_psnr = val["psnr"]
+        if best_rec is None or val["psnr"] > best_rec["val"]["psnr"]:
+            best_rec = rec
             torch.save({"model": model.state_dict(),
                         "cfg": persisted_cfg,
-                        "epoch": epoch}, Path(run_dir) / "best.pt")
+                        "epoch": epoch,
+                        "init": init_rec}, Path(run_dir) / "best.pt")
 
     facts = {"script": f"{__abbr__} v{__version__}", "cfg": persisted_cfg,
              "rng_seed": rng_seed, "n_params": n_params, "device": device,
@@ -292,7 +395,17 @@ def run_training(cfg: dict) -> dict:
                                "metric_data_range": NORMALIZED_DATA_RANGE,
                                "note": "raw file attrs recorded per sample "
                                        "in loader meta; range applied ONCE"},
-             "history": history, "best_val_psnr": best_psnr,
+             "history": history,
+             "best_val_psnr": best_rec["val"]["psnr"],
+             "best_epoch": best_rec["epoch"],
+             "best_val": best_rec["val"],
+             "competence": (lambda ce: {
+                 "psnr_floor": 31.53, "ssim_floor": 0.691,
+                 "passed": bool(ce), "qualifying_epochs": ce})(
+                 [row["epoch"] for row in history
+                  if row["val"]["psnr"] >= 31.53
+                  and row["val"]["ssim"] >= 0.691]),
+             "init": init_rec,
              "run_dir_rel": Path(run_dir).name}
     write_json(str(Path(run_dir) / "facts.json"), facts)
     # absolute path returned IN-MEMORY ONLY (never persisted -- stale after
@@ -321,6 +434,13 @@ def main() -> None:
     p.add_argument("--subset-seed", type=int, default=20260904)
     p.add_argument("--test0", action="store_true",
                    help="FULL-MASK edge cell (separate from masked val)")
+    p.add_argument("--init-from", default=None,
+                   help="weights-only continuation from a saved best.pt "
+                        "(strictly validated; --epochs = ADDED epochs)")
+    p.add_argument("--init-sha256", default=None,
+                   help="declared full sha256 of the --init-from "
+                        "checkpoint; MANDATORY whenever --init-from is "
+                        "used (smoke and formal); run fails on mismatch")
     a = p.parse_args()
     run_training(vars(a) | {"data_root": a.data_root,
                             "train_slices": a.train_slices,
@@ -330,7 +450,9 @@ def main() -> None:
                             "cond_width": a.cond_width,
                             "nsf_B": a.nsf_B, "n_post": a.n_post,
                             "out_root": a.out_root,
-                            "subset_seed": a.subset_seed})
+                            "subset_seed": a.subset_seed,
+                            "init_from": a.init_from,
+                            "init_sha256": a.init_sha256})
 
 
 if __name__ == "__main__":
