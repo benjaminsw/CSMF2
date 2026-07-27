@@ -1,5 +1,5 @@
 # =============================================================================
-# SEQREF-DCP v0.3 -- scripts._diag.dcprobe
+# SEQREF-DCP v0.4 -- scripts._diag.dcprobe
 # LIFETIME: DIAGNOSTIC
 # Purpose: DESCRIPTIVE (no gate) DC-projection probe over the EXISTING
 #   NICE ep29 / NICEXT ep57 checkpoints, separating two failure
@@ -45,6 +45,17 @@
 #   pinned to the repo. VISINSPECT formal facts REQUIRED (positions).
 # CONVENTION: logger.error + raise; smoke = dirty tree permitted,
 #   PROVISIONAL, separate output dir; no fallback.
+# Changelog (v0.3 -> v0.4, equivalence-path fix from the first formal
+# attempt):
+#   * Pre-DC and x0 metrics computed from the NORMALISED flat state on
+#     the IDENTICAL path VISINSPECT used (magnitude of the normalised
+#     complex). v0.3 converted to un-normalised complex (* amax) and
+#     divided back (/ amax) for metrics -- a float32 round-trip that
+#     shifted magnitudes ~1e-7 and correctly FAILED the pre-DC
+#     equivalence check. Un-normalised complex is now used ONLY where
+#     it belongs: DC projection, consistency, and energy split.
+#     Post-DC metrics necessarily divide by amax once (not compared to
+#     any VISINSPECT record).
 # Changelog (v0.2 -> v0.3, final pre-smoke fixes):
 #   * NON-FINITE HARD FAILURES on every diagnostic scalar (pre/post
 #     consistency, measured/total energy, per slice) and every summary
@@ -124,7 +135,7 @@ from seqref_mri.scripts._diag.visinspect import (
 
 logger = logging.getLogger("seqref_mri.dcprobe")
 
-__version__ = "0.3"
+__version__ = "0.4"
 
 DC_CONSISTENCY_TOL = 1e-5   # validity tolerance for exact DC (covers the
                             # verified c64 adjoint-preflight 1.46e-06)
@@ -206,7 +217,21 @@ def _to_complex_un(flat, p):
 
 
 def _metrics_norm(c_un, p):
+    # for POST-DC states only (one unavoidable /amax; no VISINSPECT
+    # comparison applies)
     mag = (c_un / p["amax"].view(-1, 1, 1)).abs().unsqueeze(1).cpu()
+    return _metrics_mag(mag, p)
+
+
+def _metrics_flat(flat, p):
+    # for PRE-DC / x0 states: IDENTICAL path to VISINSPECT (normalised
+    # flat -> complex -> magnitude; no amax round-trip)
+    mag = two_channel_to_complex(
+        flat.view(-1, 2, CELL_HW, CELL_HW)).abs().unsqueeze(1).cpu()
+    return _metrics_mag(mag, p)
+
+
+def _metrics_mag(mag, p):
     psnr = psnr_per_sample(mag, p["tgt_norm"].cpu(),
                            data_range=NORMALIZED_DATA_RANGE)
     ssim = ssim_per_sample(mag, p["tgt_norm"].cpu(),
@@ -226,7 +251,7 @@ def _stats(v: np.ndarray) -> dict:
 def probe_variant(tag, flat, p, x_true_un, x0_psnr):
     B = flat.shape[0]
     x_un = _to_complex_un(flat, p)
-    pre_psnr, pre_ssim = _metrics_norm(x_un, p)
+    pre_psnr, pre_ssim = _metrics_flat(flat, p)   # VISINSPECT path
     pre_cons, post_cons = [], []
     Em, Eu, tot = [], [], []
     x_dc = torch.empty_like(x_un)
@@ -457,7 +482,7 @@ def main() -> None:
 
     x_true_un = _to_complex_un(p["x_norm"].flatten(1), p)
     x0_un = _to_complex_un(p["cond_in"].flatten(1), p)
-    x0_psnr, _ = _metrics_norm(x0_un, p)
+    x0_psnr, _ = _metrics_flat(p["cond_in"].flatten(1), p)  # VINS path
     x0_psnr = x0_psnr.numpy()
     facts["x0_psnr_per_slice"] = x0_psnr.tolist()
 
