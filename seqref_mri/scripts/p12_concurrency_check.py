@@ -1,5 +1,5 @@
-# SEQREF-P12CC v0.1 -- P1 ∥ P2 concurrency verification (EXEC v0.4 §8, A3)
-# LIFETIME: EPHEMERAL
+# SEQREF-P12CC v0.2 -- P1 ∥ P2 concurrency verification (EXEC v0.4 §8, A3)
+# LIFETIME: KEEP
 #
 # A3 requires concurrency to be "verified ONCE against isolated runs, permitting
 # divergence only in volatile metadata". This script runs the pair concurrently
@@ -18,12 +18,31 @@
 #   6. every published sidecar verifies in both modes.
 #
 # Run it in SMOKE mode (default) so it never touches the locked authoritative
-# path. Delete this script and its output directories after inspection.
+# path. Its output directories are EPHEMERAL and are removed automatically; the
+# SCRIPT is KEEP.
+#
+# LIFETIME RATIONALE (v0.2)
+#   EXEC v0.4 §8 claims that P1 and P2 may publish concurrently to one locked
+#   path without affecting each other's scientific content, and that artefact
+#   identity stays isolated. This script is the only thing that demonstrates
+#   those claims. A3 requires the verification ONCE, but any change to the
+#   publication path, the claim mechanism or either stage's facts schema
+#   re-opens the question, so the checker is retained rather than deleted.
 #
 # CONVENTION: logger.error + raise on every failure path. No fallback, no mock.
 #
 # Changelog
+#   v0.2 (2026-07-30) LIFETIME EPHEMERAL -> KEEP. Retagged after the
+#     authoritative P1/P2 run (commit c144242); a committed file is not
+#     ephemeral, and this is the standing evidence for the §8 concurrency and
+#     artefact-isolation claims. No check logic changed, so the 14/14 result
+#     carries forward unchanged.
 #   v0.1 (2026-07-30) Created under Amendment A3 as build addition 3.
+#
+# Update summary (v0.2): only the declared lifetime changed. The temporary
+#   OUTPUT directories remain ephemeral and are still deleted automatically;
+#   what is now permanent is the checker itself, because the specification
+#   claims it verifies do not expire when the run does.
 
 from __future__ import annotations
 
@@ -37,14 +56,42 @@ import sys
 import tempfile
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_REPO = os.path.abspath(os.path.join(_HERE, "..", ".."))
+
+
+def _resolve_repo_root(start: str) -> str:
+    """Locate the repo root by walking up until seqref_mri/src is found, and
+    VERIFY it rather than assuming a fixed depth.
+
+    A hard-coded os.path.join(_HERE, "..", "..") silently imports from the
+    wrong tree if the layout ever differs -- and it already does differ inside
+    this campaign: p0s_normalisation_scale.py walks up THREE levels from the
+    same directory this file sits in, so at most one of the two can be right.
+    No fallback: an unlocatable root raises.
+    """
+    d = os.path.abspath(start)
+    for _ in range(8):
+        if os.path.isfile(os.path.join(d, "seqref_mri", "src",
+                                       "preflight_io.py")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            break
+        d = parent
+    raise RuntimeError(
+        f"could not locate the repo root above {start}: no ancestor contains "
+        f"seqref_mri/src/preflight_io.py. Run from a checkout, e.g. "
+        f"/home/benjamin/CSMFII/seqref_mri/scripts/")
+
+
+_REPO = _resolve_repo_root(_HERE)
+sys.path.insert(0, _REPO)
 sys.path.insert(0, os.path.join(_REPO, "seqref_mri", "src"))
 
 from preflight_io import verify_sidecar  # noqa: E402
 from preflight_parents import EXIT_BLOCK, EXIT_PASS  # noqa: E402
 
 SCRIPT_ID = "SEQREF-P12CC"
-SCRIPT_VERSION = "v0.1"
+SCRIPT_VERSION = "v0.2"
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -96,7 +143,8 @@ def _residue(out_dir: str) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="SEQREF-P12CC v0.1 -- EPHEMERAL concurrency verification")
+        description="SEQREF-P12CC v0.2 -- concurrency verification; writes "
+                    "only to EPHEMERAL temporary directories")
     ap.add_argument("--repo-dir", required=True)
     ap.add_argument("--data-root", required=True)
     ap.add_argument("--p0-facts", required=True)
@@ -107,7 +155,7 @@ def main(argv: list[str] | None = None) -> int:
                     help="frozen indices per run; keeps this check off the "
                          "locked authoritative path")
     args = ap.parse_args(argv)
-    print(f"{SCRIPT_ID} {SCRIPT_VERSION} -- EPHEMERAL; delete after use\n")
+    print(f"{SCRIPT_ID} {SCRIPT_VERSION} -- KEEP; outputs are ephemeral\n")
 
     with tempfile.TemporaryDirectory(prefix="p12cc_") as root:
         conc = os.path.join(root, "concurrent")

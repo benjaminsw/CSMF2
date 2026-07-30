@@ -1,6 +1,6 @@
-# SEQREF-P12ST v0.1 -- P1/P2 self-test (fixtures; no dataset, no publication
+# SEQREF-P12ST v0.2 -- P1/P2 self-test (fixtures; no dataset, no publication
 #                       to the locked authoritative path)
-# LIFETIME: EPHEMERAL
+# LIFETIME: KEEP
 #
 # Why this exists
 #   The BLOCK path must write a VALID facts artefact BEFORE the process exits
@@ -30,10 +30,32 @@
 # NOT covered here: anything requiring the real dataset. That is the smoke run
 #   (--smoke N against an EPHEMERAL out-dir).
 #
+# LIFETIME RATIONALE (v0.2)
+#   Written as EPHEMERAL for a single pre-deployment check, this is now the
+#   REGRESSION EVIDENCE for the A3 and A3-addendum audit semantics: the
+#   PASS/BLOCK/ERROR taxonomy, the fixed-name publication claim, the failure
+#   boundary, the run-mode guard and every margin edge case. Those claims are
+#   asserted in EXEC v0.4 §8; deleting the only thing that demonstrates them
+#   would leave the specification making claims nothing checks. Any later
+#   change to P1, P2 or preflight_parents must re-run this and still report
+#   99/99.
+#
 # CONVENTION: logger.error + raise on every failure path. No fallback, no mock.
 #
 # Changelog
+#   v0.2 (2026-07-30) LIFETIME EPHEMERAL -> KEEP. Retagged after the
+#     authoritative P1/P2 run (commit c144242): the file is committed
+#     regression machinery, and a committed file is not ephemeral. Banner and
+#     rationale updated; no test logic changed, so the 99/99 result carries
+#     forward unchanged.
 #   v0.1 (2026-07-30) Created under Amendment A3 as build addition 1.
+#
+# Update summary (v0.2): the lifetime tag was wrong the moment the file was
+#   committed. EPHEMERAL means deleted after use, and this is now run whenever
+#   the stages or their shared machinery change -- it is the regression suite
+#   for claims EXEC §8 makes about audit semantics. Nothing executable
+#   changed; only the declared lifetime, which had come to contradict the
+#   tree.
 
 from __future__ import annotations
 
@@ -50,7 +72,34 @@ import numpy as np
 import torch
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_REPO = os.path.abspath(os.path.join(_HERE, "..", ".."))
+
+
+def _resolve_repo_root(start: str) -> str:
+    """Locate the repo root by walking up until seqref_mri/src is found, and
+    VERIFY it rather than assuming a fixed depth.
+
+    A hard-coded os.path.join(_HERE, "..", "..") silently imports from the
+    wrong tree if the layout ever differs -- and it already does differ inside
+    this campaign: p0s_normalisation_scale.py walks up THREE levels from the
+    same directory this file sits in, so at most one of the two can be right.
+    No fallback: an unlocatable root raises.
+    """
+    d = os.path.abspath(start)
+    for _ in range(8):
+        if os.path.isfile(os.path.join(d, "seqref_mri", "src",
+                                       "preflight_io.py")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            break
+        d = parent
+    raise RuntimeError(
+        f"could not locate the repo root above {start}: no ancestor contains "
+        f"seqref_mri/src/preflight_io.py. Run from a checkout, e.g. "
+        f"/home/benjamin/CSMFII/seqref_mri/scripts/")
+
+
+_REPO = _resolve_repo_root(_HERE)
 sys.path.insert(0, _REPO)
 sys.path.insert(0, os.path.join(_REPO, "seqref_mri", "src"))
 sys.path.insert(0, _HERE)
@@ -64,7 +113,7 @@ import p1_representation as P1  # noqa: E402
 import p2_support as P2  # noqa: E402
 
 SCRIPT_ID = "SEQREF-P12ST"
-SCRIPT_VERSION = "v0.1"
+SCRIPT_VERSION = "v0.2"
 
 logging.basicConfig(level=logging.WARNING,
                     format="%(levelname)s %(name)s %(message)s")
@@ -744,7 +793,8 @@ def test_margins_in_semantic_hash() -> None:
 
 
 def main() -> int:
-    print(f"{SCRIPT_ID} {SCRIPT_VERSION} -- EPHEMERAL; delete after use\n")
+    print(f"{SCRIPT_ID} {SCRIPT_VERSION} -- KEEP; re-run after any change to "
+          f"P1, P2 or preflight_parents\n")
     test_p1_classification()
     test_p1_gate_and_metrics()
     test_p2_branches()

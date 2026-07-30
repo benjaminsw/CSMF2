@@ -1,9 +1,17 @@
-# SEQREF-P12PLT v0.1 -- P1/P2 diagnostic plots (EXEC v0.4 §8, A3)
-# LIFETIME: DIAGNOSTIC
+# SEQREF-P12PLT v0.2 -- P1/P2 diagnostic plots (EXEC v0.4 §8, A3)
+# LIFETIME: KEEP  (the SCRIPT is permanent; the PNGs it emits are DIAGNOSTIC)
 #
 # Reads ONLY persisted facts, and only after verifying each artefact against
 # its authoritative sidecar. Plots NEVER participate in a verdict; nothing here
 # recomputes a scientific quantity.
+#
+# LIFETIME RATIONALE (v0.2)
+#   The FIGURES are diagnostic and are deleted after inspection. The READER is
+#   not: representation_facts.json and support_facts.json are KEEP artefacts
+#   that later stages and later reviewers will want to look at, and a reader
+#   that verifies sidecars and refuses error records is the maintained way to
+#   do that. Deleting it would leave permanent artefacts with no maintained
+#   viewer.
 #
 # Panels (A3, locked)
 #   P1  1. rho_imag_E distribution, REAL (1e-10) and COMPLEX (1e-6) marked
@@ -24,7 +32,16 @@
 # CONVENTION: logger.error + raise on every failure path. No fallback, no mock.
 #
 # Changelog
+#   v0.2 (2026-07-30) LIFETIME DIAGNOSTIC -> KEEP for the SCRIPT, after the
+#     authoritative P1/P2 run (commit c144242). The emitted PNGs remain
+#     DIAGNOSTIC and are still deleted after inspection. No plotting logic
+#     changed.
 #   v0.1 (2026-07-30) Created under Amendment A3.
+#
+# Update summary (v0.2): the DIAGNOSTIC tag conflated the script with its
+#   output. The figures are disposable; the reader of two permanent artefacts
+#   is not, and it was committed alongside them. Only the declared lifetime
+#   changed.
 
 from __future__ import annotations
 
@@ -40,13 +57,41 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_REPO = os.path.abspath(os.path.join(_HERE, "..", ".."))
+
+
+def _resolve_repo_root(start: str) -> str:
+    """Locate the repo root by walking up until seqref_mri/src is found, and
+    VERIFY it rather than assuming a fixed depth.
+
+    A hard-coded os.path.join(_HERE, "..", "..") silently imports from the
+    wrong tree if the layout ever differs -- and it already does differ inside
+    this campaign: p0s_normalisation_scale.py walks up THREE levels from the
+    same directory this file sits in, so at most one of the two can be right.
+    No fallback: an unlocatable root raises.
+    """
+    d = os.path.abspath(start)
+    for _ in range(8):
+        if os.path.isfile(os.path.join(d, "seqref_mri", "src",
+                                       "preflight_io.py")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            break
+        d = parent
+    raise RuntimeError(
+        f"could not locate the repo root above {start}: no ancestor contains "
+        f"seqref_mri/src/preflight_io.py. Run from a checkout, e.g. "
+        f"/home/benjamin/CSMFII/seqref_mri/scripts/")
+
+
+_REPO = _resolve_repo_root(_HERE)
+sys.path.insert(0, _REPO)
 sys.path.insert(0, os.path.join(_REPO, "seqref_mri", "src"))
 
 from preflight_io import verify_sidecar  # noqa: E402
 
 SCRIPT_ID = "SEQREF-P12PLT"
-SCRIPT_VERSION = "v0.1"
+SCRIPT_VERSION = "v0.2"
 
 logger = logging.getLogger(SCRIPT_ID)
 
@@ -264,8 +309,9 @@ def plot_conj(facts: dict, out_path: str) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="SEQREF-P12PLT v0.1 -- DIAGNOSTIC plots from persisted "
-                    "P1/P2 facts. Delete after inspection.")
+        description="SEQREF-P12PLT v0.2 -- plots from persisted P1/P2 facts. "
+                    "The script is KEEP; the PNGs are DIAGNOSTIC and should "
+                    "be deleted after inspection.")
     ap.add_argument("--p1-facts", default=None)
     ap.add_argument("--p2-facts", default=None)
     ap.add_argument("--out-dir", required=True)
