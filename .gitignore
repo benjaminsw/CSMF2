@@ -59,3 +59,4 @@ seqref_mri/.venv_mri/
 !seqref_mri/requirements_lock.txt
 
 data/
+results/
