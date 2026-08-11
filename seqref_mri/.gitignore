@@ -1,6 +1,2 @@
 !FORK_RECORD.md
-!results/
-results/*
-!results/_diag/
-results/_diag/*
-!results/_diag/mri_legacy_scan.txt
+
