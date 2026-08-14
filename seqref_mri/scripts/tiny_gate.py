@@ -767,10 +767,23 @@ def _parse_args(argv) -> argparse.Namespace:
 
 def main(argv=None) -> int:
     args = _parse_args(argv)
-    handlers = [logging.StreamHandler(sys.stdout)]
-    if args.log_file:
-        handlers.append(logging.FileHandler(args.log_file, mode="w",
-                                            encoding="utf-8"))
+    # Startup infrastructure must NEVER escape as raw shell exit 1: exit 1
+    # is RESERVED for scientific BLOCK. Directory preparation and the log
+    # FileHandler run under a guard returning the registered ERROR code
+    # (same pattern as the realpath guard below).
+    try:
+        os.makedirs(args.out_dir, exist_ok=True)
+        if args.log_file:
+            os.makedirs(os.path.dirname(os.path.abspath(args.log_file)),
+                        exist_ok=True)
+        handlers = [logging.StreamHandler(sys.stdout)]
+        if args.log_file:
+            handlers.append(logging.FileHandler(args.log_file, mode="w",
+                                                encoding="utf-8"))
+    except OSError as exc:
+        print(f"startup infrastructure failure: could not prepare the "
+              f"output/log targets: {exc}", file=sys.stderr)
+        return EXIT_ERROR
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(name)s %(message)s",
                         handlers=handlers, force=True)

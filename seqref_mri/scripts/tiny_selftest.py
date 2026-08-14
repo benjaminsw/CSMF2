@@ -48,6 +48,10 @@
 #   F14 trusted-context ERROR boundary: an injected ordinary runtime
 #       failure AFTER parents are trusted -> UNEXPECTED_RUNTIME_ERROR, a
 #       DISTINCT tiny_error record WITH sidecar, NO tiny_facts, exit 2.
+#   F15 startup logging robustness (attempt-#0 regression): a nested
+#       nonexistent --log-file/--out-dir target is CREATED at startup and
+#       failures leave as typed ERROR (2) -- raw shell exit 1 is reserved
+#       for scientific BLOCK and must never escape from infrastructure.
 # Coverage registry: EXPECTED_COUNTS pins the check count of every
 #   fixture plus the suite total; coverage_ok requires zero failures AND
 #   exact count matches, so a green suite cannot silently shrink.
@@ -543,6 +547,45 @@ def f13_error_boundary_and_exit_taxonomy() -> None:
 
 
 # ---------------------------------------------------------------------------
+# F15 -- startup logging robustness (attempt-#0 regression)
+# ---------------------------------------------------------------------------
+
+def f15_startup_logging_robustness() -> None:
+    """Nested nonexistent --log-file/--out-dir targets must be CREATED by
+    the startup guard; the subsequent parent-input failure must leave as
+    typed ERROR (2). Raw shell exit 1 is reserved for scientific BLOCK and
+    must never escape from infrastructure."""
+    with tempfile.TemporaryDirectory() as td:
+        nested_out = os.path.join(td, "deep", "nested", "out")
+        nested_log = os.path.join(td, "deep", "nested", "logs",
+                                  "tiny_run.log")
+        try:
+            rc = tg.main(["--repo-dir", os.path.realpath(tg._REPO),
+                          "--data-root", td,
+                          "--out-dir", nested_out,
+                          "--log-file", nested_log])
+        finally:
+            # tg.main reconfigures root logging (force=True) onto the
+            # temporary file handler; restore stdout logging before the
+            # tempdir disappears so later suite logging cannot hit a
+            # stale descriptor.
+            logging.basicConfig(level=logging.INFO,
+                                format="%(asctime)s %(name)s %(message)s",
+                                force=True)
+        check("F15 startup failure leaves as typed ERROR (2), never raw 1",
+              rc == 2, f"rc={rc}")
+        check("F15 startup guard created the nested log file",
+              os.path.isfile(nested_log))
+        content = (open(nested_log, encoding="utf-8").read()
+                   if os.path.isfile(nested_log) else "")
+        check("F15 typed PARENT_INPUT_MISSING recorded in the log file",
+              "PARENT_INPUT_MISSING" in content,
+              content[-200:] if content else "log missing/empty")
+        check("F15 startup guard created the nested out dir",
+              os.path.isdir(nested_out))
+
+
+# ---------------------------------------------------------------------------
 # F14 -- trusted-context ERROR boundary (integration)
 # ---------------------------------------------------------------------------
 
@@ -620,6 +663,7 @@ EXPECTED_COUNTS = {  # static registry: a green suite cannot shrink
     "f12_publication_pairing_and_taxonomy": 4,
     "f13_error_boundary_and_exit_taxonomy": 2,
     "f14_trusted_context_error": 5,
+    "f15_startup_logging_robustness": 4,
 }
 EXPECTED_TOTAL = sum(EXPECTED_COUNTS.values())
 
@@ -638,7 +682,8 @@ def main() -> int:
                 f11_parent_and_sidecar_refusal,
                 f12_publication_pairing_and_taxonomy,
                 f13_error_boundary_and_exit_taxonomy,
-                f14_trusted_context_error]
+                f14_trusted_context_error,
+                f15_startup_logging_robustness]
     counts_ok = True
     for fn in fixtures:
         before = len(RESULTS)
