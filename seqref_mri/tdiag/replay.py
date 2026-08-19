@@ -30,11 +30,18 @@
 #     and compares the registered records against them; previously the
 #     parent_impl_semantic_sha256 and parent_tiny_file_sha256 rows were
 #     tautological (artefact field vs itself / constant vs itself).
+#   * D1 slice (2026-08-18, under the same SS10.6 lock; NO contract
+#     change): ReplayContext -- the frozen step-500 runtime (model,
+#     slice states, selection, spline_b, s_ref) is now handed from R0 to
+#     D1 via run_r0_with_context; the context holds live torch objects
+#     and is NEVER serialized into facts. R0's scientific calculation is
+#     unchanged; run_r0 keeps its original signature.
 # Update summary:
 #   v0.1 lands the TINY dual-pin loader, the registered-selection
-#   re-derivation check, the deterministic state-capture/hash helpers and
+#   re-derivation check, the deterministic state-capture/hash helpers,
 #   the exact serialized-value comparison engine (per-quantity equality
-#   booleans, never one silent overall flag).
+#   booleans, never one silent overall flag) and the R0->D1 frozen
+#   runtime handover (ReplayContext, facts-free).
 # =============================================================================
 from __future__ import annotations
 
@@ -42,6 +49,7 @@ import copy
 import hashlib
 import json
 import logging
+from dataclasses import dataclass
 
 import numpy as np
 import torch
@@ -228,9 +236,24 @@ def compare_registered(tiny_facts: dict, selection: dict,
 # R0 orchestration: the registered TINY construction, replayed.
 # ---------------------------------------------------------------------------
 
-def run_r0(data_root: str, tiny_facts: dict, impl_file_sha: str,
-           impl_semantic_sha: str, tiny_file_sha: str,
-           spline_b: float, p4: dict, s_ref: float) -> dict:
+@dataclass
+class ReplayContext:
+    """The frozen step-500 runtime handed from R0 to D1-D3: the trained
+    model object, the per-slice states (conditioner tensors and masks
+    live inside them), the registered selection, spline_b and s_ref.
+    INTERNAL ONLY -- it holds live torch objects and is NEVER serialized
+    into the facts document."""
+    model: object
+    states: list
+    selection: dict
+    spline_b: float
+    s_ref: float
+
+
+def _run_r0_impl(data_root: str, tiny_facts: dict, impl_file_sha: str,
+                 impl_semantic_sha: str, tiny_file_sha: str,
+                 spline_b: float, p4: dict,
+                 s_ref: float) -> tuple[dict, ReplayContext]:
     """Replay the registered TINY configuration and compare against the
     verified authoritative artefact. On any deviation: typed StageError
     (no partial diagnosis is returned). spline_b comes from the verified
@@ -238,7 +261,9 @@ def run_r0(data_root: str, tiny_facts: dict, impl_file_sha: str,
     FRESHLY VERIFIED live parent identities (driver-provided). P0S
     overlap is NOT re-derived here: it is a TINY-gate observation
     already recorded inside the authoritative artefact; R0 consumes only
-    the selection manifest/draw.
+    the selection manifest/draw. Returns (result, ReplayContext) -- the
+    context carries the FROZEN step-500 runtime for D1-D3; the result
+    dict is unchanged from the R0-only contract.
     """
     ds = tg.FastMRISliceDataset(data_root, split="train", mode="eval")
     selection = tg._select_batch(ds)
@@ -309,4 +334,29 @@ def run_r0(data_root: str, tiny_facts: dict, impl_file_sha: str,
     logger.info("[SEQREF-TDIAG] R0 replay VALID: %d/%d registered "
                 "quantities exactly reproduced",
                 len(result["comparisons"]), len(result["comparisons"]))
-    return result
+    ctx = ReplayContext(model=model, states=states,
+                        selection=selection, spline_b=float(spline_b),
+                        s_ref=float(s_ref))
+    return result, ctx
+
+
+def run_r0(data_root: str, tiny_facts: dict, impl_file_sha: str,
+           impl_semantic_sha: str, tiny_file_sha: str,
+           spline_b: float, p4: dict, s_ref: float) -> dict:
+    """R0 replay, result only (original R0-slice signature, kept for
+    callers that do not continue into D1-D3)."""
+    return _run_r0_impl(data_root, tiny_facts, impl_file_sha,
+                        impl_semantic_sha, tiny_file_sha, spline_b, p4,
+                        s_ref)[0]
+
+
+def run_r0_with_context(data_root: str, tiny_facts: dict,
+                        impl_file_sha: str, impl_semantic_sha: str,
+                        tiny_file_sha: str, spline_b: float, p4: dict,
+                        s_ref: float) -> tuple[dict, ReplayContext]:
+    """R0 replay plus the frozen step-500 runtime context for D1-D3.
+    The model is handed over at exactly step 500 -- it is never rebuilt
+    or retrained downstream."""
+    return _run_r0_impl(data_root, tiny_facts, impl_file_sha,
+                        impl_semantic_sha, tiny_file_sha, spline_b, p4,
+                        s_ref)

@@ -13,9 +13,14 @@
 #   placeholder, no silent pass.
 # Changelog (NEW in v0.1):
 #   * Introduced with the R0 slice after the 2026-08-15 EXEC SS10.6 lock.
+#   * D1 slice (2026-08-18, under the same SS10.6 lock; NO contract
+#     change): added the locked D1 estimator-slate constants -- Z_DIAG
+#     bank, JVP probes, the MAP multi-start protocol, trajectory
+#     checkpoints and the frozen materiality bands.
 # Update summary:
-#   v0.1 pins the TINY dual-pin, the R0 checkpoint grid and the
-#   amendment-gated D4/D5/D6 refusal guard.
+#   v0.1 pins the TINY dual-pin, the R0 checkpoint grid, the locked D1
+#   estimator-slate constants and the amendment-gated D4/D5/D6 refusal
+#   guard.
 # =============================================================================
 from __future__ import annotations
 
@@ -43,6 +48,19 @@ R0_TRACE_CHECKPOINTS = tuple(range(0, 501, 50))          # 11 points
 R0_STEPS = 500                                           # registered TINY
 R0_MODEL_INIT_SEED = 0                                   # registered TINY
 R0_SELECTION_SEED = 0                                    # registered TINY
+
+# --- D1 estimator-slate locks (EXEC SS10.6 D1, locked 2026-08-15) ------
+Z_DIAG_N = 128                      # shared latent bank size
+Z_DIAG_SEED = 0                     # PCG64(0)
+Z_DIAG_GENERATOR = "PCG64"
+JVP_N_PROBES = 16                   # Rademacher probes at z=0
+JVP_SEED = 2                        # PCG64(2)
+MAP_N_STARTS = 8                    # z=0 + Z_DIAG[0:7], exactly 8
+MAP_STEPS = 200                     # Adam steps per start (E3/E4)
+MAP_LR = 1e-3                       # Adam lr (E3/E4)
+MAP_TRAJ_CHECKPOINTS = (0, 25, 50, 75, 100, 125, 150, 175, 200)
+MATERIAL_PSNR_DELTA_DB = 2.0        # material: mean_PSNR >= E0 + 2.0
+MATERIAL_NMSE_RATIO = 0.5           # material: mean_NMSE_u <= 0.5 * E0
 
 # --- Deferred probes (EXEC SS10.6 deferred block): DESIGN ONLY -----------
 # D4 extended-budget continuation, D5 gradient/objective alignment,

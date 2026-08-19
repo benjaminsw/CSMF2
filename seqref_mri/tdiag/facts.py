@@ -6,9 +6,12 @@
 #          verdict field and no gate outcome -- only measurements,
 #          comparisons against frozen bands (D1-D3, as they land), the R0
 #          replay-validity record, provenance and hashes.
-#          This slice assembles the R0-only partial report; D1/D2/D3
-#          blocks are added by later slices under the same schema, with
-#          the completeness block tracking what is present.
+#          The R0-only builder assembles the replay-validity partial
+#          report; the D1 builder extends it with the estimator-slate
+#          block (E0-E4 + JVP, frozen-band materiality, decision
+#          fields); D2/D3 blocks are added by later slices under the
+#          same schema, with the completeness block tracking what is
+#          present.
 # Publication: seqref_mri/results/_diag/diag/tdiag_facts.json under the
 #   campaign claim/publish/sidecar machinery; reruns write a stamped
 #   sibling, never overwrite.
@@ -16,10 +19,17 @@
 #   placeholder, no silent pass.
 # Changelog (NEW in v0.1):
 #   * Introduced with the R0 slice after the 2026-08-15 EXEC SS10.6 lock.
+#   * D1 slice (2026-08-18, under the same SS10.6 lock; NO contract
+#     change): build_d1_facts extends the R0 report with the D1 block,
+#     flips completeness to D1 complete (D2/D3 pending), run_mode
+#     validation-r0-d1; a RECURSIVE no-verdict scan now covers the D1
+#     block; estimators.py and d1_plots.py joined the code record.
 # Update summary:
-#   v0.1 lands the R0-only partial evidence assembly: completeness block,
-#   no-verdict schema invariant, TDIAG code record and the campaign
-#   semantic-hash attachment (run/ excluded as volatile).
+#   v0.1 lands the R0 partial evidence assembly and the D1 extension:
+#   completeness tracking, recursive no-verdict schema invariant, TDIAG
+#   code record (now including the estimator slate and the D1 figures
+#   module) and the campaign semantic-hash attachment (run/ excluded
+#   as volatile).
 # =============================================================================
 from __future__ import annotations
 
@@ -52,6 +62,8 @@ TDIAG_LOCAL_FILES = [
     "seqref_mri/tdiag/_bootstrap.py",
     "seqref_mri/tdiag/invariants.py",
     "seqref_mri/tdiag/replay.py",
+    "seqref_mri/tdiag/estimators.py",
+    "seqref_mri/tdiag/d1_plots.py",
     "seqref_mri/tdiag/facts.py",
     "seqref_mri/scripts/tiny_gate.py",
     "seqref_mri/scripts/tiny_selftest.py",
@@ -179,6 +191,49 @@ def build_r0_facts(r0: dict, tiny_facts: dict, tiny_file_sha: str,
         raise _fail("FACTS_SCHEMA_VIOLATION",
                     "a verdict key entered the TDIAG facts; the stage is "
                     "evidence-only by preregistration")
+    semantic = {k: v for k, v in facts.items() if k != "run"}
+    attach_semantic_hash(facts, semantic)
+    return facts
+
+
+def _no_verdict_scan(node, path: str) -> None:
+    """Recursive evidence-only invariant: NO 'verdict' key may appear
+    anywhere inside the D1 block (the top-level check alone would miss
+    nested leakage)."""
+    if isinstance(node, dict):
+        for k, v in node.items():
+            if k == "verdict":
+                raise _fail("FACTS_SCHEMA_VIOLATION",
+                            f"a verdict key entered the TDIAG facts at "
+                            f"{path}.verdict; the stage is evidence-only "
+                            f"by preregistration")
+            _no_verdict_scan(v, f"{path}.{k}")
+    elif isinstance(node, list):
+        for i, v in enumerate(node):
+            _no_verdict_scan(v, f"{path}[{i}]")
+
+
+def build_d1_facts(r0: dict, d1: dict, tiny_facts: dict,
+                   tiny_file_sha: str, impl: dict, impl_file_sha: str,
+                   parents: dict, p3: dict, p4: dict, implb: dict,
+                   s_ref: float, repo: str, argv) -> dict:
+    """Assemble the R0+D1 partial evidence report: the R0 report plus
+    the D1 estimator-slate block. Completeness flips D1 to complete;
+    run_mode validation-r0-d1; still NOT the authoritative TDIAG closure
+    (D2/D3 pending). INVARIANT: no 'verdict' key anywhere, enforced by
+    the top-level check (R0 builder) plus a recursive scan over the D1
+    block."""
+    _no_verdict_scan(d1, "d1")
+    facts = build_r0_facts(r0, tiny_facts, tiny_file_sha, impl,
+                           impl_file_sha, parents, p3, p4, implb, s_ref,
+                           repo, argv)
+    facts["report_status"] = ("partial -- R0 replay validity + D1 "
+                              "estimator slate; D2/D3 pending "
+                              "implementation")
+    facts["run_mode"] = "validation-r0-d1"
+    facts["completeness"] = {"R0": "complete", "D1": "complete",
+                             "D2": "pending", "D3": "pending"}
+    facts["d1"] = d1
     semantic = {k: v for k, v in facts.items() if k != "run"}
     attach_semantic_hash(facts, semantic)
     return facts

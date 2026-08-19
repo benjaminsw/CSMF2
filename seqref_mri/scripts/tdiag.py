@@ -6,7 +6,10 @@
 #          reconstruction mismatch. This slice implements R0 (replay
 #          validity) only; D1/D2/D3 land in later slices under the same
 #          driver; D4/D5/D6 are amendment-gated and have NO execution
-#          path (tdiag.invariants.refuse_deferred_probe).
+#          path (tdiag.invariants.refuse_deferred_probe). The D1 slice
+#          (2026-08-18) adds the estimator slate on the frozen R0
+#          runtime: E0-E4 + JVP, the E0/R0 exact-equivalence gate,
+#          frozen-band materiality and four diagnostic figures.
 # TAXONOMY (locked for this stage): the driver owns a standalone 0/2
 #   contract -- 0 = a valid diagnostic evidence report was produced and
 #   published; 2 = typed ERROR (invariant/replay/parent failure), error
@@ -28,13 +31,27 @@
 #     parent identities (IMPL file+semantic, TINY file) so the R0
 #     evidence record compares registered records against live
 #     verification, never against themselves.
+#   * Review-repair round (2026-08-18, pre-execution; NO contract
+#     change): ALL-OR-NOTHING publication -- the four D1 figures now
+#     render BEFORE facts assembly/publication, so a D1_PLOT_FAILURE
+#     aborts the execution with a typed ERROR and NO facts artefact
+#     (never a valid report + ERROR exit from one run).
+#   * D1 slice (2026-08-18, under the same SS10.6 lock; NO contract
+#     change): the driver now continues from a VALID R0 into D1 -- the
+#     frozen step-500 runtime is handed over via ReplayContext (never
+#     rebuilt, never retrained), the estimator slate executes under the
+#     E0/R0 equivalence gate, the evidence report gains the D1 block
+#     (completeness D1 complete; run_mode validation-r0-d1) and the
+#     four descriptive figures render after publication.
 # Update summary:
-#   v0.1 lands the R0-only driver: full parent chain (campaign verifier +
+#   v0.1 lands the R0+D1 driver: full parent chain (campaign verifier +
 #   P3/P4/IMPL-B runtime loaders + IMPL dual-pin + TINY dual-pin),
 #   registered-selection re-derivation, deterministic replay of the 500
 #   registered Adam steps through the production train_step, exact
-#   serialized-value comparison, evidence publication and the standalone
-#   0/2 exit contract with the startup-infrastructure guard.
+#   serialized-value comparison, the D1 estimator slate on the frozen
+#   replay runtime, evidence publication, descriptive D1 figures and
+#   the standalone 0/2 exit contract with the startup-infrastructure
+#   guard.
 # =============================================================================
 from __future__ import annotations
 
@@ -54,6 +71,8 @@ from preflight_parents import (StageError, verify_parents,  # noqa: E402
                                publish_stage, publish_error)
 from seqref_mri.src import free_flow_runtime as ffr  # noqa: E402
 from seqref_mri.scripts import tiny_gate as tg  # noqa: E402
+from seqref_mri.tdiag import d1_plots  # noqa: E402
+from seqref_mri.tdiag import estimators  # noqa: E402
 from seqref_mri.tdiag import facts as tfacts  # noqa: E402
 from seqref_mri.tdiag import replay  # noqa: E402
 
@@ -165,17 +184,27 @@ def main(argv=None) -> int:
                         f"verified IMPL artefact carries "
                         f"{impl['semantic_sha256']}")
 
-        r0 = replay.run_r0(args.data_root, tiny_facts, impl_file_sha,
-                           impl["semantic_sha256"], tiny_file_sha,
-                           float(implb["spline_b"]), p4, s_ref)
-        facts = tfacts.build_r0_facts(
-            r0, tiny_facts, tiny_file_sha, impl, impl_file_sha, parents,
-            p3, p4, implb, s_ref, _REPO, sys.argv)
+        r0, ctx = replay.run_r0_with_context(
+            args.data_root, tiny_facts, impl_file_sha,
+            impl["semantic_sha256"], tiny_file_sha,
+            float(implb["spline_b"]), p4, s_ref)
+        d1 = estimators.run_d1(ctx, r0)
+        # All-or-nothing publication (2026-08-18 repair): the descriptive
+        # figures render BEFORE the facts are assembled/published. A
+        # D1_PLOT_FAILURE therefore aborts with a typed ERROR and NO
+        # evidence artefact -- one execution can never leave a valid
+        # report alongside an ERROR exit.
+        figures = d1_plots.render_d1_figures(d1, args.out_dir)
+        facts = tfacts.build_d1_facts(
+            r0, d1, tiny_facts, tiny_file_sha, impl, impl_file_sha,
+            parents, p3, p4, implb, s_ref, _REPO, sys.argv)
         path, sha = publish_stage(facts, args.out_dir,
                                   tfacts.FACTS_PREFIX, tfacts.STAGE)
-        logger.info("[%s] R0 replay VALID; evidence report published %s "
-                    "sha256=%s (partial: D1/D2/D3 pending; no verdict "
-                    "exists in this stage)", SCRIPT_ID, path, sha)
+        logger.info("[%s] R0 replay VALID + D1 slate complete; evidence "
+                    "report published %s sha256=%s (partial: D2/D3 "
+                    "pending; no verdict exists in this stage); %d "
+                    "descriptive figures written (non-evidence)",
+                    SCRIPT_ID, path, sha, len(figures))
         return EXIT_REPORT
     except StageError as exc:
         logger.error("[%s] %s: %s", SCRIPT_ID, exc.error_code, exc.reason)

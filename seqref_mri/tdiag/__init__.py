@@ -14,9 +14,20 @@
 #                     guard (D4/D5/D6 are amendment-gated)
 #   replay.py      -- R0 replay validity (exact serialized-value equality
 #                     against the dual-pinned authoritative TINY artefact)
+#                     + the frozen step-500 runtime handover
+#                     (ReplayContext) for D1-D3
+#   estimators.py  -- D1 estimator slate (Z_DIAG bank, E0-E4, JVP,
+#                     E0/R0 equivalence gate, frozen-band materiality)
+#   d1_plots.py    -- D1 descriptive figures (never registered evidence)
 #   facts.py       -- seqref-tdiag-facts/1 assembly + code record
 # Driver: seqref_mri/scripts/tdiag.py (taxonomy 0 = report, 2 = ERROR;
 #   the scientific PASS/BLOCK tokens do not exist in this stage).
 # Selftest: seqref_mri/scripts/tdiag_selftest.py (SEQREF-TDIAGT v0.1).
+# Changelog:
+#   * v0.1 R0 slice (2026-08-15/17): package introduced (bootstrap-only
+#     __init__, no path side effects).
+#   * v0.1 D1 slice (2026-08-18, same SS10.6 lock; NO contract change):
+#     module list extended with estimators.py and d1_plots.py; replay.py
+#     now also hands the frozen step-500 runtime to D1-D3.
 # =============================================================================
 # =============================================================================
