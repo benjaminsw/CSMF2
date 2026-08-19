@@ -36,12 +36,19 @@
 #     D1 via run_r0_with_context; the context holds live torch objects
 #     and is NEVER serialized into facts. R0's scientific calculation is
 #     unchanged; run_r0 keeps its original signature.
+#   * D2a slice (2026-08-19, under the same SS10.6 lock; NO contract
+#     change): ReplayContext now ALSO carries the captured step-0
+#     state_dict (state0) so D2a can swap the verified step-0 state into
+#     the SAME model object under state-hash verification -- no second
+#     model is built. R0's scientific calculation is unchanged; run_r0
+#     keeps its original signature.
 # Update summary:
 #   v0.1 lands the TINY dual-pin loader, the registered-selection
 #   re-derivation check, the deterministic state-capture/hash helpers,
 #   the exact serialized-value comparison engine (per-quantity equality
-#   booleans, never one silent overall flag) and the R0->D1 frozen
-#   runtime handover (ReplayContext, facts-free).
+#   booleans, never one silent overall flag) and the R0->D1-D3 frozen
+#   runtime handover (ReplayContext, facts-free; now including the
+#   captured step-0 state_dict for the D2a state-swap invariant).
 # =============================================================================
 from __future__ import annotations
 
@@ -240,14 +247,18 @@ def compare_registered(tiny_facts: dict, selection: dict,
 class ReplayContext:
     """The frozen step-500 runtime handed from R0 to D1-D3: the trained
     model object, the per-slice states (conditioner tensors and masks
-    live inside them), the registered selection, spline_b and s_ref.
-    INTERNAL ONLY -- it holds live torch objects and is NEVER serialized
-    into the facts document."""
+    live inside them), the registered selection, spline_b and s_ref,
+    plus the CAPTURED step-0 state_dict (state0) for the D2a state-swap
+    identity invariant. INTERNAL ONLY -- it holds live torch objects and
+    is NEVER serialized into the facts document. state0 defaults to
+    None for R0-only/D1 callers; run_d2a refuses a missing state0
+    (D2A_STATE0_MISSING) and discards it (sets None) when done."""
     model: object
     states: list
     selection: dict
     spline_b: float
     s_ref: float
+    state0: dict | None = None
 
 
 def _run_r0_impl(data_root: str, tiny_facts: dict, impl_file_sha: str,
@@ -336,7 +347,7 @@ def _run_r0_impl(data_root: str, tiny_facts: dict, impl_file_sha: str,
                 len(result["comparisons"]), len(result["comparisons"]))
     ctx = ReplayContext(model=model, states=states,
                         selection=selection, spline_b=float(spline_b),
-                        s_ref=float(s_ref))
+                        s_ref=float(s_ref), state0=state0)
     return result, ctx
 
 

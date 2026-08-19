@@ -9,9 +9,10 @@
 #          The R0-only builder assembles the replay-validity partial
 #          report; the D1 builder extends it with the estimator-slate
 #          block (E0-E4 + JVP, frozen-band materiality, decision
-#          fields); D2/D3 blocks are added by later slices under the
-#          same schema, with the completeness block tracking what is
-#          present.
+#          fields); the D2 builder nests the D2a latent-geometry block
+#          under d2 with its own D2a/D2b/D2c sub-completeness (top-level
+#          D2 stays "partial" until D2a+b+c all land); D3 is added by a
+#          later slice under the same schema.
 # Publication: seqref_mri/results/_diag/diag/tdiag_facts.json under the
 #   campaign claim/publish/sidecar machinery; reruns write a stamped
 #   sibling, never overwrite.
@@ -24,11 +25,17 @@
 #     flips completeness to D1 complete (D2/D3 pending), run_mode
 #     validation-r0-d1; a RECURSIVE no-verdict scan now covers the D1
 #     block; estimators.py and d1_plots.py joined the code record.
+#   * D2a slice (2026-08-19, under the same SS10.6 lock; NO contract
+#     change): build_d2_facts nests d2.completeness (D2a complete;
+#     D2b/D2c pending) with top-level D2 "partial", run_mode
+#     validation-r0-d1-d2a; d2a.py and d2a_plots.py joined the code
+#     record.
 # Update summary:
-#   v0.1 lands the R0 partial evidence assembly and the D1 extension:
-#   completeness tracking, recursive no-verdict schema invariant, TDIAG
-#   code record (now including the estimator slate and the D1 figures
-#   module) and the campaign semantic-hash attachment (run/ excluded
+#   v0.1 lands the R0 partial evidence assembly plus the D1 and D2a
+#   extensions: completeness tracking (with the nested D2 sub-block),
+#   recursive no-verdict schema invariant, TDIAG code record (now
+#   including the estimator slate, the D1 figures module and the D2a
+#   modules) and the campaign semantic-hash attachment (run/ excluded
 #   as volatile).
 # =============================================================================
 from __future__ import annotations
@@ -64,6 +71,8 @@ TDIAG_LOCAL_FILES = [
     "seqref_mri/tdiag/replay.py",
     "seqref_mri/tdiag/estimators.py",
     "seqref_mri/tdiag/d1_plots.py",
+    "seqref_mri/tdiag/d2a.py",
+    "seqref_mri/tdiag/d2a_plots.py",
     "seqref_mri/tdiag/facts.py",
     "seqref_mri/scripts/tiny_gate.py",
     "seqref_mri/scripts/tiny_selftest.py",
@@ -234,6 +243,35 @@ def build_d1_facts(r0: dict, d1: dict, tiny_facts: dict,
     facts["completeness"] = {"R0": "complete", "D1": "complete",
                              "D2": "pending", "D3": "pending"}
     facts["d1"] = d1
+    semantic = {k: v for k, v in facts.items() if k != "run"}
+    attach_semantic_hash(facts, semantic)
+    return facts
+
+
+def build_d2_facts(r0: dict, d1: dict, d2a: dict, tiny_facts: dict,
+                   tiny_file_sha: str, impl: dict, impl_file_sha: str,
+                   parents: dict, p3: dict, p4: dict, implb: dict,
+                   s_ref: float, repo: str, argv) -> dict:
+    """Assemble the R0+D1+D2a partial evidence report. The D2 block is
+    NESTED: d2.completeness tracks D2a/D2b/D2c individually while the
+    top-level D2 stays "partial" until D2a+b+c all land -- no new
+    top-level field, no accidental contract change (review 2026-08-19).
+    INVARIANT: no 'verdict' key anywhere, enforced by the top-level
+    check (R0 builder) plus recursive scans over the D1 and D2a
+    blocks."""
+    _no_verdict_scan(d2a, "d2.d2a")
+    facts = build_d1_facts(r0, d1, tiny_facts, tiny_file_sha, impl,
+                           impl_file_sha, parents, p3, p4, implb, s_ref,
+                           repo, argv)
+    facts["report_status"] = ("partial -- R0 replay validity + D1 "
+                              "estimator slate + D2a latent geometry; "
+                              "D2b/D2c/D3 pending implementation")
+    facts["run_mode"] = "validation-r0-d1-d2a"
+    facts["completeness"] = {"R0": "complete", "D1": "complete",
+                             "D2": "partial", "D3": "pending"}
+    facts["d2"] = {"completeness": {"D2a": "complete", "D2b": "pending",
+                                    "D2c": "pending"},
+                   "d2a": d2a}
     semantic = {k: v for k, v in facts.items() if k != "run"}
     attach_semantic_hash(facts, semantic)
     return facts

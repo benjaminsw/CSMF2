@@ -19,6 +19,10 @@
 #   estimators.py  -- D1 estimator slate (Z_DIAG bank, E0-E4, JVP,
 #                     E0/R0 equivalence gate, frozen-band materiality)
 #   d1_plots.py    -- D1 descriptive figures (never registered evidence)
+#   d2a.py         -- D2a true-latent geometry (state-swap identity
+#                     invariant, Z_DIAG density reference, Gaussian
+#                     identity check, step deltas, top-K drift)
+#   d2a_plots.py   -- D2a descriptive figures (never registered evidence)
 #   facts.py       -- seqref-tdiag-facts/1 assembly + code record
 # Driver: seqref_mri/scripts/tdiag.py (taxonomy 0 = report, 2 = ERROR;
 #   the scientific PASS/BLOCK tokens do not exist in this stage).
@@ -29,5 +33,8 @@
 #   * v0.1 D1 slice (2026-08-18, same SS10.6 lock; NO contract change):
 #     module list extended with estimators.py and d1_plots.py; replay.py
 #     now also hands the frozen step-500 runtime to D1-D3.
+#   * v0.1 D2a slice (2026-08-19, same SS10.6 lock; NO contract change):
+#     module list extended with d2a.py and d2a_plots.py; ReplayContext
+#     now also carries the captured step-0 state_dict for D2a.
 # =============================================================================
 # =============================================================================

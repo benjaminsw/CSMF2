@@ -71,6 +71,25 @@
 #       density decomposition; JVP is deterministic; run_d1 happy path
 #       carries the E4 non-routing marker; D1 facts keep the recursive
 #       no-verdict invariant.
+#   T19 D2a state-swap identity invariant: the verified step-0 state is
+#       swapped into the SAME model under hash checks at every boundary;
+#       a tampered step-500/step-0 hash is D2A_STATE_MISMATCH, a missing
+#       state0 is D2A_STATE0_MISSING; state0 is discarded after D2a.
+#   T20 D2a Gaussian identity + percentile: the production log-prob
+#       agrees with the analytic identity within the frozen tolerance
+#       (and a wrong formula is caught); percentile below-all/above-all/
+#       exact-tie/duplicate-tie conventions and the record fields.
+#   T21 D2a z_true: exact stub closed form (bitwise), deterministic
+#       vector sha, non-finite target -> D2A_Z_TRUE_NON_FINITE, missing
+#       target -> D2A_TARGET_MISSING.
+#   T22 D2a hygiene: no parameter mutation; no verdict/pattern keys;
+#       slice-order drift -> D2A_SLICE_ORDER_MISMATCH; bank drift ->
+#       D2A_BANK_MISMATCH.
+#   T23 D2a happy path + facts: full block structure, top-K and global
+#       top-K shapes, nested d2.completeness with top-level D2 partial,
+#       run_mode validation-r0-d1-d2a, stable semantic hash.
+#   T24 D2a figures: three figures render non-empty; a broken payload
+#       is D2A_PLOT_FAILURE.
 # Coverage registry: EXPECTED_COUNTS pins the check count of every
 #   fixture plus the suite total; coverage_ok requires zero failures AND
 #   exact count matches, so a green suite cannot silently shrink.
@@ -91,12 +110,13 @@
 #     live IMPL semantic sha or TINY file sha fails exactly its row, so
 #     the tautological comparison form can never return.
 # Update summary:
-#   v0.1 pins the R0-slice contracts as executable regressions: the
-#   standalone 0/2 taxonomy, the amendment-gated deferred-probe guard,
-#   the exact serialized-value comparison engine, the TINY dual-pin
-#   refusal paths, trace-grid completeness, canonical state hashing, the
-#   no-verdict facts schema and both ERROR-context boundaries, under a
-#   static expected-count coverage registry.
+#   v0.1 pins the R0/D1/D2a-slice contracts as executable regressions:
+#   the standalone 0/2 taxonomy, the amendment-gated deferred-probe
+#   guard, the exact serialized-value comparison engine, the TINY
+#   dual-pin refusal paths, trace-grid completeness, canonical state
+#   hashing, the no-verdict facts schema, both ERROR-context boundaries,
+#   the D1 estimator-slate conventions and the D2a state-swap/geometry
+#   invariants, under a static expected-count coverage registry.
 #   * D1 slice (2026-08-18, under the same SS10.6 lock; NO contract
 #     change): T11-T16 pin the D1 contracts (locked banks, E0/R0 gate,
 #     winner/tie-break, slice-set aggregation, materiality boundaries,
@@ -107,6 +127,12 @@
 #     change): T8 gains the all-or-nothing publication-order case (plot
 #     failure pre-publication => exit 2, typed error record, NO facts);
 #     T18 pins the gradient-hygiene freeze regression. +5 checks.
+#   * D2a slice (2026-08-19, under the same SS10.6 lock; NO contract
+#     change): T19-T24 pin the D2a contracts (state-swap identity,
+#     Gaussian identity + percentile conventions, z_true encode/hash,
+#     no-mutation/no-pattern hygiene, nested d2 completeness, figures);
+#     T8 gains the D2a plot-failure case (+2), T10's bootstrap/identity
+#     guards now cover d2a.py and d2a_plots.py (+2). 87 -> 118 checks.
 # =============================================================================
 from __future__ import annotations
 
@@ -124,6 +150,8 @@ import torch
 if __package__:  # `python -m seqref_mri.scripts.tdiag_selftest`
     from seqref_mri.scripts import tdiag as td
     from seqref_mri.tdiag import d1_plots as tplots
+    from seqref_mri.tdiag import d2a as td2a
+    from seqref_mri.tdiag import d2a_plots as td2aplots
     from seqref_mri.tdiag import estimators as test
     from seqref_mri.tdiag import facts as tfacts
     from seqref_mri.tdiag import invariants as tinv
@@ -131,6 +159,8 @@ if __package__:  # `python -m seqref_mri.scripts.tdiag_selftest`
 else:  # direct script run: scripts/ is on sys.path; tdiag sets repo paths
     import tdiag as td
     from seqref_mri.tdiag import d1_plots as tplots
+    from seqref_mri.tdiag import d2a as td2a
+    from seqref_mri.tdiag import d2a_plots as td2aplots
     from seqref_mri.tdiag import estimators as test
     from seqref_mri.tdiag import facts as tfacts
     from seqref_mri.tdiag import invariants as tinv
@@ -470,9 +500,14 @@ def t8_publication_and_error_taxonomy() -> None:
                lambda p: (_tiny_facts_stub(), "9" * 64), td.replay)
         _patch("run_d1", lambda *a, **k: {"note": "fixture d1 block"},
                td.estimators)
+        _patch("run_d2a", lambda *a, **k: {"note": "fixture d2a block"},
+               td.d2a)
         _patch("render_d1_figures", lambda d1, out: ["f1.png", "f2.png",
                                                      "f3.png", "f4.png"],
                td.d1_plots)
+        _patch("render_d2a_figures",
+               lambda d2a, out: ["f5.png", "f6.png", "f7.png"],
+               td.d2a_plots)
         _patch("code_record", lambda repo: {"fixture": True}, td.tfacts)
         _patch("environment_record", lambda *a, **k: {"fixture": True},
                td.tfacts)
@@ -552,6 +587,33 @@ def t8_publication_and_error_taxonomy() -> None:
                   typed, f"{errs}")
             check("T8 NO evidence report when plots fail "
                   "pre-publication", facts_left == [], f"{facts_left}")
+        # symmetric D2a plot failure (2026-08-19): typed D2A_PLOT_FAILURE,
+        # exit 2, NO facts artefact; render_d1_figures is first restored
+        # to the happy stub (the previous case left it throwing)
+        _patch("render_d1_figures", lambda d1, out: ["f1.png", "f2.png",
+                                                     "f3.png", "f4.png"],
+               td.d1_plots)
+        def _d2a_plot_throw(*a, **k):
+            raise td.d2a_plots.StageError("D2A_PLOT_FAILURE",
+                                          "injected d2a plot failure")
+        _patch("render_d2a_figures", _d2a_plot_throw, td.d2a_plots)
+        with tempfile.TemporaryDirectory() as td_:
+            rc = td.main(base_args + ["--data-root", td_,
+                                      "--out-dir", td_] + parents_args)
+            check("T8 D2a plot failure pre-publication -> exit 2",
+                  rc == 2)
+            errs = [p for p in os.listdir(td_)
+                    if p.startswith("tdiag_error") and p.endswith(".json")]
+            facts_left = [p for p in os.listdir(td_)
+                          if p.startswith("tdiag_facts")]
+            typed = False
+            if len(errs) == 1:
+                with open(os.path.join(td_, errs[0]),
+                          encoding="utf-8") as fh:
+                    rec = json.load(fh)
+                typed = rec.get("error_code") == "D2A_PLOT_FAILURE"
+            check("T8 typed D2A_PLOT_FAILURE record, NO facts artefact",
+                  typed and facts_left == [], f"{errs} {facts_left}")
     finally:
         for (owner, name), value in saved.items():
             setattr(owner, name, value)
@@ -620,7 +682,9 @@ def t10_preflight_module_identity() -> None:
           and tfacts.StageError is pp.StageError
           and tinv.StageError is pp.StageError
           and test.StageError is pp.StageError
-          and tplots.StageError is pp.StageError)
+          and tplots.StageError is pp.StageError
+          and td2a.StageError is pp.StageError
+          and td2aplots.StageError is pp.StageError)
     check("T10 reused tiny_gate shares the same StageError identity",
           td.tg.StageError is pp.StageError)
     check("T10 no duplicate qualified preflight_parents module object",
@@ -636,7 +700,8 @@ def t10_preflight_module_identity() -> None:
               False, f"escaped as {type(exc).__name__}: identity split")
     # structural guard: the explicit bootstrap import must precede the
     # first preflight import in every TDIAG package module
-    for mod in (treplay, tfacts, tinv, test, tplots):
+    for mod in (treplay, tfacts, tinv, test, tplots, td2a,
+                td2aplots):
         with open(mod.__file__, "r", encoding="utf-8") as fh:
             src = fh.read()
         boot_at = src.find("from seqref_mri.tdiag import _bootstrap")
@@ -712,6 +777,11 @@ def _stub_states(n: int = 2) -> list:
         u_true = (rng.standard_normal(cmap.n_free_complex)
                   + 1j * rng.standard_normal(cmap.n_free_complex)
                   ).astype(np.complex128)
+        # registered standardised target (encode_target layout): with
+        # the identity P4 affine this is exactly interleaved re/im f64
+        target = np.empty((1, ffr.FLOW_DIM_REAL), dtype=np.float64)
+        target[0, 0::2] = u_true.real
+        target[0, 1::2] = u_true.imag
         states.append({
             "identity": {"split": "train", "file": f"fixture_{i}.h5",
                          "slice_index": i, "dataset_index": i},
@@ -721,6 +791,7 @@ def _stub_states(n: int = 2) -> list:
             "x_true_mag": torch.from_numpy(
                 np.abs(rng.standard_normal(
                     (ffr.GRID_H, ffr.GRID_W))).astype(np.float32)),
+            "target": target,
             "u_true": u_true, "excluded": False})
     return states
 
@@ -1065,6 +1136,253 @@ def t18_gradient_hygiene() -> None:
 
 
 # ---------------------------------------------------------------------------
+# D2a fixtures (2026-08-19): state-swap identity, Gaussian identity +
+# percentile conventions, z_true encode/hash, hygiene, facts, figures.
+# ---------------------------------------------------------------------------
+
+class _StubModelState(_StubModel):
+    """Stub whose decode parameters are REGISTERED buffers, so
+    state_dict/capture_state/state_hash exercise the real hash path
+    (the plain _StubModel attributes never enter state_dict)."""
+
+    def __init__(self):
+        super().__init__()
+        self.register_buffer("s_r", self.s.clone())
+        self.register_buffer("b_r", self.b.clone())
+
+    def decode_scalars(self, z, cond_in, mask):
+        return z.to(torch.float32) * self.s_r + self.b_r
+
+
+def _d2a_setup(n: int = 2):
+    """Consistent D2a fixture context: stub model with registered state,
+    an r0 stub whose step0/step500 hashes match the captured states, and
+    the REAL D1 block (run_d1 on the same states). state0 is a scaled
+    copy of the step-500 state -- a different, hash-verifiable state."""
+    model = _StubModelState()
+    states = _stub_states(n)
+    e0 = [test.e0_slice(model, st) for st in states]
+    state500 = treplay.capture_state(model)
+    state0 = {k: v * 1.01 for k, v in state500.items()}
+    r0_stub = {"endpoints": {"final": {"per_slice": [
+        {"identity": r["identity"], "psnr_z0": r["psnr"],
+         "nmse_u_z0": r["nmse_u"]} for r in e0]}},
+        "step0_state_hash": treplay.state_hash(state0),
+        "step500_state_hash": treplay.state_hash(state500)}
+    ctx = treplay.ReplayContext(model=model, states=states, selection={},
+                                spline_b=1.0, s_ref=1.0, state0=state0)
+    d1 = test.run_d1(ctx, r0_stub)
+    return model, states, ctx, r0_stub, d1
+
+
+def t19_state_swap_identity() -> None:
+    model, states, ctx, r0_stub, d1 = _d2a_setup()
+    block = td2a.run_d2a(ctx, r0_stub, d1)
+    si = block["state_identity"]
+    check("T19 happy path: all four swap boundaries verified",
+          all(si[k]["equal"] for k in ("pre_swap_step500", "step0_loaded",
+                                       "step500_restored",
+                                       "post_measurement_step500")))
+    check("T19 the step-0 state is discarded after D2a",
+          ctx.state0 is None)
+    _, _, ctx2, r0_stub2, d1_2 = _d2a_setup()
+    r0_bad = {**r0_stub2, "step500_state_hash": "0" * 64}
+    expect_stage_error(
+        "T19 tampered step-500 hash -> D2A_STATE_MISMATCH",
+        lambda: td2a.run_d2a(ctx2, r0_bad, d1_2), "D2A_STATE_MISMATCH")
+    _, _, ctx3, r0_stub3, d1_3 = _d2a_setup()
+    r0_bad0 = {**r0_stub3, "step0_state_hash": "0" * 64}
+    expect_stage_error(
+        "T19 tampered step-0 hash -> D2A_STATE_MISMATCH",
+        lambda: td2a.run_d2a(ctx3, r0_bad0, d1_3), "D2A_STATE_MISMATCH")
+    _, _, ctx4, r0_stub4, d1_4 = _d2a_setup()
+    ctx4.state0 = None
+    expect_stage_error(
+        "T19 missing state0 -> D2A_STATE0_MISSING",
+        lambda: td2a.run_d2a(ctx4, r0_stub4, d1_4), "D2A_STATE0_MISSING")
+
+
+def t20_gaussian_identity_percentile() -> None:
+    rng = np.random.Generator(np.random.PCG64(23))
+    vecs = [rng.standard_normal(tinv.Z_DIAG_N).astype(np.float32)
+            for _ in range(3)]
+    worst = td2a._gaussian_identity_check(vecs)
+    check("T20 production log-prob matches the analytic identity",
+          worst <= tinv.GAUSS_LOGPROB_CHECK_TOL, f"worst={worst!r}")
+    saved = td.tg.ffr._gaussian_logprob
+    td.tg.ffr._gaussian_logprob = (
+        lambda z: -0.5 * z.pow(2).sum(-1))  # dropped -d/2 log(2pi)
+    try:
+        expect_stage_error(
+            "T20 a wrong production formula is caught",
+            lambda: td2a._gaussian_identity_check(vecs),
+            "D2A_GAUSSIAN_IDENTITY_MISMATCH")
+    finally:
+        td.tg.ffr._gaussian_logprob = saved
+    bank = np.array([-10.0, -5.0, -5.0, -1.0])
+    r_below = td2a.bank_percentile(-11.0, bank)
+    check("T20 below-all -> rank 0, fraction 0.0",
+          r_below["rank_le_count"] == 0
+          and r_below["percentile_fraction"] == 0.0)
+    r_above = td2a.bank_percentile(0.0, bank)
+    check("T20 above-all -> rank n, fraction 1.0, percent 100",
+          r_above["rank_le_count"] == 4
+          and r_above["percentile_fraction"] == 1.0
+          and r_above["percentile_percent"] == 100.0)
+    r_tie = td2a.bank_percentile(-5.0, bank)
+    check("T20 exact tie counts ALL tied members (<= rule)",
+          r_tie["rank_le_count"] == 3)
+    check("T20 percentile record fields + frozen tie rule",
+          set(r_tie) == {"bank_n", "rank_le_count", "percentile_fraction",
+                         "percentile_percent", "tie_rule"}
+          and r_tie["bank_n"] == 4
+          and r_tie["tie_rule"] == tinv.D2A_PERCENTILE_TIE_RULE)
+
+
+def t21_ztrue_encode() -> None:
+    model = _StubModel()
+    st = _stub_states(1)[0]
+    z1 = td2a.z_true_slice(model, st)
+    t32 = np.ascontiguousarray(st["target"], dtype=np.float32)
+    expected = (torch.from_numpy(t32)
+                * torch.exp(model.flow.log_scale)).numpy()[0]
+    check("T21 z_true matches the stub closed form BITWISE",
+          np.array_equal(z1, expected))
+    z2 = td2a.z_true_slice(model, st)
+    check("T21 z_true deterministic + sha over f32 C-order bytes",
+          np.array_equal(z1, z2)
+          and td2a._z_sha(z1) == hashlib.sha256(
+              np.ascontiguousarray(z1, dtype=np.float32)
+              .tobytes(order="C")).hexdigest()
+          and len(td2a._z_sha(z1)) == 64)
+    st_nan = dict(st)
+    bad = st["target"].copy()
+    bad[0, 5] = np.nan
+    st_nan["target"] = bad
+    expect_stage_error(
+        "T21 non-finite target -> D2A_Z_TRUE_NON_FINITE",
+        lambda: td2a.z_true_slice(model, st_nan), "D2A_Z_TRUE_NON_FINITE")
+    st_missing = {k: v for k, v in st.items() if k != "target"}
+    expect_stage_error(
+        "T21 missing target -> D2A_TARGET_MISSING",
+        lambda: td2a.z_true_slice(model, st_missing),
+        "D2A_TARGET_MISSING")
+
+
+def _no_key(node, pred) -> bool:
+    if isinstance(node, dict):
+        return all(not pred(k) and _no_key(v, pred)
+                   for k, v in node.items())
+    if isinstance(node, list):
+        return all(_no_key(v, pred) for v in node)
+    return True
+
+
+def t22_d2a_hygiene() -> None:
+    model, states, ctx, r0_stub, d1 = _d2a_setup()
+    block = td2a.run_d2a(ctx, r0_stub, d1)
+    check("T22 D2a leaves the model at the registered step-500 state",
+          treplay.state_hash(treplay.capture_state(model))
+          == r0_stub["step500_state_hash"])
+    check("T22 no verdict/pattern keys anywhere in the D2a block",
+          _no_key(block, lambda k: k == "verdict"
+                  or str(k).startswith("pattern"))
+          and block["routing"].startswith("descriptive_mechanistic_only"))
+    _, states3, ctx3, r0_stub3, d1_3 = _d2a_setup()
+    ctx3.states = list(reversed(states3))
+    expect_stage_error(
+        "T22 slice-order drift -> D2A_SLICE_ORDER_MISMATCH",
+        lambda: td2a.run_d2a(ctx3, r0_stub3, d1_3),
+        "D2A_SLICE_ORDER_MISMATCH")
+    _, _, ctx4, r0_stub4, d1_4 = _d2a_setup()
+    d1_bad = dict(d1_4)
+    d1_bad["z_diag"] = {**d1_4["z_diag"], "manifest_sha256": "0" * 64}
+    expect_stage_error(
+        "T22 bank-manifest drift -> D2A_BANK_MISMATCH",
+        lambda: td2a.run_d2a(ctx4, r0_stub4, d1_bad), "D2A_BANK_MISMATCH")
+
+
+def t23_d2a_facts() -> None:
+    model, states, ctx, r0_stub, d1 = _d2a_setup()
+    block = td2a.run_d2a(ctx, r0_stub, d1)
+    check("T23 D2a block carries all top-level sections",
+          all(k in block for k in
+              ("spec", "routing", "z_true_rule", "state_identity",
+               "bank_reference", "gaussian_identity", "slices",
+               "global_topk_drift", "runtime")))
+    stat_keys = {"mean", "std", "rms", "mean_abs", "median", "q05",
+                 "q25", "q75", "q95", "min", "max", "max_abs"}
+    delta_keys = {"delta_norm_z", "delta_norm_z_squared", "delta_log_pz",
+                  "norm_ratio_500_over_0", "cosine_similarity_z0_z500",
+                  "delta_z_l2", "delta_z_rms", "top_k_drift",
+                  "top_k_rule"}
+    s0 = block["slices"][0]
+    check("T23 per-slice step records carry the frozen stat/delta sets",
+          set(s0["step0"]["coordinate_stats"]) == stat_keys
+          and set(s0["step500"]["coordinate_stats"]) == stat_keys
+          and set(s0["delta"]) == delta_keys
+          and set(s0["step0"]["percentile"])
+          == {"bank_n", "rank_le_count", "percentile_fraction",
+              "percentile_percent", "tie_rule"})
+    check("T23 top-K drift: 20 entries, exact fields",
+          len(s0["delta"]["top_k_drift"]) == tinv.D2A_TOP_K
+          and set(s0["delta"]["top_k_drift"][0])
+          == {"coordinate_index", "z_step0", "z_step500", "delta",
+              "abs_delta"})
+    g = block["global_topk_drift"]
+    check("T23 global top-K: 20 indices x per-slice signed deltas",
+          len(g["coordinate_indices"]) == tinv.D2A_TOP_K
+          and len(g["delta_matrix"]) == len(states)
+          and all(len(row) == tinv.D2A_TOP_K for row in g["delta_matrix"]))
+    saved_code, saved_env = tfacts.code_record, tfacts.environment_record
+    tfacts.code_record = lambda repo: {"fixture": "isolated"}  # noqa: E731
+    tfacts.environment_record = lambda *a, **k: {"fixture": True}  # noqa: E731
+    try:
+        tiny = _tiny_facts_stub()
+        impl = {"schema": "seqref-impl-facts/1",
+                "semantic_sha256": "f" * 64, "verdict": "PASS"}
+        parents = {"parents_id": "fixture", "p0": {}, "p0s": {}}
+        f1 = tfacts.build_d2_facts(_r0_result_stub(), d1, block, tiny,
+                                   "9" * 64, impl, "e" * 64, parents,
+                                   {}, {}, {}, 15.62704,
+                                   "/nonexistent-repo", ["x"])
+        f2 = tfacts.build_d2_facts(_r0_result_stub(), d1, block, tiny,
+                                   "9" * 64, impl, "e" * 64, parents,
+                                   {}, {}, {}, 15.62704,
+                                   "/nonexistent-repo", ["x"])
+    finally:
+        tfacts.code_record, tfacts.environment_record = (saved_code,
+                                                         saved_env)
+    check("T23 D2 facts: nested d2.completeness, top-level D2 partial",
+          f1["completeness"] == {"R0": "complete", "D1": "complete",
+                                 "D2": "partial", "D3": "pending"}
+          and f1["d2"]["completeness"] == {"D2a": "complete",
+                                           "D2b": "pending",
+                                           "D2c": "pending"}
+          and f1["run_mode"] == "validation-r0-d1-d2a")
+    check("T23 D2 facts: recursive no-verdict + stable semantic hash",
+          "verdict" not in f1
+          and _no_key(f1["d1"], lambda k: k == "verdict")
+          and _no_key(f1["d2"], lambda k: k == "verdict")
+          and f1["semantic_sha256"] == f2["semantic_sha256"])
+
+
+def t24_d2a_figures() -> None:
+    _, _, ctx, r0_stub, d1 = _d2a_setup()
+    block = td2a.run_d2a(ctx, r0_stub, d1)
+    with tempfile.TemporaryDirectory() as td_:
+        paths = td2aplots.render_d2a_figures(block, td_)
+        check("T24 three D2a figures rendered non-empty",
+              len(paths) == 3
+              and all(os.path.isfile(p) and os.path.getsize(p) > 0
+                      for p in paths), f"{paths}")
+        expect_stage_error(
+            "T24 broken D2a payload -> D2A_PLOT_FAILURE",
+            lambda: td2aplots.render_d2a_figures({"broken": True}, td_),
+            "D2A_PLOT_FAILURE")
+
+
+# ---------------------------------------------------------------------------
 
 EXPECTED_COUNTS = {  # static registry: a green suite cannot shrink
     "t1_taxonomy_purity": 3,
@@ -1075,9 +1393,9 @@ EXPECTED_COUNTS = {  # static registry: a green suite cannot shrink
     "t5_trace_completeness": 1,
     "t6_state_hash_determinism": 3,
     "t7_facts_schema_purity": 4,
-    "t8_publication_and_error_taxonomy": 10,
+    "t8_publication_and_error_taxonomy": 12,
     "t9_startup_logging_robustness": 4,
-    "t10_preflight_module_identity": 9,
+    "t10_preflight_module_identity": 11,
     "t11_locked_banks": 5,
     "t12_e0_r0_equivalence_gate": 4,
     "t13_winner_selection": 6,
@@ -1086,6 +1404,12 @@ EXPECTED_COUNTS = {  # static registry: a green suite cannot shrink
     "t16_estimator_conventions": 8,
     "t17_d1_figures": 2,
     "t18_gradient_hygiene": 2,
+    "t19_state_swap_identity": 5,
+    "t20_gaussian_identity_percentile": 6,
+    "t21_ztrue_encode": 4,
+    "t22_d2a_hygiene": 4,
+    "t23_d2a_facts": 6,
+    "t24_d2a_figures": 2,
 }
 EXPECTED_TOTAL = sum(EXPECTED_COUNTS.values())
 
@@ -1104,7 +1428,9 @@ def main() -> int:
                 t12_e0_r0_equivalence_gate, t13_winner_selection,
                 t14_aggregation_slice_set, t15_materiality_bands,
                 t16_estimator_conventions, t17_d1_figures,
-                t18_gradient_hygiene]
+                t18_gradient_hygiene, t19_state_swap_identity,
+                t20_gaussian_identity_percentile, t21_ztrue_encode,
+                t22_d2a_hygiene, t23_d2a_facts, t24_d2a_figures]
     counts_ok = True
     for fn in fixtures:
         before = len(RESULTS)
@@ -1137,7 +1463,7 @@ def main() -> int:
             logger.error("[%s] coverage registry mismatch -- refusing "
                          "green exit", SCRIPT_ID)
         return 2
-    logger.info("[%s] all fixtures green; tdiag v0.1 R0+D1-slice "
+    logger.info("[%s] all fixtures green; tdiag v0.1 R0+D1+D2a-slice "
                 "contracts hold", SCRIPT_ID)
     return 0
 

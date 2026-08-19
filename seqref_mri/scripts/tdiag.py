@@ -4,12 +4,15 @@
 # Purpose: TDIAG diagnostic stage driver (EXEC SS10.6, locked 2026-08-15
 #          pre-implementation) -- diagnosis of the TINY likelihood-
 #          reconstruction mismatch. This slice implements R0 (replay
-#          validity) only; D1/D2/D3 land in later slices under the same
+#          validity), D1 (estimator slate) and D2a (true-latent
+#          geometry); D2b/D2c/D3 land in later slices under the same
 #          driver; D4/D5/D6 are amendment-gated and have NO execution
 #          path (tdiag.invariants.refuse_deferred_probe). The D1 slice
 #          (2026-08-18) adds the estimator slate on the frozen R0
 #          runtime: E0-E4 + JVP, the E0/R0 exact-equivalence gate,
-#          frozen-band materiality and four diagnostic figures.
+#          frozen-band materiality and four diagnostic figures. The D2a
+#          slice (2026-08-19) adds the true-latent geometry measurements
+#          under the state-swap identity invariant plus three figures.
 # TAXONOMY (locked for this stage): the driver owns a standalone 0/2
 #   contract -- 0 = a valid diagnostic evidence report was produced and
 #   published; 2 = typed ERROR (invariant/replay/parent failure), error
@@ -42,16 +45,25 @@
 #     rebuilt, never retrained), the estimator slate executes under the
 #     E0/R0 equivalence gate, the evidence report gains the D1 block
 #     (completeness D1 complete; run_mode validation-r0-d1) and the
-#     four descriptive figures render after publication.
+#     four descriptive figures render BEFORE facts assembly/
+#     publication (all-or-nothing, 2026-08-18 repair).
+#   * D2a slice (2026-08-19, under the same SS10.6 lock; NO contract
+#     change): the driver continues into D2a -- the verified step-0
+#     state_dict is swapped into the SAME model under state-hash
+#     verification for the step-0 measurements, the registered step-500
+#     state is restored and re-verified, the three D2a figures render
+#     BEFORE facts assembly (all-or-nothing extended), and the report
+#     gains the nested d2 block (completeness D2 partial; run_mode
+#     validation-r0-d1-d2a).
 # Update summary:
-#   v0.1 lands the R0+D1 driver: full parent chain (campaign verifier +
-#   P3/P4/IMPL-B runtime loaders + IMPL dual-pin + TINY dual-pin),
-#   registered-selection re-derivation, deterministic replay of the 500
-#   registered Adam steps through the production train_step, exact
-#   serialized-value comparison, the D1 estimator slate on the frozen
-#   replay runtime, evidence publication, descriptive D1 figures and
-#   the standalone 0/2 exit contract with the startup-infrastructure
-#   guard.
+#   v0.1 lands the R0+D1+D2a driver: full parent chain (campaign
+#   verifier + P3/P4/IMPL-B runtime loaders + IMPL dual-pin + TINY
+#   dual-pin), registered-selection re-derivation, deterministic replay
+#   of the 500 registered Adam steps through the production train_step,
+#   exact serialized-value comparison, the D1 estimator slate and the
+#   D2a true-latent geometry on the frozen replay runtime, evidence
+#   publication, descriptive D1+D2a figures and the standalone 0/2 exit
+#   contract with the startup-infrastructure guard.
 # =============================================================================
 from __future__ import annotations
 
@@ -72,6 +84,8 @@ from preflight_parents import (StageError, verify_parents,  # noqa: E402
 from seqref_mri.src import free_flow_runtime as ffr  # noqa: E402
 from seqref_mri.scripts import tiny_gate as tg  # noqa: E402
 from seqref_mri.tdiag import d1_plots  # noqa: E402
+from seqref_mri.tdiag import d2a  # noqa: E402
+from seqref_mri.tdiag import d2a_plots  # noqa: E402
 from seqref_mri.tdiag import estimators  # noqa: E402
 from seqref_mri.tdiag import facts as tfacts  # noqa: E402
 from seqref_mri.tdiag import replay  # noqa: E402
@@ -189,21 +203,26 @@ def main(argv=None) -> int:
             impl["semantic_sha256"], tiny_file_sha,
             float(implb["spline_b"]), p4, s_ref)
         d1 = estimators.run_d1(ctx, r0)
-        # All-or-nothing publication (2026-08-18 repair): the descriptive
-        # figures render BEFORE the facts are assembled/published. A
-        # D1_PLOT_FAILURE therefore aborts with a typed ERROR and NO
-        # evidence artefact -- one execution can never leave a valid
-        # report alongside an ERROR exit.
+        d2a_block = d2a.run_d2a(ctx, r0, d1)
+        # All-or-nothing publication (2026-08-18 repair, extended to D2a
+        # on 2026-08-19): ALL descriptive figures render BEFORE the facts
+        # are assembled/published. A D1_PLOT_FAILURE / D2A_PLOT_FAILURE
+        # therefore aborts with a typed ERROR and NO evidence artefact --
+        # one execution can never leave a valid report alongside an
+        # ERROR exit.
         figures = d1_plots.render_d1_figures(d1, args.out_dir)
-        facts = tfacts.build_d1_facts(
-            r0, d1, tiny_facts, tiny_file_sha, impl, impl_file_sha,
-            parents, p3, p4, implb, s_ref, _REPO, sys.argv)
+        figures += d2a_plots.render_d2a_figures(d2a_block, args.out_dir)
+        facts = tfacts.build_d2_facts(
+            r0, d1, d2a_block, tiny_facts, tiny_file_sha, impl,
+            impl_file_sha, parents, p3, p4, implb, s_ref, _REPO,
+            sys.argv)
         path, sha = publish_stage(facts, args.out_dir,
                                   tfacts.FACTS_PREFIX, tfacts.STAGE)
-        logger.info("[%s] R0 replay VALID + D1 slate complete; evidence "
-                    "report published %s sha256=%s (partial: D2/D3 "
-                    "pending; no verdict exists in this stage); %d "
-                    "descriptive figures written (non-evidence)",
+        logger.info("[%s] R0 replay VALID + D1 slate + D2a complete; "
+                    "evidence report published %s sha256=%s (partial: "
+                    "D2b/D2c/D3 pending; no verdict exists in this "
+                    "stage); %d descriptive figures written "
+                    "(non-evidence)",
                     SCRIPT_ID, path, sha, len(figures))
         return EXIT_REPORT
     except StageError as exc:

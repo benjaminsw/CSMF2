@@ -17,10 +17,15 @@
 #     change): added the locked D1 estimator-slate constants -- Z_DIAG
 #     bank, JVP probes, the MAP multi-start protocol, trajectory
 #     checkpoints and the frozen materiality bands.
+#   * D2a slice (2026-08-19, under the same SS10.6 lock; NO contract
+#     change): added the locked D2a recording conventions -- the top-K
+#     coordinate-drift count, the bank-percentile tie rule and the
+#     analytic Gaussian-identity tolerance. D2a is
+#     descriptive-mechanistic: NO band, NO routing constants exist.
 # Update summary:
 #   v0.1 pins the TINY dual-pin, the R0 checkpoint grid, the locked D1
-#   estimator-slate constants and the amendment-gated D4/D5/D6 refusal
-#   guard.
+#   estimator-slate constants, the D2a recording conventions and the
+#   amendment-gated D4/D5/D6 refusal guard.
 # =============================================================================
 from __future__ import annotations
 
@@ -83,3 +88,15 @@ def refuse_deferred_probe(probe: str) -> None:
         f"block); SEQREF-TDIAG v0.1 implements R0/D1/D2/D3 only",
         detail={"probe": str(probe),
                 "deferred_probes": list(DEFERRED_PROBES)})
+
+
+# --- D2a locks (EXEC SS10.6 D2a, locked 2026-08-15) ----------------------
+# D2a is DESCRIPTIVE-MECHANISTIC: the decision matrix does NOT consume
+# it, so no band/threshold constants exist here -- only recording
+# conventions are frozen.
+D2A_TOP_K = 20                    # top-|z500 - z0| coordinates per slice
+D2A_PERCENTILE_TIE_RULE = "<= observed value"
+# Analytic base-density identity: log p_Z(z) = -0.5*||z||^2 - d/2*log(2pi)
+# in float64; the production _gaussian_logprob must agree within this
+# frozen ABSOLUTE tolerance (float64 summation-order noise only, ~1e-12).
+GAUSS_LOGPROB_CHECK_TOL = 1e-9
