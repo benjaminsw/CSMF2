@@ -100,3 +100,14 @@ D2A_PERCENTILE_TIE_RULE = "<= observed value"
 # in float64; the production _gaussian_logprob must agree within this
 # frozen ABSOLUTE tolerance (float64 summation-order noise only, ~1e-12).
 GAUSS_LOGPROB_CHECK_TOL = 1e-9
+
+
+# D2c (EXEC SS10.6, locked 2026-08-15; D2c slice 2026-08-20):
+# volume-level holdout. LOCKED-SPEC constants, never tolerances.
+D2C_HOLDOUT_N = 32           # volumes drawn from the eligible list
+D2C_SELECTION_SEED = 1       # Generator(PCG64(1)).choice(n_elig, 32)
+D2C_BAND_MEMORIZATION = 0.25  # R <= this: strong memorization-consistent
+D2C_BAND_TRANSFER = 0.75      # R >= this: strong transfer (likelihood)
+D2C_BOOTSTRAP_N = 10_000      # descriptive-only bootstrap resamples
+D2C_BOOTSTRAP_SEED = 3        # PCG64(3): distinct from selection 1, D1
+                              # bank 0, JVP 2 (review 2026-08-20)

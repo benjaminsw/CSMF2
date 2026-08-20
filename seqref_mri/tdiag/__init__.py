@@ -26,6 +26,10 @@
 #   d2b.py         -- D2b signed NLL decomposition (endpoint exact gate,
 #                     D2a z_true cross-tie, per-slice/aggregate deltas)
 #   d2b_plots.py   -- D2b descriptive figures (never registered evidence)
+#   d2c.py         -- D2c volume-level holdout generalization (locked
+#                     PCG64(1) selection, two-state measurement, G/R,
+#                     locked-band classification)
+#   d2c_plots.py   -- D2c descriptive figures (never registered evidence)
 #   facts.py       -- seqref-tdiag-facts/1 assembly + code record
 # Driver: seqref_mri/scripts/tdiag.py (taxonomy 0 = report, 2 = ERROR;
 #   the scientific PASS/BLOCK tokens do not exist in this stage).
@@ -42,5 +46,8 @@
 #   * v0.1 D2b slice (2026-08-19, same SS10.6 lock; NO contract change):
 #     module list extended with d2b.py and d2b_plots.py; the step-0
 #     state_dict lifetime is now driver-owned (D2b/D2c reuse it).
+#   * v0.1 D2c slice (2026-08-20, same SS10.6 lock; NO contract change):
+#     module list extended with d2c.py and d2c_plots.py; the driver
+#     clears the step-0 state_dict after run_d2c (its last consumer).
 # =============================================================================
 # =============================================================================

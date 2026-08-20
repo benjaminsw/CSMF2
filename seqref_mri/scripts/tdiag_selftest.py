@@ -107,6 +107,23 @@
 #       hash, d2.d2b embeds the block verbatim.
 #   T28 D2b figures: two figures render non-empty; a broken payload
 #       is D2B_PLOT_FAILURE.
+#   T29 D2c selection: all TINY source files excluded; canonical sort
+#       BEFORE the RNG draw; the frozen PCG64(1) draw vector exact;
+#       32 unique volumes, disjoint from TINY; frozen midpoint rule
+#       (odd floor(n/2), even n/2-1); per-record consistency with the
+#       dataset index; stable manifests; full evidence field set.
+#   T30 D2c measurement + classification: G_train from the registered
+#       endpoints exactly; per-slice sign convention step0-step500;
+#       G_hold as the per-slice aggregate mean; batch cross-check with
+#       recorded reconciliation error; locked bands inclusive at
+#       exactly 0.25/0.75; sign counts + improved fraction; no
+#       parameter mutation; non-finite terms -> D2C_TERM_NON_FINITE.
+#   T31 D2c facts: nested completeness (D2a/D2b/D2c complete,
+#       top-level D2 complete, D3 pending), run_mode
+#       validation-r0-d1-d2a-d2b-d2c, recursive no-verdict, stable
+#       semantic hash, d2.d2c embedded verbatim.
+#   T32 D2c figures: three figures render non-empty; a broken payload
+#       is D2C_PLOT_FAILURE.
 # Coverage registry: EXPECTED_COUNTS pins the check count of every
 #   fixture plus the suite total; coverage_ok requires zero failures AND
 #   exact count matches, so a green suite cannot silently shrink.
@@ -136,7 +153,12 @@
 #   geometry invariants and the D2b likelihood-decomposition contracts
 #   (sign via a known-affine fixture, exact NLL identity, endpoint and
 #   D2a cross-tie gates, driver-owned state0 lifetime), under a static
-#   expected-count coverage registry.
+#   expected-count coverage registry. The D2c slice (2026-08-20) adds
+#   the volume-level holdout contracts: the locked PCG64(1) selection
+#   with hard uniqueness/disjointness invariants and the frozen
+#   midpoint rule, the two-state measurement with G/R and the
+#   registered-endpoint G_train, the inclusive locked-band
+#   classification and the descriptive-only bootstrap.
 #   * D1 slice (2026-08-18, under the same SS10.6 lock; NO contract
 #     change): T11-T16 pin the D1 contracts (locked banks, E0/R0 gate,
 #     winner/tie-break, slice-set aggregation, materiality boundaries,
@@ -160,6 +182,13 @@
 #     completeness, figures); T8 gains the D2b plot-failure case (+2),
 #     T10's bootstrap/identity guards now cover d2b.py and
 #     d2b_plots.py (+2). 118 -> 139 checks.
+#   * D2c slice (2026-08-20, under the same SS10.6 lock; NO contract
+#     change): T29-T32 pin the D2c contracts (locked selection +
+#     midpoint rule, G/R arithmetic + registered-endpoint G_train,
+#     inclusive bands, no-mutation, nested d2 completeness with
+#     top-level D2 complete, figures); T8 gains the D2c plot-failure
+#     case (+2), T10's bootstrap/identity guards now cover d2c.py and
+#     d2c_plots.py (+2). 139 -> 165 checks.
 # =============================================================================
 from __future__ import annotations
 
@@ -170,6 +199,7 @@ import math
 import os
 import sys
 import tempfile
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -181,6 +211,8 @@ if __package__:  # `python -m seqref_mri.scripts.tdiag_selftest`
     from seqref_mri.tdiag import d2a_plots as td2aplots
     from seqref_mri.tdiag import d2b as td2b
     from seqref_mri.tdiag import d2b_plots as td2bplots
+    from seqref_mri.tdiag import d2c as td2c
+    from seqref_mri.tdiag import d2c_plots as td2cplots
     from seqref_mri.tdiag import estimators as test
     from seqref_mri.tdiag import facts as tfacts
     from seqref_mri.tdiag import invariants as tinv
@@ -192,6 +224,8 @@ else:  # direct script run: scripts/ is on sys.path; tdiag sets repo paths
     from seqref_mri.tdiag import d2a_plots as td2aplots
     from seqref_mri.tdiag import d2b as td2b
     from seqref_mri.tdiag import d2b_plots as td2bplots
+    from seqref_mri.tdiag import d2c as td2c
+    from seqref_mri.tdiag import d2c_plots as td2cplots
     from seqref_mri.tdiag import estimators as test
     from seqref_mri.tdiag import facts as tfacts
     from seqref_mri.tdiag import invariants as tinv
@@ -545,6 +579,8 @@ def t8_publication_and_error_taxonomy() -> None:
                td.d2a)
         _patch("run_d2b", lambda *a, **k: {"note": "fixture d2b block"},
                td.d2b)
+        _patch("run_d2c", lambda *a, **k: {"note": "fixture d2c block"},
+               td.d2c)
         _patch("render_d1_figures", lambda d1, out: ["f1.png", "f2.png",
                                                      "f3.png", "f4.png"],
                td.d1_plots)
@@ -554,6 +590,9 @@ def t8_publication_and_error_taxonomy() -> None:
         _patch("render_d2b_figures", lambda d2b, out: ["f8.png",
                                                        "f9.png"],
                td.d2b_plots)
+        _patch("render_d2c_figures",
+               lambda d2c, out: ["f10.png", "f11.png", "f12.png"],
+               td.d2c_plots)
         _patch("code_record", lambda repo: {"fixture": True}, td.tfacts)
         _patch("environment_record", lambda *a, **k: {"fixture": True},
                td.tfacts)
@@ -692,6 +731,39 @@ def t8_publication_and_error_taxonomy() -> None:
                 typed = rec.get("error_code") == "D2B_PLOT_FAILURE"
             check("T8 typed D2B_PLOT_FAILURE record, NO facts artefact",
                   typed and facts_left == [], f"{errs} {facts_left}")
+        # symmetric D2c plot failure (2026-08-20): typed D2C_PLOT_FAILURE,
+        # exit 2, NO facts artefact; d1/d2a/d2b figures restored to happy
+        _patch("render_d1_figures", lambda d1, out: ["f1.png", "f2.png",
+                                                     "f3.png", "f4.png"],
+               td.d1_plots)
+        _patch("render_d2a_figures",
+               lambda d2a, out: ["f5.png", "f6.png", "f7.png"],
+               td.d2a_plots)
+        _patch("render_d2b_figures", lambda d2b, out: ["f8.png",
+                                                       "f9.png"],
+               td.d2b_plots)
+
+        def _d2c_plot_throw(*a, **k):
+            raise td.d2c_plots.StageError("D2C_PLOT_FAILURE",
+                                          "injected d2c plot failure")
+        _patch("render_d2c_figures", _d2c_plot_throw, td.d2c_plots)
+        with tempfile.TemporaryDirectory() as td_:
+            rc = td.main(base_args + ["--data-root", td_,
+                                      "--out-dir", td_] + parents_args)
+            check("T8 D2c plot failure pre-publication -> exit 2",
+                  rc == 2)
+            errs = [p for p in os.listdir(td_)
+                    if p.startswith("tdiag_error") and p.endswith(".json")]
+            facts_left = [p for p in os.listdir(td_)
+                          if p.startswith("tdiag_facts")]
+            typed = False
+            if len(errs) == 1:
+                with open(os.path.join(td_, errs[0]),
+                          encoding="utf-8") as fh:
+                    rec = json.load(fh)
+                typed = rec.get("error_code") == "D2C_PLOT_FAILURE"
+            check("T8 typed D2C_PLOT_FAILURE record, NO facts artefact",
+                  typed and facts_left == [], f"{errs} {facts_left}")
     finally:
         for (owner, name), value in saved.items():
             setattr(owner, name, value)
@@ -764,7 +836,9 @@ def t10_preflight_module_identity() -> None:
           and td2a.StageError is pp.StageError
           and td2aplots.StageError is pp.StageError
           and td2b.StageError is pp.StageError
-          and td2bplots.StageError is pp.StageError)
+          and td2bplots.StageError is pp.StageError
+          and td2c.StageError is pp.StageError
+          and td2cplots.StageError is pp.StageError)
     check("T10 reused tiny_gate shares the same StageError identity",
           td.tg.StageError is pp.StageError)
     check("T10 no duplicate qualified preflight_parents module object",
@@ -781,7 +855,7 @@ def t10_preflight_module_identity() -> None:
     # structural guard: the explicit bootstrap import must precede the
     # first preflight import in every TDIAG package module
     for mod in (treplay, tfacts, tinv, test, tplots, td2a,
-                td2aplots, td2b, td2bplots):
+                td2aplots, td2b, td2bplots, td2c, td2cplots):
         with open(mod.__file__, "r", encoding="utf-8") as fh:
             src = fh.read()
         boot_at = src.find("from seqref_mri.tdiag import _bootstrap")
@@ -1643,6 +1717,244 @@ def t28_d2b_figures() -> None:
 
 
 
+# ---------------------------------------------------------------------------
+# D2c fixtures: locked selection against a STUB dataset boundary (the
+# selection logic is the unit under test); measurement through the real
+# state-swap machinery with the stateful stub model.
+# ---------------------------------------------------------------------------
+
+class _FakeHoldoutDS:
+    # Stub dataset boundary for the D2c selection: 40 volumes with
+    # 3/4/5/6 eval slices cycling (odd AND even counts), exposing the
+    # same index/data_root surface as the production
+    # FastMRISliceDataset.
+    def __init__(self, n_files: int = 40):
+        self.data_root = Path("/fixture-root")
+        self.index = []
+        for k in range(n_files):
+            for s in range(3 + (k % 4)):
+                self.index.append((self.data_root / f"vol_{k:03d}.h5", s))
+
+
+_D2C_TINY_SELECTION = {"ordered_identities": [
+    {"split": "train", "file": f"vol_{k:03d}.h5", "slice_index": 0,
+     "dataset_index": 0} for k in range(6)] + [
+    {"split": "train", "file": "vol_000.h5", "slice_index": 1,
+     "dataset_index": 1},
+    {"split": "train", "file": "vol_001.h5", "slice_index": 1,
+     "dataset_index": 5}]}
+
+# Frozen 2026-08-20: Generator(PCG64(1)).choice(34, 32, replace=False)
+# over 34 eligible files (40-volume fixture population minus the 6
+# distinct TINY source files). Pinned verbatim so a silent numpy stream
+# change fails loudly instead of passing tautologically.
+_D2C_EXPECTED_DRAW = [10, 25, 17, 9, 32, 26, 29, 12, 24, 4, 22, 5, 20,
+                      23, 16, 30, 18, 3, 21, 11, 28, 2, 19, 1, 8, 15,
+                      7, 27, 31, 13, 0, 33]
+
+
+def t29_d2c_selection() -> None:
+    ds = _FakeHoldoutDS()
+    sel = td2c.select_holdout(ds, _D2C_TINY_SELECTION)
+    excluded = sorted({f"vol_{k:03d}.h5" for k in range(6)})
+    check("T29 exclusion + counts: 6 distinct TINY files out, 34 "
+          "eligible of 40",
+          sel["population_file_count"] == 40
+          and sel["excluded_tiny_slice_count"] == 8
+          and sel["excluded_tiny_file_count"] == 6
+          and sel["excluded_tiny_files"] == excluded
+          and sel["eligible_file_count"] == 34)
+    check("T29 locked PCG64(1) draw vector exact",
+          sel["draw_file_indices"] == _D2C_EXPECTED_DRAW
+          and sel["rng"] == {"generator": "PCG64", "seed": 1})
+    eligible = [f"vol_{k:03d}.h5" for k in range(40)
+                if f"vol_{k:03d}.h5" not in set(excluded)]
+    expected_files = [eligible[i] for i in _D2C_EXPECTED_DRAW]
+    check("T29 canonical sort BEFORE the draw: selected files are the "
+          "sorted-eligible positions in draw order",
+          [r["file"] for r in sel["selected"]] == expected_files
+          and [r["eligible_file_index"] for r in sel["selected"]]
+          == _D2C_EXPECTED_DRAW)
+    check("T29 hard invariants recorded: 32 unique files, disjoint "
+          "from TINY",
+          sel["invariants"] == {"selected_files_unique": True,
+                                "selected_disjoint_from_tiny": True}
+          and len({r["file"] for r in sel["selected"]}) == 32
+          and not (set(excluded)
+                   & {r["file"] for r in sel["selected"]}))
+    check("T29 frozen midpoint rule: odd floor(n/2), even n/2-1",
+          [td2c._slice_position(n) for n in (1, 3, 5, 2, 4, 6)]
+          == [0, 1, 2, 0, 1, 2])
+    ok = True
+    for r in sel["selected"]:
+        path, si = ds.index[r["dataset_index"]]
+        ok = ok and path.name == r["file"] and si == r["slice_index"]
+        ok = ok and r["selected_slice_position"] == td2c._slice_position(
+            r["n_slices"])
+    check("T29 per-record consistency: dataset_index/slice_index/"
+          "position all agree with the dataset index", ok)
+    sel2 = td2c.select_holdout(_FakeHoldoutDS(), _D2C_TINY_SELECTION)
+    check("T29 manifests stable across identical selections",
+          sel["eligible_manifest_sha256"]
+          == sel2["eligible_manifest_sha256"]
+          and sel["selection_manifest_sha256"]
+          == sel2["selection_manifest_sha256"]
+          and sel["selected_identity_manifest_sha256"]
+          == sel2["selected_identity_manifest_sha256"])
+    need = {"draw_order", "eligible_file_index", "canonical_file_index",
+            "file", "n_slices", "selected_slice_position",
+            "slice_index", "dataset_index", "identity"}
+    check("T29 every selected record carries the full evidence field "
+          "set", all(set(r) == need for r in sel["selected"]))
+
+
+def _d2c_setup():
+    # Measurement fixture: stateful stub model + registered production
+    # endpoint values as the G_train source; tg._nll patched to the
+    # stub production formula (restored before return).
+    model, states, ctx, r0_stub, d1 = _d2a_setup(2)
+    r0_stub["endpoints"]["initial"] = {"nll_batch_mean": 18883.5859375}
+    r0_stub["endpoints"]["final"] = {"nll_batch_mean": -35316.66015625}
+    saved = td.tg._nll
+    td.tg._nll = _stub_nll
+    try:
+        block = td2c.run_d2c_core(ctx, r0_stub, states)
+    finally:
+        td.tg._nll = saved
+    return model, states, ctx, r0_stub, block
+
+
+def t30_d2c_measurement_and_classification() -> None:
+    model, states, ctx, r0_stub, block = _d2c_setup()
+    agg = block["aggregate"]
+    dim = td.tg.ffr.FLOW_DIM_REAL
+    g_train = (18883.5859375 - (-35316.66015625)) / dim
+    check("T30 G_train from the registered endpoints, exact",
+          agg["G_train"] == g_train
+          and block["g_train_source"]["value"] == g_train
+          and block["g_train_source"]["delta_nll"] == 54200.24609375)
+    ok = all(r["delta"]["delta_nll"]
+             == r["step0"]["nll"] - r["step500"]["nll"]
+             for r in block["per_slice"])
+    check("T30 sign convention: per-slice delta_nll = step0 - step500 "
+          "exactly, positive under the stub",
+          ok and all(r["delta"]["delta_nll"] > 0.0
+                     for r in block["per_slice"]))
+    per_dim = np.array([r["delta"]["delta_nll_per_dim"]
+                        for r in block["per_slice"]])
+    check("T30 G_hold = mean of per-slice per-dim deltas; "
+          "R = G_hold/G_train exact",
+          agg["G_hold"] == float(per_dim.mean())
+          and agg["R"] == agg["G_hold"] / agg["G_train"])
+    g_batch = (agg["NLL_step0_mean"] - agg["NLL_step500_mean"]) / dim
+    check("T30 batch cross-check + recorded reconciliation error",
+          agg["G_hold_batch"] == g_batch
+          and agg["holdout_reconciliation_error"]
+          == g_batch - agg["G_hold"])
+    check("T30 locked bands inclusive: 0.25 memorization-consistent, "
+          "0.75 transfer, midpoints mixed",
+          td2c._classify(0.25)["label"]
+          == "strong_memorization_consistent"
+          and td2c._classify(0.75)["label"]
+          == "strong_transfer_likelihood_gain"
+          and td2c._classify(0.5)["label"] == "mixed"
+          and td2c._classify(0.2500001)["label"] == "mixed"
+          and td2c._classify(0.7499999)["label"] == "mixed")
+    check("T30 sign counts + improved fraction cover all slices",
+          agg["n_positive_delta_nll"] + agg["n_zero_delta_nll"]
+          + agg["n_negative_delta_nll"] == len(states)
+          and agg["holdout_improved_fraction"]
+          == agg["n_positive_delta_nll"] / len(states))
+    check("T30 no parameter mutation: model back at the registered "
+          "step-500 state",
+          treplay.state_hash(treplay.capture_state(model))
+          == r0_stub["step500_state_hash"])
+    bad_model = _StubModelState()
+    bad_model.flow_log_scale.fill_(float("inf"))
+    s0 = treplay.capture_state(bad_model)
+    ctx_bad = treplay.ReplayContext(model=bad_model, states=states,
+                                    selection={}, spline_b=1.0,
+                                    s_ref=1.0, state0=s0)
+    r0_bad = json.loads(json.dumps(r0_stub))
+    r0_bad["step0_state_hash"] = r0_bad["step500_state_hash"] = (
+        treplay.state_hash(s0))
+    saved = td.tg._nll
+    td.tg._nll = _stub_nll
+    try:
+        expect_stage_error("T30 non-finite terms -> "
+                           "D2C_TERM_NON_FINITE",
+                           lambda: td2c.run_d2c_core(ctx_bad, r0_bad,
+                                                     states),
+                           "D2C_TERM_NON_FINITE")
+    finally:
+        td.tg._nll = saved
+
+
+def t31_d2c_facts() -> None:
+    model, states, ctx, r0_stub, d1, d2a_block, d2b_block = _d2b_setup()
+    saved = td.tg._nll
+    td.tg._nll = _stub_nll
+    try:
+        block = td2c.run_d2c_core(ctx, r0_stub, states)
+    finally:
+        td.tg._nll = saved
+    saved_code = tfacts.code_record
+    saved_env = tfacts.environment_record
+    tfacts.code_record = lambda repo: {"fixture": "isolated"}  # noqa: E731
+    tfacts.environment_record = lambda *a, **k: {"fixture": True}  # noqa: E731
+    try:
+        tiny = _tiny_facts_stub()
+        impl = {"schema": "seqref-impl-facts/1",
+                "semantic_sha256": "f" * 64, "verdict": "PASS"}
+        parents = {"parents_id": "fixture", "p0": {}, "p0s": {}}
+        f1 = tfacts.build_d2c_facts(_r0_result_stub(), d1, d2a_block,
+                                    d2b_block, block, tiny, "9" * 64,
+                                    impl, "e" * 64, parents, {}, {},
+                                    {}, 15.62704, "/nonexistent-repo",
+                                    ["x"])
+        f2 = tfacts.build_d2c_facts(_r0_result_stub(), d1, d2a_block,
+                                    d2b_block, block, tiny, "9" * 64,
+                                    impl, "e" * 64, parents, {}, {},
+                                    {}, 15.62704, "/nonexistent-repo",
+                                    ["x"])
+    finally:
+        tfacts.code_record, tfacts.environment_record = (saved_code,
+                                                         saved_env)
+    check("T31 D2c facts: nested d2 all complete, top-level D2 "
+          "complete, D3 pending",
+          f1["completeness"] == {"R0": "complete", "D1": "complete",
+                                 "D2": "complete", "D3": "pending"}
+          and f1["d2"]["completeness"] == {"D2a": "complete",
+                                           "D2b": "complete",
+                                           "D2c": "complete"})
+    check("T31 run_mode and report_status name the D2c stage",
+          f1["run_mode"] == "validation-r0-d1-d2a-d2b-d2c"
+          and "D2c holdout generalization" in f1["report_status"])
+    check("T31 recursive no-verdict + stable semantic hash",
+          "verdict" not in f1
+          and _no_key(f1["d1"], lambda k: k == "verdict")
+          and _no_key(f1["d2"], lambda k: k == "verdict")
+          and f1["semantic_sha256"] == f2["semantic_sha256"])
+    check("T31 d2.d2c embeds the D2c block verbatim",
+          f1["d2"]["d2c"]["aggregate"]["R"] == block["aggregate"]["R"])
+
+
+def t32_d2c_figures() -> None:
+    model, states, ctx, r0_stub, block = _d2c_setup()
+    with tempfile.TemporaryDirectory() as tmp:
+        figs = td2cplots.render_d2c_figures(block, tmp)
+        check("T32 three D2c figures rendered non-empty",
+              len(figs) == 3 and all(
+                  os.path.isfile(p_) and os.path.getsize(p_) > 0
+                  for p_ in figs), f"{len(figs)}")
+        broken = json.loads(json.dumps(block))
+        broken["aggregate"]["G_train"] = "not-a-number"
+        expect_stage_error(
+            "T32 broken D2c payload -> D2C_PLOT_FAILURE",
+            lambda: td2cplots.render_d2c_figures(broken, tmp),
+            "D2C_PLOT_FAILURE")
+
+
 EXPECTED_COUNTS = {  # static registry: a green suite cannot shrink
     "t1_taxonomy_purity": 3,
     "t2_deferred_probe_guard": 4,
@@ -1652,9 +1964,9 @@ EXPECTED_COUNTS = {  # static registry: a green suite cannot shrink
     "t5_trace_completeness": 1,
     "t6_state_hash_determinism": 3,
     "t7_facts_schema_purity": 4,
-    "t8_publication_and_error_taxonomy": 14,
+    "t8_publication_and_error_taxonomy": 16,
     "t9_startup_logging_robustness": 4,
-    "t10_preflight_module_identity": 13,
+    "t10_preflight_module_identity": 15,
     "t11_locked_banks": 5,
     "t12_e0_r0_equivalence_gate": 4,
     "t13_winner_selection": 6,
@@ -1673,6 +1985,10 @@ EXPECTED_COUNTS = {  # static registry: a green suite cannot shrink
     "t26_d2b_gates": 5,
     "t27_d2b_facts": 4,
     "t28_d2b_figures": 2,
+    "t29_d2c_selection": 8,
+    "t30_d2c_measurement_and_classification": 8,
+    "t31_d2c_facts": 4,
+    "t32_d2c_figures": 2,
 }
 EXPECTED_TOTAL = sum(EXPECTED_COUNTS.values())
 
@@ -1695,7 +2011,10 @@ def main() -> int:
                 t20_gaussian_identity_percentile, t21_ztrue_encode,
                 t22_d2a_hygiene, t23_d2a_facts, t24_d2a_figures,
                 t25_d2b_sign_and_decomposition, t26_d2b_gates,
-                t27_d2b_facts, t28_d2b_figures]
+                t27_d2b_facts, t28_d2b_figures,
+                t29_d2c_selection,
+                t30_d2c_measurement_and_classification,
+                t31_d2c_facts, t32_d2c_figures]
     counts_ok = True
     for fn in fixtures:
         before = len(RESULTS)
@@ -1728,7 +2047,7 @@ def main() -> int:
             logger.error("[%s] coverage registry mismatch -- refusing "
                          "green exit", SCRIPT_ID)
         return 2
-    logger.info("[%s] all fixtures green; tdiag v0.1 R0+D1+D2a+D2b-slice "
+    logger.info("[%s] all fixtures green; tdiag v0.1 R0+D1+D2a+D2b+D2c-slice "
                 "contracts hold", SCRIPT_ID)
     return 0
 

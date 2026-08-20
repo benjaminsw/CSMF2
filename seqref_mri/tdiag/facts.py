@@ -35,6 +35,11 @@
 #     d2.completeness.D2b to complete (top-level D2 stays "partial"
 #     until D2c), run_mode validation-r0-d1-d2a-d2b; d2b.py and
 #     d2b_plots.py joined the code record.
+#   * D2c slice (2026-08-20, under the same SS10.6 lock; NO contract
+#     change): build_d2c_facts adds the D2c holdout block, flips D2c
+#     and the top-level D2 to complete (D3 pending), run_mode
+#     validation-r0-d1-d2a-d2b-d2c; d2c.py and d2c_plots.py joined the
+#     code record.
 # Update summary:
 #   v0.1 lands the R0 partial evidence assembly plus the D1, D2a and
 #   D2b extensions: completeness tracking (with the nested D2
@@ -80,6 +85,8 @@ TDIAG_LOCAL_FILES = [
     "seqref_mri/tdiag/d2a_plots.py",
     "seqref_mri/tdiag/d2b.py",
     "seqref_mri/tdiag/d2b_plots.py",
+    "seqref_mri/tdiag/d2c.py",
+    "seqref_mri/tdiag/d2c_plots.py",
     "seqref_mri/tdiag/facts.py",
     "seqref_mri/scripts/tiny_gate.py",
     "seqref_mri/scripts/tiny_selftest.py",
@@ -307,6 +314,34 @@ def build_d2b_facts(r0: dict, d1: dict, d2a: dict, d2b: dict,
     facts["run_mode"] = "validation-r0-d1-d2a-d2b"
     facts["d2"]["completeness"]["D2b"] = "complete"
     facts["d2"]["d2b"] = d2b
+    semantic = {k: v for k, v in facts.items() if k != "run"}
+    attach_semantic_hash(facts, semantic)
+    return facts
+def build_d2c_facts(r0: dict, d1: dict, d2a: dict, d2b: dict,
+                    d2c: dict, tiny_facts: dict, tiny_file_sha: str,
+                    impl: dict, impl_file_sha: str, parents: dict,
+                    p3: dict, p4: dict, implb: dict, s_ref: float,
+                    repo: str, argv) -> dict:
+    """Assemble the R0+D1+D2a+D2b+D2c partial evidence report: the D2b
+    report plus the D2c holdout-generalization block. d2.completeness
+    flips D2c to complete and the TOP-LEVEL D2 flips to "complete"
+    (D2a+b+c all landed); D3 stays pending; run_mode
+    validation-r0-d1-d2a-d2b-d2c (review 2026-08-20). INVARIANT: no
+    'verdict' key anywhere, enforced by the top-level check (R0
+    builder) plus recursive scans over the D1/D2a/D2b/D2c blocks."""
+    _no_verdict_scan(d2c, "d2.d2c")
+    facts = build_d2b_facts(r0, d1, d2a, d2b, tiny_facts, tiny_file_sha,
+                            impl, impl_file_sha, parents, p3, p4, implb,
+                            s_ref, repo, argv)
+    facts["report_status"] = ("partial -- R0 replay validity + D1 "
+                              "estimator slate + D2a latent geometry + "
+                              "D2b likelihood decomposition + D2c "
+                              "holdout generalization; D3 pending "
+                              "implementation")
+    facts["run_mode"] = "validation-r0-d1-d2a-d2b-d2c"
+    facts["completeness"]["D2"] = "complete"
+    facts["d2"]["completeness"]["D2c"] = "complete"
+    facts["d2"]["d2c"] = d2c
     semantic = {k: v for k, v in facts.items() if k != "run"}
     attach_semantic_hash(facts, semantic)
     return facts
