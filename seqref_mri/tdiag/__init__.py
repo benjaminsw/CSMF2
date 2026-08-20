@@ -30,6 +30,10 @@
 #                     PCG64(1) selection, two-state measurement, G/R,
 #                     locked-band classification)
 #   d2c_plots.py   -- D2c descriptive figures (never registered evidence)
+#   d3.py          -- D3 conditioner-perturbation sensitivity (locked
+#                     derangement, C0 exact cross-ties to R0/D1, locked-
+#                     band C1 classification, C2/C3 attribution-only)
+#   d3_plots.py    -- D3 descriptive figures (never registered evidence)
 #   facts.py       -- seqref-tdiag-facts/1 assembly + code record
 # Driver: seqref_mri/scripts/tdiag.py (taxonomy 0 = report, 2 = ERROR;
 #   the scientific PASS/BLOCK tokens do not exist in this stage).
@@ -49,5 +53,9 @@
 #   * v0.1 D2c slice (2026-08-20, same SS10.6 lock; NO contract change):
 #     module list extended with d2c.py and d2c_plots.py; the driver
 #     clears the step-0 state_dict after run_d2c (its last consumer).
+#   * v0.1 D3 slice (2026-08-20, same SS10.6 lock; NO contract change):
+#     module list extended with d3.py and d3_plots.py; D3 is step-500-
+#     only and runs after the state0 clear -- the TDIAG D1-D3 suite is
+#     complete.
 # =============================================================================
 # =============================================================================

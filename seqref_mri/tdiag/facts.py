@@ -11,8 +11,9 @@
 #          block (E0-E4 + JVP, frozen-band materiality, decision
 #          fields); the D2 builder nests the D2a latent-geometry block
 #          under d2 with its own D2a/D2b/D2c sub-completeness (top-level
-#          D2 stays "partial" until D2a+b+c all land); D3 is added by a
-#          later slice under the same schema.
+#          D2 stays "partial" until D2a+b+c all land); the D3 builder
+#          adds the conditioner-sensitivity block and flips D3 to
+#          complete (the full R0/D1/D2/D3 diagnostic suite).
 # Publication: seqref_mri/results/_diag/diag/tdiag_facts.json under the
 #   campaign claim/publish/sidecar machinery; reruns write a stamped
 #   sibling, never overwrite.
@@ -40,13 +41,18 @@
 #     and the top-level D2 to complete (D3 pending), run_mode
 #     validation-r0-d1-d2a-d2b-d2c; d2c.py and d2c_plots.py joined the
 #     code record.
+#   * D3 slice (2026-08-20, under the same SS10.6 lock; NO contract
+#     change): build_d3_facts adds the D3 conditioner-sensitivity block,
+#     flips D3 to complete (ALL of R0/D1/D2/D3 complete; the report
+#     becomes the TDIAG D1-D3 suite closure -- D4/D5/D6 remain
+#     amendment-gated), run_mode validation-r0-d1-d2a-d2b-d2c-d3; d3.py
+#     and d3_plots.py joined the code record.
 # Update summary:
-#   v0.1 lands the R0 partial evidence assembly plus the D1, D2a and
-#   D2b extensions: completeness tracking (with the nested D2
+#   v0.1 lands the R0 partial evidence assembly plus the D1, D2a, D2b,
+#   D2c and D3 extensions: completeness tracking (with the nested D2
 #   sub-block), recursive no-verdict schema invariant, TDIAG code
-#   record (now including the estimator slate, the D1/D2a/D2b figures
-#   modules and the D2a/D2b measurement modules) and the campaign
-#   semantic-hash attachment (run/ excluded as volatile).
+#   record (all measurement and figure modules through D3) and the
+#   campaign semantic-hash attachment (run/ excluded as volatile).
 # =============================================================================
 from __future__ import annotations
 
@@ -87,6 +93,8 @@ TDIAG_LOCAL_FILES = [
     "seqref_mri/tdiag/d2b_plots.py",
     "seqref_mri/tdiag/d2c.py",
     "seqref_mri/tdiag/d2c_plots.py",
+    "seqref_mri/tdiag/d3.py",
+    "seqref_mri/tdiag/d3_plots.py",
     "seqref_mri/tdiag/facts.py",
     "seqref_mri/scripts/tiny_gate.py",
     "seqref_mri/scripts/tiny_selftest.py",
@@ -342,6 +350,37 @@ def build_d2c_facts(r0: dict, d1: dict, d2a: dict, d2b: dict,
     facts["completeness"]["D2"] = "complete"
     facts["d2"]["completeness"]["D2c"] = "complete"
     facts["d2"]["d2c"] = d2c
+    semantic = {k: v for k, v in facts.items() if k != "run"}
+    attach_semantic_hash(facts, semantic)
+    return facts
+
+
+def build_d3_facts(r0: dict, d1: dict, d2a: dict, d2b: dict,
+                   d2c: dict, d3: dict, tiny_facts: dict,
+                   tiny_file_sha: str, impl: dict, impl_file_sha: str,
+                   parents: dict, p3: dict, p4: dict, implb: dict,
+                   s_ref: float, repo: str, argv) -> dict:
+    """Assemble the R0+D1+D2a+D2b+D2c+D3 evidence report: the D2c
+    report plus the D3 conditioner-sensitivity block. ALL of R0/D1/D2/
+    D3 flip to complete -- this is the TDIAG D1-D3 diagnostic-suite
+    closure (D4/D5/D6 remain amendment-gated); run_mode
+    validation-r0-d1-d2a-d2b-d2c-d3 (review 2026-08-20). INVARIANT: no
+    'verdict' key anywhere, enforced by the top-level check (R0
+    builder) plus recursive scans over the D1/D2/D3 blocks."""
+    _no_verdict_scan(d3, "d3")
+    facts = build_d2c_facts(r0, d1, d2a, d2b, d2c, tiny_facts,
+                            tiny_file_sha, impl, impl_file_sha, parents,
+                            p3, p4, implb, s_ref, repo, argv)
+    facts["report_status"] = ("complete -- R0 replay validity + D1 "
+                              "estimator slate + D2a latent geometry + "
+                              "D2b likelihood decomposition + D2c "
+                              "holdout generalization + D3 conditioner "
+                              "sensitivity; the TDIAG D1-D3 diagnostic "
+                              "suite is complete (deferred probes "
+                              "D4/D5/D6 remain amendment-gated)")
+    facts["run_mode"] = "validation-r0-d1-d2a-d2b-d2c-d3"
+    facts["completeness"]["D3"] = "complete"
+    facts["d3"] = d3
     semantic = {k: v for k, v in facts.items() if k != "run"}
     attach_semantic_hash(facts, semantic)
     return facts

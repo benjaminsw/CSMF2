@@ -22,10 +22,19 @@
 #     coordinate-drift count, the bank-percentile tie rule and the
 #     analytic Gaussian-identity tolerance. D2a is
 #     descriptive-mechanistic: NO band, NO routing constants exist.
+#   * D2c slice (2026-08-20, under the same SS10.6 lock; NO contract
+#     change): added the locked D2c selection/classification constants
+#     (holdout N, selection seed, the 0.25/0.75 R bands, the
+#     descriptive-only bootstrap grid).
+#   * D3 slice (2026-08-20, under the same SS10.6 lock; NO contract
+#     change): added the locked D3 sensitivity bands (0.25 strong /
+#     0.01 negligible) and the registered reference-gain literals
+#     (NLL_GAIN_REF, PSNR_GAIN_REF).
 # Update summary:
 #   v0.1 pins the TINY dual-pin, the R0 checkpoint grid, the locked D1
-#   estimator-slate constants, the D2a recording conventions and the
-#   amendment-gated D4/D5/D6 refusal guard.
+#   estimator-slate constants, the D2a recording conventions, the D2c
+#   selection/classification constants, the D3 sensitivity bands and
+#   reference gains, and the amendment-gated D4/D5/D6 refusal guard.
 # =============================================================================
 from __future__ import annotations
 
@@ -111,3 +120,14 @@ D2C_BAND_TRANSFER = 0.75      # R >= this: strong transfer (likelihood)
 D2C_BOOTSTRAP_N = 10_000      # descriptive-only bootstrap resamples
 D2C_BOOTSTRAP_SEED = 3        # PCG64(3): distinct from selection 1, D1
                               # bank 0, JVP 2 (review 2026-08-20)
+
+# D3 (EXEC SS10.6, locked 2026-08-15; D3 slice 2026-08-20):
+# conditioner-perturbation sensitivity. LOCKED-SPEC constants, never
+# tolerances. Derangement rule p(i) = (i+1) mod n is frozen in
+# tdiag.d3.derangement (n = 8 in production) and pinned by selftest.
+D3_BAND_STRONG = 0.25        # S >= this: strong sensitivity
+D3_BAND_NEGLIGIBLE = 0.01    # both C1 scores <= this: under-use-consistent
+# Registered reference gains (single authoritative literals; verified in
+# float64 to reproduce the endpoint arithmetic EXACTLY):
+NLL_GAIN_REF = 54200.24609375        # 18883.5859375 - (-35316.66015625)
+PSNR_GAIN_REF = 0.6205652992072146   # 32.1537681211221 - 31.533202821914884

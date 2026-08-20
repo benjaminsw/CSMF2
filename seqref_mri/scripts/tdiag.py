@@ -18,7 +18,11 @@
 #          z_true cross-tie) plus two figures. The D2c slice
 #          (2026-08-20) adds the volume-level holdout generalization
 #          (locked PCG64(1) 32-volume selection, R = G_hold/G_train,
-#          locked-band classification) plus three figures.
+#          locked-band classification) plus three figures. The D3 slice
+#          (2026-08-20) adds the conditioner-perturbation sensitivity
+#          (locked derangement, C0 exact cross-ties to R0/D1, locked-
+#          band C1 classification, C2/C3 attribution-only, C4 omitted +
+#          recorded) plus three figures -- completing the D1-D3 suite.
 # TAXONOMY (locked for this stage): the driver owns a standalone 0/2
 #   contract -- 0 = a valid diagnostic evidence report was produced and
 #   published; 2 = typed ERROR (invariant/replay/parent failure), error
@@ -77,16 +81,25 @@
 #     twelve figures render BEFORE facts assembly; the report gains
 #     d2.d2c, D2 flips complete (run_mode validation-r0-d1-d2a-d2b-
 #     d2c).
+#   * D3 slice (2026-08-20, under the same SS10.6 lock; NO contract
+#     change): the driver continues into D3 (conditioner-perturbation
+#     sensitivity on the frozen step-500 model -- D3 is step-500-only
+#     and never touches the cleared step-0 state); fifteen figures
+#     render BEFORE facts assembly; the report gains d3, D3 flips
+#     complete -- the TDIAG D1-D3 diagnostic suite is complete
+#     (run_mode validation-r0-d1-d2a-d2b-d2c-d3).
 # Update summary:
-#   v0.1 lands the R0+D1+D2a+D2b+D2c driver: full parent chain (campaign
-#   verifier + P3/P4/IMPL-B runtime loaders + IMPL dual-pin + TINY
-#   dual-pin), registered-selection re-derivation, deterministic replay
-#   of the 500 registered Adam steps through the production train_step,
-#   exact serialized-value comparison, the D1 estimator slate plus the
-#   D2a true-latent geometry and D2b likelihood decomposition on the
-#   frozen replay runtime, evidence publication, descriptive
-#   D1+D2a+D2b figures and the standalone 0/2 exit contract with the
-#   startup-infrastructure guard.
+#   v0.1 lands the R0+D1+D2a+D2b+D2c+D3 driver: full parent chain
+#   (campaign verifier + P3/P4/IMPL-B runtime loaders + IMPL dual-pin +
+#   TINY dual-pin), registered-selection re-derivation, deterministic
+#   replay of the 500 registered Adam steps through the production
+#   train_step, exact serialized-value comparison, the D1 estimator
+#   slate, the D2a true-latent geometry, the D2b likelihood
+#   decomposition and the D2c holdout generalization on the frozen
+#   replay runtime, the D3 conditioner-sensitivity diagnostic on the
+#   frozen step-500 model, evidence publication, descriptive D1-D3
+#   figures and the standalone 0/2 exit contract with the startup-
+#   infrastructure guard.
 # =============================================================================
 from __future__ import annotations
 
@@ -113,6 +126,8 @@ from seqref_mri.tdiag import d2b  # noqa: E402
 from seqref_mri.tdiag import d2b_plots  # noqa: E402
 from seqref_mri.tdiag import d2c  # noqa: E402
 from seqref_mri.tdiag import d2c_plots  # noqa: E402
+from seqref_mri.tdiag import d3  # noqa: E402
+from seqref_mri.tdiag import d3_plots  # noqa: E402
 from seqref_mri.tdiag import estimators  # noqa: E402
 from seqref_mri.tdiag import facts as tfacts  # noqa: E402
 from seqref_mri.tdiag import replay  # noqa: E402
@@ -236,28 +251,33 @@ def main(argv=None) -> int:
         # The DRIVER owns the step-0 state_dict lifetime (review
         # 2026-08-19): D2b/D2c swap the same verified state into the
         # same model, so no D2-family module may discard it. Cleared
-        # after the last D2-family consumer (D2c, 2026-08-20).
+        # after the last D2-family consumer (D2c, 2026-08-20). D3 is
+        # step-500-only and never touches it.
         ctx.state0 = None
+        d3_block = d3.run_d3(ctx, r0, d1)
         # All-or-nothing publication (2026-08-18 repair, extended to D2a
-        # on 2026-08-19, D2b on 2026-08-19 and D2c on 2026-08-20): ALL
-        # descriptive figures render BEFORE the facts are
+        # on 2026-08-19, D2b on 2026-08-19, D2c and D3 on 2026-08-20):
+        # ALL descriptive figures render BEFORE the facts are
         # assembled/published. A D1_PLOT_FAILURE / D2A_PLOT_FAILURE /
-        # D2B_PLOT_FAILURE / D2C_PLOT_FAILURE therefore aborts with a
-        # typed ERROR and NO evidence artefact -- one execution can
-        # never leave a valid report alongside an ERROR exit.
+        # D2B_PLOT_FAILURE / D2C_PLOT_FAILURE / D3_PLOT_FAILURE
+        # therefore aborts with a typed ERROR and NO evidence artefact
+        # -- one execution can never leave a valid report alongside an
+        # ERROR exit.
         figures = d1_plots.render_d1_figures(d1, args.out_dir)
         figures += d2a_plots.render_d2a_figures(d2a_block, args.out_dir)
         figures += d2b_plots.render_d2b_figures(d2b_block, args.out_dir)
         figures += d2c_plots.render_d2c_figures(d2c_block, args.out_dir)
-        facts = tfacts.build_d2c_facts(
-            r0, d1, d2a_block, d2b_block, d2c_block, tiny_facts,
+        figures += d3_plots.render_d3_figures(d3_block, args.out_dir)
+        facts = tfacts.build_d3_facts(
+            r0, d1, d2a_block, d2b_block, d2c_block, d3_block, tiny_facts,
             tiny_file_sha, impl, impl_file_sha, parents, p3, p4, implb,
             s_ref, _REPO, sys.argv)
         path, sha = publish_stage(facts, args.out_dir,
                                   tfacts.FACTS_PREFIX, tfacts.STAGE)
         logger.info("[%s] R0 replay VALID + D1 slate + D2a + D2b + D2c "
-                    "complete; evidence report published %s sha256=%s "
-                    "(partial: D3 pending; no verdict exists in "
+                    "+ D3 complete; evidence report published %s "
+                    "sha256=%s (TDIAG D1-D3 diagnostic suite complete; "
+                    "D4/D5/D6 amendment-gated; no verdict exists in "
                     "this stage); %d descriptive figures written "
                     "(non-evidence)",
                     SCRIPT_ID, path, sha, len(figures))

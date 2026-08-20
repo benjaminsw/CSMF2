@@ -124,6 +124,27 @@
 #       semantic hash, d2.d2c embedded verbatim.
 #   T32 D2c figures: three figures render non-empty; a broken payload
 #       is D2C_PLOT_FAILURE.
+#   T33 D3 derangement + conditions: the frozen p(i)=(i+1) mod n map
+#       exact (n=8 production and generic; n=1 undefined); the locked
+#       per-condition input sets (C1 donor/donor, C2 own/donor, C3
+#       donor/own); recipient/donor identity wiring and order; C4
+#       omitted + recorded with the neutral-input reason; C2/C3
+#       attribution-only structure (no routing fields); bank manifest
+#       tamper -> D3_BANK_MISMATCH.
+#   T34 D3 measurement + gates: C0 cross-ties bitwise against the
+#       production-path anchors (R0 endpoint, D1 E0 per-slice+aggregate,
+#       D1 E1 per-slice+aggregate) with the model left at the registered
+#       step-500 state; nonzero fixture sensitivity; S arithmetic exact
+#       against the locked reference gains; bands/classification
+#       inclusive at 0.25/0.01 with the under-use BOTH-rule; C0 anchor
+#       drift -> D3_C0_MISMATCH; the immutability fingerprint detects a
+#       one-element mutation and a pre/post drift -> D3_STATE_TAMPER;
+#       non-finite terms -> D3_TERM_NON_FINITE.
+#   T35 D3 facts: ALL of R0/D1/D2/D3 complete, run_mode
+#       validation-r0-d1-d2a-d2b-d2c-d3, recursive no-verdict, stable
+#       semantic hash, d3 embedded verbatim.
+#   T36 D3 figures: three figures render non-empty; a broken payload
+#       is D3_PLOT_FAILURE.
 # Coverage registry: EXPECTED_COUNTS pins the check count of every
 #   fixture plus the suite total; coverage_ok requires zero failures AND
 #   exact count matches, so a green suite cannot silently shrink.
@@ -158,7 +179,11 @@
 #   with hard uniqueness/disjointness invariants and the frozen
 #   midpoint rule, the two-state measurement with G/R and the
 #   registered-endpoint G_train, the inclusive locked-band
-#   classification and the descriptive-only bootstrap.
+#   classification and the descriptive-only bootstrap. The D3 slice
+#   (2026-08-20) adds the conditioner-perturbation contracts: the frozen
+#   derangement and locked input sets, the C0 exact cross-ties to the
+#   R0/D1 anchors, the bank and immutability gates, the locked-band
+#   C1-only classification and the attribution-only C2/C3 structure.
 #   * D1 slice (2026-08-18, under the same SS10.6 lock; NO contract
 #     change): T11-T16 pin the D1 contracts (locked banks, E0/R0 gate,
 #     winner/tie-break, slice-set aggregation, materiality boundaries,
@@ -189,6 +214,14 @@
 #     top-level D2 complete, figures); T8 gains the D2c plot-failure
 #     case (+2), T10's bootstrap/identity guards now cover d2c.py and
 #     d2c_plots.py (+2). 139 -> 165 checks.
+#   * D3 slice (2026-08-20, under the same SS10.6 lock; NO contract
+#     change): T33-T36 pin the D3 contracts (frozen derangement + input
+#     sets + C4 omission + attribution-only C2/C3, C0 exact cross-ties
+#     to the R0/D1 anchors, S arithmetic + locked bands + the under-use
+#     BOTH-rule, C0-drift/bank/tamper/non-finite gates, full-suite
+#     completeness in the facts, figures); T8 gains the D3 plot-failure
+#     case (+2), T10's bootstrap/identity guards now cover d3.py and
+#     d3_plots.py (+2). 165 -> 190 checks.
 # =============================================================================
 from __future__ import annotations
 
@@ -213,6 +246,8 @@ if __package__:  # `python -m seqref_mri.scripts.tdiag_selftest`
     from seqref_mri.tdiag import d2b_plots as td2bplots
     from seqref_mri.tdiag import d2c as td2c
     from seqref_mri.tdiag import d2c_plots as td2cplots
+    from seqref_mri.tdiag import d3 as td3
+    from seqref_mri.tdiag import d3_plots as td3plots
     from seqref_mri.tdiag import estimators as test
     from seqref_mri.tdiag import facts as tfacts
     from seqref_mri.tdiag import invariants as tinv
@@ -226,6 +261,8 @@ else:  # direct script run: scripts/ is on sys.path; tdiag sets repo paths
     from seqref_mri.tdiag import d2b_plots as td2bplots
     from seqref_mri.tdiag import d2c as td2c
     from seqref_mri.tdiag import d2c_plots as td2cplots
+    from seqref_mri.tdiag import d3 as td3
+    from seqref_mri.tdiag import d3_plots as td3plots
     from seqref_mri.tdiag import estimators as test
     from seqref_mri.tdiag import facts as tfacts
     from seqref_mri.tdiag import invariants as tinv
@@ -581,6 +618,8 @@ def t8_publication_and_error_taxonomy() -> None:
                td.d2b)
         _patch("run_d2c", lambda *a, **k: {"note": "fixture d2c block"},
                td.d2c)
+        _patch("run_d3", lambda *a, **k: {"note": "fixture d3 block"},
+               td.d3)
         _patch("render_d1_figures", lambda d1, out: ["f1.png", "f2.png",
                                                      "f3.png", "f4.png"],
                td.d1_plots)
@@ -593,6 +632,9 @@ def t8_publication_and_error_taxonomy() -> None:
         _patch("render_d2c_figures",
                lambda d2c, out: ["f10.png", "f11.png", "f12.png"],
                td.d2c_plots)
+        _patch("render_d3_figures",
+               lambda d3, out: ["f13.png", "f14.png", "f15.png"],
+               td.d3_plots)
         _patch("code_record", lambda repo: {"fixture": True}, td.tfacts)
         _patch("environment_record", lambda *a, **k: {"fixture": True},
                td.tfacts)
@@ -764,6 +806,42 @@ def t8_publication_and_error_taxonomy() -> None:
                 typed = rec.get("error_code") == "D2C_PLOT_FAILURE"
             check("T8 typed D2C_PLOT_FAILURE record, NO facts artefact",
                   typed and facts_left == [], f"{errs} {facts_left}")
+        # symmetric D3 plot failure (2026-08-20): typed D3_PLOT_FAILURE,
+        # exit 2, NO facts artefact; d1/d2a/d2b/d2c figures restored
+        _patch("render_d1_figures", lambda d1, out: ["f1.png", "f2.png",
+                                                     "f3.png", "f4.png"],
+               td.d1_plots)
+        _patch("render_d2a_figures",
+               lambda d2a, out: ["f5.png", "f6.png", "f7.png"],
+               td.d2a_plots)
+        _patch("render_d2b_figures", lambda d2b, out: ["f8.png",
+                                                       "f9.png"],
+               td.d2b_plots)
+        _patch("render_d2c_figures",
+               lambda d2c, out: ["f10.png", "f11.png", "f12.png"],
+               td.d2c_plots)
+
+        def _d3_plot_throw(*a, **k):
+            raise td.d3_plots.StageError("D3_PLOT_FAILURE",
+                                         "injected d3 plot failure")
+        _patch("render_d3_figures", _d3_plot_throw, td.d3_plots)
+        with tempfile.TemporaryDirectory() as td_:
+            rc = td.main(base_args + ["--data-root", td_,
+                                      "--out-dir", td_] + parents_args)
+            check("T8 D3 plot failure pre-publication -> exit 2",
+                  rc == 2)
+            errs = [p for p in os.listdir(td_)
+                    if p.startswith("tdiag_error") and p.endswith(".json")]
+            facts_left = [p for p in os.listdir(td_)
+                          if p.startswith("tdiag_facts")]
+            typed = False
+            if len(errs) == 1:
+                with open(os.path.join(td_, errs[0]),
+                          encoding="utf-8") as fh:
+                    rec = json.load(fh)
+                typed = rec.get("error_code") == "D3_PLOT_FAILURE"
+            check("T8 typed D3_PLOT_FAILURE record, NO facts artefact",
+                  typed and facts_left == [], f"{errs} {facts_left}")
     finally:
         for (owner, name), value in saved.items():
             setattr(owner, name, value)
@@ -838,7 +916,9 @@ def t10_preflight_module_identity() -> None:
           and td2b.StageError is pp.StageError
           and td2bplots.StageError is pp.StageError
           and td2c.StageError is pp.StageError
-          and td2cplots.StageError is pp.StageError)
+          and td2cplots.StageError is pp.StageError
+          and td3.StageError is pp.StageError
+          and td3plots.StageError is pp.StageError)
     check("T10 reused tiny_gate shares the same StageError identity",
           td.tg.StageError is pp.StageError)
     check("T10 no duplicate qualified preflight_parents module object",
@@ -855,7 +935,8 @@ def t10_preflight_module_identity() -> None:
     # structural guard: the explicit bootstrap import must precede the
     # first preflight import in every TDIAG package module
     for mod in (treplay, tfacts, tinv, test, tplots, td2a,
-                td2aplots, td2b, td2bplots, td2c, td2cplots):
+                td2aplots, td2b, td2bplots, td2c, td2cplots, td3,
+                td3plots):
         with open(mod.__file__, "r", encoding="utf-8") as fh:
             src = fh.read()
         boot_at = src.find("from seqref_mri.tdiag import _bootstrap")
@@ -1955,6 +2036,330 @@ def t32_d2c_figures() -> None:
             "D2C_PLOT_FAILURE")
 
 
+# ---------------------------------------------------------------------------
+# D3 fixtures: conditioner-sensitive stateful stub. The d1/r0 anchors are
+# computed through the PRODUCTION path (tg._decode_z /
+# estimators.decode_bank / d2b._batch_tensors + the stub production NLL),
+# so the C0 cross-ties are real cross-code agreements (compute-then-tie),
+# never tautological.
+# ---------------------------------------------------------------------------
+
+class _CondFlow:
+    """Translation stub flow: z = u * exp(ls) + h with h from the
+    conditioner; ldj = sum(ls) exactly (a translation has a unit
+    Jacobian). Perturbing (cond, mask) moves z but never ldj."""
+
+    def __init__(self, model):
+        self._model = model
+
+    def encode(self, u, h):
+        ls = self._model.flow_log_scale
+        return (u * torch.exp(ls) + h.to(torch.float32),
+                ls.sum().expand(u.shape[0]))
+
+
+class _CondSensitiveModel(_StubModelState):
+    """Conditioner-sensitive stub: condition() maps (cond, mask) to a
+    per-item scalar; the flow translates z by it; decode_scalars adds
+    it. Donor perturbations therefore change the NLL, z=0 and
+    posterior-mean metrics deterministically."""
+
+    def __init__(self):
+        super().__init__()
+        self.flow = _CondFlow(self)
+
+    def condition(self, cond_in, mask):
+        s = (cond_in.to(torch.float64).sum(dim=(1, 2, 3))
+             + mask.to(torch.float64).sum(dim=1))
+        return s.reshape(-1, 1).to(torch.float32)
+
+    def decode_scalars(self, z, cond_in, mask):
+        h = self.condition(cond_in, mask)
+        return z.to(torch.float32) * self.s_r + self.b_r + h
+
+
+def _cond_states(n: int = 8) -> list:
+    """_stub_states with DISTINCT conditioner inputs per slice: cond
+    filled with (i+1)*1e-3, mask with the first 24+i columns acquired --
+    the derangement then changes every perturbed condition's inputs."""
+    states = _stub_states(n)
+    for i, st in enumerate(states):
+        st["cond"] = torch.full(
+            (1, 2, td.tg.ffr.GRID_H, td.tg.ffr.GRID_W),
+            float(i + 1) * 1e-3)
+        m = torch.zeros(1, td.tg.ffr.GRID_W)
+        m[0, :24 + i] = 1.0
+        st["mask"] = m
+    return states
+
+
+def _d3_setup(n: int = 8):
+    """D3 fixture context: the conditioner-sensitive stateful stub, the
+    production-path anchors and the D3 block. tg._nll is patched to the
+    stub production formula for the anchor computation AND the run
+    (restored before return)."""
+    model = _CondSensitiveModel()
+    states = _cond_states(n)
+    state500 = treplay.capture_state(model)
+    state0 = {k: v * 1.01 for k, v in state500.items()}
+    saved = td.tg._nll
+    td.tg._nll = _stub_nll
+    try:
+        targets, cond, mask = td2b._batch_tensors(states)
+        nll500 = _stub_nll(model, targets, cond, mask)
+        model.load_state_dict(state0)
+        nll0 = _stub_nll(model, targets, cond, mask)
+        model.load_state_dict(state500)
+        e0 = [test.e0_slice(model, st) for st in states]
+        bank = test.z_diag_bank()
+        counter: dict = {}
+        e1 = [test.e1_e2_from_decodes(
+            st, test.decode_bank(model, st, bank["bank"], counter))[0]
+            for st in states]
+        r0_stub = {"endpoints": {
+                       "initial": {"nll_batch_mean": nll0},
+                       "final": {"nll_batch_mean": nll500}},
+                   "step0_state_hash": treplay.state_hash(state0),
+                   "step500_state_hash": treplay.state_hash(state500)}
+        d1_stub = {
+            "estimators": {"E0": {"per_slice": e0},
+                           "E1": {"per_slice": e1}},
+            "aggregate": {
+                "E0": {"mean_psnr": float(np.mean(
+                           [r["psnr"] for r in e0])),
+                       "mean_nmse_u": float(np.mean(
+                           [r["nmse_u"] for r in e0]))},
+                "E1": {"mean_psnr": float(np.mean(
+                           [r["psnr"] for r in e1])),
+                       "mean_nmse_u": float(np.mean(
+                           [r["nmse_u"] for r in e1]))}},
+            "z_diag": {"bank_sha256": bank["bank_sha256"],
+                       "manifest_sha256": bank["manifest_sha256"]}}
+        ctx = treplay.ReplayContext(model=model, states=states,
+                                    selection={}, spline_b=1.0,
+                                    s_ref=1.0, state0=None)
+        block = td3.run_d3(ctx, r0_stub, d1_stub)
+    finally:
+        td.tg._nll = saved
+    return model, states, ctx, r0_stub, d1_stub, block
+
+
+def t33_d3_derangement_and_conditions() -> None:
+    check("T33 frozen derangement exact (production n=8 and generic)",
+          td3.derangement(8) == [1, 2, 3, 4, 5, 6, 7, 0]
+          and td3.derangement(3) == [1, 2, 0])
+    expect_stage_error("T33 n=1 -> D3_DERANGEMENT_UNDEFINED",
+                       lambda: td3.derangement(1),
+                       "D3_DERANGEMENT_UNDEFINED")
+    model, states, ctx, r0_stub, d1_stub, block = _d3_setup()
+    check("T33 per-condition input sets recorded correctly (C1 "
+          "donor/donor, C2 own/donor, C3 donor/own)",
+          all(rec["C1"]["cond_source"] == "donor"
+              and rec["C1"]["mask_source"] == "donor"
+              and rec["C2"]["cond_source"] == "own"
+              and rec["C2"]["mask_source"] == "donor"
+              and rec["C3"]["cond_source"] == "donor"
+              and rec["C3"]["mask_source"] == "own"
+              for rec in block["per_slice"]))
+    ids = [st["identity"] for st in states]
+    check("T33 recipient/donor identity wiring exact, same order in "
+          "every condition",
+          [rec["recipient_identity"] for rec in block["per_slice"]]
+          == ids
+          and all(rec["donor_identity"] == ids[(i + 1) % len(ids)]
+                  for i, rec in enumerate(block["per_slice"]))
+          and block["derangement"]["map"] == [1, 2, 3, 4, 5, 6, 7, 0])
+    check("T33 C4 omitted + recorded with the neutral-input reason",
+          block["conditions"]["C4"]["included"] is False
+          and "neutral" in block["conditions"]["C4"]["reason"])
+    check("T33 C2/C3 attribution-only: fixed descriptive fields, no "
+          "routing fields; classification bound to C1",
+          set(block["c2_c3_attribution"]) == {"rule", "C2", "C3",
+                                              "dominance_note"}
+          and all(set(block["c2_c3_attribution"][c])
+                  == {"S_NLL", "S_PSNR", "band_nll", "band_psnr"}
+                  for c in ("C2", "C3"))
+          and block["classification"]["routing_condition"].startswith(
+              "C1"))
+    d1_bad = json.loads(json.dumps(d1_stub))
+    d1_bad["z_diag"]["manifest_sha256"] = "0" * 64
+    saved = td.tg._nll
+    td.tg._nll = _stub_nll
+    try:
+        expect_stage_error(
+            "T33 bank manifest tamper -> D3_BANK_MISMATCH",
+            lambda: td3.run_d3(ctx, r0_stub, d1_bad),
+            "D3_BANK_MISMATCH")
+    finally:
+        td.tg._nll = saved
+
+
+def t34_d3_measurement_and_gates() -> None:
+    model, states, ctx, r0_stub, d1_stub, block = _d3_setup()
+    ties = block["c0_cross_ties"]
+    check("T34 C0 cross-ties exact (R0 endpoint, D1 E0, D1 E1) + the "
+          "model is back at the registered step-500 state",
+          ties["nll"]["equal"] is True
+          and ties["nll"]["instrumentation"]
+          == r0_stub["endpoints"]["final"]["nll_batch_mean"]
+          and ties["z0_vs_d1_e0"]["equal"] is True
+          and ties["pm_vs_d1_e1"]["equal"] is True
+          and block["state_identity"]["post_measurement_step500"][
+              "equal"] is True
+          and treplay.state_hash(treplay.capture_state(model))
+          == r0_stub["step500_state_hash"])
+    c1 = block["conditions_measured"]["C1"]
+    check("T34 conditioner sensitivity nonzero under the stub (fixture "
+          "sanity: the perturbation must move the metrics)",
+          c1["S_NLL"] > 0.0 and c1["S_PSNR"] > 0.0)
+    check("T34 S arithmetic exact against the locked reference gains",
+          c1["S_NLL"] == abs(c1["delta_nll_batch_vs_c0"])
+          / tinv.NLL_GAIN_REF
+          and c1["S_PSNR"] == abs(c1["mean_delta_z0_psnr_vs_c0"])
+          / tinv.PSNR_GAIN_REF
+          and tinv.NLL_GAIN_REF == 54200.24609375
+          and tinv.PSNR_GAIN_REF == 0.6205652992072146)
+    check("T34 locked bands inclusive + classification: strong on "
+          "either channel, under-use needs BOTH negligible, else mixed",
+          td3._band_label(0.25) == "strong"
+          and td3._band_label(0.01) == "negligible"
+          and td3._band_label(0.2499999) == "weak"
+          and td3._band_label(0.0100001) == "weak"
+          and td3._classify_c1(0.25, 0.0)["label"]
+          == "strong_conditioner_use"
+          and td3._classify_c1(0.0, 0.25)["label"]
+          == "strong_conditioner_use"
+          and td3._classify_c1(0.01, 0.01)["label"]
+          == "conditioner_under_use_consistent"
+          and td3._classify_c1(0.009, 0.005)["label"]
+          == "conditioner_under_use_consistent"
+          and td3._classify_c1(0.02, 0.005)["label"] == "mixed"
+          and td3._classify_c1(0.1, 0.1)["label"] == "mixed")
+    d1_bad = json.loads(json.dumps(d1_stub))
+    d1_bad["estimators"]["E0"]["per_slice"][0]["psnr"] += 1.0
+    saved = td.tg._nll
+    td.tg._nll = _stub_nll
+    try:
+        expect_stage_error(
+            "T34 C0 anchor drift -> D3_C0_MISMATCH",
+            lambda: td3.run_d3(ctx, r0_stub, d1_bad),
+            "D3_C0_MISMATCH")
+    finally:
+        td.tg._nll = saved
+    fp1 = td3._states_fingerprint(states)
+    orig_el = states[0]["y"][0, 0, 0].clone()
+    states[0]["y"][0, 0, 0] = orig_el + 1.0
+    fp2 = td3._states_fingerprint(states)
+    states[0]["y"][0, 0, 0] = orig_el   # EXACT restore (no f32 round-trip)
+    check("T34 the state fingerprint detects a one-element mutation",
+          fp1 != fp2
+          and td3._states_fingerprint(states) == fp1)
+    calls = {"n": 0}
+    orig_fp = td3._states_fingerprint
+
+    def _fp_drifting(sts):
+        calls["n"] += 1
+        fp = orig_fp(sts)
+        return fp if calls["n"] == 1 else "0" * 64
+    td3._states_fingerprint = _fp_drifting
+    saved = td.tg._nll
+    td.tg._nll = _stub_nll
+    try:
+        expect_stage_error(
+            "T34 pre/post fingerprint drift -> D3_STATE_TAMPER",
+            lambda: td3.run_d3(ctx, r0_stub, d1_stub),
+            "D3_STATE_TAMPER")
+    finally:
+        td3._states_fingerprint = orig_fp
+        td.tg._nll = saved
+    bad_model = _CondSensitiveModel()
+    bad_model.flow_log_scale.fill_(float("inf"))
+    r0_bad = json.loads(json.dumps(r0_stub))
+    r0_bad["step500_state_hash"] = treplay.state_hash(
+        treplay.capture_state(bad_model))
+    ctx_bad = treplay.ReplayContext(model=bad_model, states=states,
+                                    selection={}, spline_b=1.0,
+                                    s_ref=1.0, state0=None)
+    saved = td.tg._nll
+    td.tg._nll = _stub_nll
+    try:
+        expect_stage_error(
+            "T34 non-finite terms -> D3_TERM_NON_FINITE",
+            lambda: td3.run_d3(ctx_bad, r0_bad, d1_stub),
+            "D3_TERM_NON_FINITE")
+    finally:
+        td.tg._nll = saved
+
+
+def t35_d3_facts() -> None:
+    model, states, ctx, r0_stub, d1, d2a_block, d2b_block = _d2b_setup()
+    saved = td.tg._nll
+    td.tg._nll = _stub_nll
+    try:
+        d2c_block = td2c.run_d2c_core(ctx, r0_stub, states)
+    finally:
+        td.tg._nll = saved
+    _, _, _, _, _, d3_block = _d3_setup()
+    saved_code = tfacts.code_record
+    saved_env = tfacts.environment_record
+    tfacts.code_record = lambda repo: {"fixture": "isolated"}  # noqa: E731
+    tfacts.environment_record = lambda *a, **k: {"fixture": True}  # noqa: E731
+    try:
+        tiny = _tiny_facts_stub()
+        impl = {"schema": "seqref-impl-facts/1",
+                "semantic_sha256": "f" * 64, "verdict": "PASS"}
+        parents = {"parents_id": "fixture", "p0": {}, "p0s": {}}
+        f1 = tfacts.build_d3_facts(_r0_result_stub(), d1, d2a_block,
+                                   d2b_block, d2c_block, d3_block, tiny,
+                                   "9" * 64, impl, "e" * 64, parents,
+                                   {}, {}, {}, 15.62704,
+                                   "/nonexistent-repo", ["x"])
+        f2 = tfacts.build_d3_facts(_r0_result_stub(), d1, d2a_block,
+                                   d2b_block, d2c_block, d3_block, tiny,
+                                   "9" * 64, impl, "e" * 64, parents,
+                                   {}, {}, {}, 15.62704,
+                                   "/nonexistent-repo", ["x"])
+    finally:
+        tfacts.code_record, tfacts.environment_record = (saved_code,
+                                                         saved_env)
+    check("T35 D3 facts: ALL of R0/D1/D2/D3 complete (nested d2 all "
+          "complete)",
+          f1["completeness"] == {"R0": "complete", "D1": "complete",
+                                 "D2": "complete", "D3": "complete"}
+          and f1["d2"]["completeness"] == {"D2a": "complete",
+                                           "D2b": "complete",
+                                           "D2c": "complete"})
+    check("T35 run_mode and report_status name the D1-D3 suite closure",
+          f1["run_mode"] == "validation-r0-d1-d2a-d2b-d2c-d3"
+          and f1["report_status"].startswith("complete")
+          and "D3 conditioner sensitivity" in f1["report_status"])
+    check("T35 recursive no-verdict + stable semantic hash",
+          "verdict" not in f1
+          and _no_key(f1["d1"], lambda k: k == "verdict")
+          and _no_key(f1["d2"], lambda k: k == "verdict")
+          and _no_key(f1["d3"], lambda k: k == "verdict")
+          and f1["semantic_sha256"] == f2["semantic_sha256"])
+    check("T35 d3 embeds the D3 block verbatim",
+          f1["d3"]["classification"]["label"]
+          == d3_block["classification"]["label"])
+
+
+def t36_d3_figures() -> None:
+    _, _, _, _, _, block = _d3_setup()
+    with tempfile.TemporaryDirectory() as tmp:
+        figs = td3plots.render_d3_figures(block, tmp)
+        check("T36 three D3 figures rendered non-empty",
+              len(figs) == 3 and all(
+                  os.path.isfile(p_) and os.path.getsize(p_) > 0
+                  for p_ in figs), f"{len(figs)}")
+        broken = json.loads(json.dumps(block))
+        broken["conditions_measured"]["C1"]["S_NLL"] = "not-a-number"
+        expect_stage_error(
+            "T36 broken D3 payload -> D3_PLOT_FAILURE",
+            lambda: td3plots.render_d3_figures(broken, tmp),
+            "D3_PLOT_FAILURE")
+
+
 EXPECTED_COUNTS = {  # static registry: a green suite cannot shrink
     "t1_taxonomy_purity": 3,
     "t2_deferred_probe_guard": 4,
@@ -1964,9 +2369,9 @@ EXPECTED_COUNTS = {  # static registry: a green suite cannot shrink
     "t5_trace_completeness": 1,
     "t6_state_hash_determinism": 3,
     "t7_facts_schema_purity": 4,
-    "t8_publication_and_error_taxonomy": 16,
+    "t8_publication_and_error_taxonomy": 18,
     "t9_startup_logging_robustness": 4,
-    "t10_preflight_module_identity": 15,
+    "t10_preflight_module_identity": 17,
     "t11_locked_banks": 5,
     "t12_e0_r0_equivalence_gate": 4,
     "t13_winner_selection": 6,
@@ -1989,6 +2394,10 @@ EXPECTED_COUNTS = {  # static registry: a green suite cannot shrink
     "t30_d2c_measurement_and_classification": 8,
     "t31_d2c_facts": 4,
     "t32_d2c_figures": 2,
+    "t33_d3_derangement_and_conditions": 7,
+    "t34_d3_measurement_and_gates": 8,
+    "t35_d3_facts": 4,
+    "t36_d3_figures": 2,
 }
 EXPECTED_TOTAL = sum(EXPECTED_COUNTS.values())
 
@@ -2014,7 +2423,10 @@ def main() -> int:
                 t27_d2b_facts, t28_d2b_figures,
                 t29_d2c_selection,
                 t30_d2c_measurement_and_classification,
-                t31_d2c_facts, t32_d2c_figures]
+                t31_d2c_facts, t32_d2c_figures,
+                t33_d3_derangement_and_conditions,
+                t34_d3_measurement_and_gates, t35_d3_facts,
+                t36_d3_figures]
     counts_ok = True
     for fn in fixtures:
         before = len(RESULTS)
@@ -2047,8 +2459,8 @@ def main() -> int:
             logger.error("[%s] coverage registry mismatch -- refusing "
                          "green exit", SCRIPT_ID)
         return 2
-    logger.info("[%s] all fixtures green; tdiag v0.1 R0+D1+D2a+D2b+D2c-slice "
-                "contracts hold", SCRIPT_ID)
+    logger.info("[%s] all fixtures green; tdiag v0.1 "
+                "R0+D1+D2a+D2b+D2c+D3-slice contracts hold", SCRIPT_ID)
     return 0
 
 
