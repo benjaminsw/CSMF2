@@ -30,13 +30,18 @@
 #     D2b/D2c pending) with top-level D2 "partial", run_mode
 #     validation-r0-d1-d2a; d2a.py and d2a_plots.py joined the code
 #     record.
+#   * D2b slice (2026-08-19, under the same SS10.6 lock; NO contract
+#     change): build_d2b_facts adds the D2b decomposition block, flips
+#     d2.completeness.D2b to complete (top-level D2 stays "partial"
+#     until D2c), run_mode validation-r0-d1-d2a-d2b; d2b.py and
+#     d2b_plots.py joined the code record.
 # Update summary:
-#   v0.1 lands the R0 partial evidence assembly plus the D1 and D2a
-#   extensions: completeness tracking (with the nested D2 sub-block),
-#   recursive no-verdict schema invariant, TDIAG code record (now
-#   including the estimator slate, the D1 figures module and the D2a
-#   modules) and the campaign semantic-hash attachment (run/ excluded
-#   as volatile).
+#   v0.1 lands the R0 partial evidence assembly plus the D1, D2a and
+#   D2b extensions: completeness tracking (with the nested D2
+#   sub-block), recursive no-verdict schema invariant, TDIAG code
+#   record (now including the estimator slate, the D1/D2a/D2b figures
+#   modules and the D2a/D2b measurement modules) and the campaign
+#   semantic-hash attachment (run/ excluded as volatile).
 # =============================================================================
 from __future__ import annotations
 
@@ -73,6 +78,8 @@ TDIAG_LOCAL_FILES = [
     "seqref_mri/tdiag/d1_plots.py",
     "seqref_mri/tdiag/d2a.py",
     "seqref_mri/tdiag/d2a_plots.py",
+    "seqref_mri/tdiag/d2b.py",
+    "seqref_mri/tdiag/d2b_plots.py",
     "seqref_mri/tdiag/facts.py",
     "seqref_mri/scripts/tiny_gate.py",
     "seqref_mri/scripts/tiny_selftest.py",
@@ -272,6 +279,34 @@ def build_d2_facts(r0: dict, d1: dict, d2a: dict, tiny_facts: dict,
     facts["d2"] = {"completeness": {"D2a": "complete", "D2b": "pending",
                                     "D2c": "pending"},
                    "d2a": d2a}
+    semantic = {k: v for k, v in facts.items() if k != "run"}
+    attach_semantic_hash(facts, semantic)
+    return facts
+
+
+def build_d2b_facts(r0: dict, d1: dict, d2a: dict, d2b: dict,
+                    tiny_facts: dict, tiny_file_sha: str, impl: dict,
+                    impl_file_sha: str, parents: dict, p3: dict,
+                    p4: dict, implb: dict, s_ref: float, repo: str,
+                    argv) -> dict:
+    """Assemble the R0+D1+D2a+D2b partial evidence report: the D2a
+    report plus the D2b decomposition block. d2.completeness flips D2b
+    to complete; the top-level D2 stays "partial" until D2c lands;
+    run_mode validation-r0-d1-d2a-d2b (the completed D2a stays visible
+    in the mode string, review 2026-08-19). INVARIANT: no 'verdict'
+    key anywhere, enforced by the top-level check (R0 builder) plus
+    recursive scans over the D1/D2a/D2b blocks."""
+    _no_verdict_scan(d2b, "d2.d2b")
+    facts = build_d2_facts(r0, d1, d2a, tiny_facts, tiny_file_sha, impl,
+                           impl_file_sha, parents, p3, p4, implb, s_ref,
+                           repo, argv)
+    facts["report_status"] = ("partial -- R0 replay validity + D1 "
+                              "estimator slate + D2a latent geometry + "
+                              "D2b likelihood decomposition; D2c/D3 "
+                              "pending implementation")
+    facts["run_mode"] = "validation-r0-d1-d2a-d2b"
+    facts["d2"]["completeness"]["D2b"] = "complete"
+    facts["d2"]["d2b"] = d2b
     semantic = {k: v for k, v in facts.items() if k != "run"}
     attach_semantic_hash(facts, semantic)
     return facts

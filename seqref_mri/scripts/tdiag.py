@@ -13,6 +13,9 @@
 #          frozen-band materiality and four diagnostic figures. The D2a
 #          slice (2026-08-19) adds the true-latent geometry measurements
 #          under the state-swap identity invariant plus three figures.
+#          The D2b slice (2026-08-19) adds the signed NLL decomposition
+#          (L_base / L_logdet, registered-endpoint exact gate, D2a
+#          z_true cross-tie) plus two figures.
 # TAXONOMY (locked for this stage): the driver owns a standalone 0/2
 #   contract -- 0 = a valid diagnostic evidence report was produced and
 #   published; 2 = typed ERROR (invariant/replay/parent failure), error
@@ -55,15 +58,24 @@
 #     BEFORE facts assembly (all-or-nothing extended), and the report
 #     gains the nested d2 block (completeness D2 partial; run_mode
 #     validation-r0-d1-d2a).
+#   * D2b slice (2026-08-19, under the same SS10.6 lock; NO contract
+#     change): the driver continues into D2b (signed NLL decomposition
+#     with the registered-endpoint exact gate and the D2a z_true
+#     cross-tie); the DRIVER now owns the step-0 state_dict lifetime --
+#     it is cleared after the last D2-family consumer (D2c will need
+#     it; move the clear when D2c lands); nine figures render BEFORE
+#     facts assembly; the report gains d2.d2b (run_mode
+#     validation-r0-d1-d2a-d2b).
 # Update summary:
-#   v0.1 lands the R0+D1+D2a driver: full parent chain (campaign
+#   v0.1 lands the R0+D1+D2a+D2b driver: full parent chain (campaign
 #   verifier + P3/P4/IMPL-B runtime loaders + IMPL dual-pin + TINY
 #   dual-pin), registered-selection re-derivation, deterministic replay
 #   of the 500 registered Adam steps through the production train_step,
-#   exact serialized-value comparison, the D1 estimator slate and the
-#   D2a true-latent geometry on the frozen replay runtime, evidence
-#   publication, descriptive D1+D2a figures and the standalone 0/2 exit
-#   contract with the startup-infrastructure guard.
+#   exact serialized-value comparison, the D1 estimator slate plus the
+#   D2a true-latent geometry and D2b likelihood decomposition on the
+#   frozen replay runtime, evidence publication, descriptive
+#   D1+D2a+D2b figures and the standalone 0/2 exit contract with the
+#   startup-infrastructure guard.
 # =============================================================================
 from __future__ import annotations
 
@@ -86,6 +98,8 @@ from seqref_mri.scripts import tiny_gate as tg  # noqa: E402
 from seqref_mri.tdiag import d1_plots  # noqa: E402
 from seqref_mri.tdiag import d2a  # noqa: E402
 from seqref_mri.tdiag import d2a_plots  # noqa: E402
+from seqref_mri.tdiag import d2b  # noqa: E402
+from seqref_mri.tdiag import d2b_plots  # noqa: E402
 from seqref_mri.tdiag import estimators  # noqa: E402
 from seqref_mri.tdiag import facts as tfacts  # noqa: E402
 from seqref_mri.tdiag import replay  # noqa: E402
@@ -204,24 +218,33 @@ def main(argv=None) -> int:
             float(implb["spline_b"]), p4, s_ref)
         d1 = estimators.run_d1(ctx, r0)
         d2a_block = d2a.run_d2a(ctx, r0, d1)
+        d2b_block = d2b.run_d2b(ctx, r0, d2a_block)
+        # The DRIVER owns the step-0 state_dict lifetime (review
+        # 2026-08-19): D2b/D2c swap the same verified state into the
+        # same model, so no D2-family module may discard it. Cleared
+        # after the last D2-family consumer -- when D2c lands, move
+        # this line below run_d2c.
+        ctx.state0 = None
         # All-or-nothing publication (2026-08-18 repair, extended to D2a
-        # on 2026-08-19): ALL descriptive figures render BEFORE the facts
-        # are assembled/published. A D1_PLOT_FAILURE / D2A_PLOT_FAILURE
+        # on 2026-08-19 and D2b on 2026-08-19): ALL descriptive figures
+        # render BEFORE the facts are assembled/published. A
+        # D1_PLOT_FAILURE / D2A_PLOT_FAILURE / D2B_PLOT_FAILURE
         # therefore aborts with a typed ERROR and NO evidence artefact --
         # one execution can never leave a valid report alongside an
         # ERROR exit.
         figures = d1_plots.render_d1_figures(d1, args.out_dir)
         figures += d2a_plots.render_d2a_figures(d2a_block, args.out_dir)
-        facts = tfacts.build_d2_facts(
-            r0, d1, d2a_block, tiny_facts, tiny_file_sha, impl,
-            impl_file_sha, parents, p3, p4, implb, s_ref, _REPO,
+        figures += d2b_plots.render_d2b_figures(d2b_block, args.out_dir)
+        facts = tfacts.build_d2b_facts(
+            r0, d1, d2a_block, d2b_block, tiny_facts, tiny_file_sha,
+            impl, impl_file_sha, parents, p3, p4, implb, s_ref, _REPO,
             sys.argv)
         path, sha = publish_stage(facts, args.out_dir,
                                   tfacts.FACTS_PREFIX, tfacts.STAGE)
-        logger.info("[%s] R0 replay VALID + D1 slate + D2a complete; "
-                    "evidence report published %s sha256=%s (partial: "
-                    "D2b/D2c/D3 pending; no verdict exists in this "
-                    "stage); %d descriptive figures written "
+        logger.info("[%s] R0 replay VALID + D1 slate + D2a + D2b "
+                    "complete; evidence report published %s sha256=%s "
+                    "(partial: D2c/D3 pending; no verdict exists in "
+                    "this stage); %d descriptive figures written "
                     "(non-evidence)",
                     SCRIPT_ID, path, sha, len(figures))
         return EXIT_REPORT

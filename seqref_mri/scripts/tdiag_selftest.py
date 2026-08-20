@@ -90,6 +90,23 @@
 #       run_mode validation-r0-d1-d2a, stable semantic hash.
 #   T24 D2a figures: three figures render non-empty; a broken payload
 #       is D2A_PLOT_FAILURE.
+#   T25 D2b sign and decomposition: the known-affine fixture pins
+#       log|det| = sum(log_scale) exactly (log-det sign proven, no
+#       frozen tolerance); NLL = L_base + L_logdet exact per slice x
+#       step; delta identity to f64 rounding; shares sum to 1; the D2a
+#       z_true sha cross-tie is exact at both steps; sign counts cover
+#       every slice per term.
+#   T26 D2b gates: one-byte z_true sha drift -> D2B_Z_TRUE_DRIFT;
+#       slice-order tamper -> D2B_SLICE_ORDER_MISMATCH; endpoint tamper
+#       -> D2B_NLL_ENDPOINT_MISMATCH; missing state0 ->
+#       D2B_STATE0_MISSING; D2b leaves the model at the registered
+#       step-500 state.
+#   T27 D2b facts: nested completeness (D2a/D2b complete, D2c pending;
+#       top-level D2 partial), run_mode validation-r0-d1-d2a-d2b,
+#       no verdict fields anywhere in d1/d2/top level, stable semantic
+#       hash, d2.d2b embeds the block verbatim.
+#   T28 D2b figures: two figures render non-empty; a broken payload
+#       is D2B_PLOT_FAILURE.
 # Coverage registry: EXPECTED_COUNTS pins the check count of every
 #   fixture plus the suite total; coverage_ok requires zero failures AND
 #   exact count matches, so a green suite cannot silently shrink.
@@ -110,13 +127,16 @@
 #     live IMPL semantic sha or TINY file sha fails exactly its row, so
 #     the tautological comparison form can never return.
 # Update summary:
-#   v0.1 pins the R0/D1/D2a-slice contracts as executable regressions:
-#   the standalone 0/2 taxonomy, the amendment-gated deferred-probe
-#   guard, the exact serialized-value comparison engine, the TINY
-#   dual-pin refusal paths, trace-grid completeness, canonical state
-#   hashing, the no-verdict facts schema, both ERROR-context boundaries,
-#   the D1 estimator-slate conventions and the D2a state-swap/geometry
-#   invariants, under a static expected-count coverage registry.
+#   v0.1 pins the R0/D1/D2a/D2b-slice contracts as executable
+#   regressions: the standalone 0/2 taxonomy, the amendment-gated
+#   deferred-probe guard, the exact serialized-value comparison engine,
+#   the TINY dual-pin refusal paths, trace-grid completeness, canonical
+#   state hashing, the no-verdict facts schema, both ERROR-context
+#   boundaries, the D1 estimator-slate conventions, the D2a state-swap/
+#   geometry invariants and the D2b likelihood-decomposition contracts
+#   (sign via a known-affine fixture, exact NLL identity, endpoint and
+#   D2a cross-tie gates, driver-owned state0 lifetime), under a static
+#   expected-count coverage registry.
 #   * D1 slice (2026-08-18, under the same SS10.6 lock; NO contract
 #     change): T11-T16 pin the D1 contracts (locked banks, E0/R0 gate,
 #     winner/tie-break, slice-set aggregation, materiality boundaries,
@@ -133,6 +153,13 @@
 #     no-mutation/no-pattern hygiene, nested d2 completeness, figures);
 #     T8 gains the D2a plot-failure case (+2), T10's bootstrap/identity
 #     guards now cover d2a.py and d2a_plots.py (+2). 87 -> 118 checks.
+#   * D2b slice (2026-08-19, under the same SS10.6 lock; NO contract
+#     change): T25-T28 pin the D2b contracts (known-affine log-det
+#     sign, exact NLL = L_base + L_logdet identity, delta identities +
+#     shares, D2a cross-tie and endpoint/state0 gates, nested d2
+#     completeness, figures); T8 gains the D2b plot-failure case (+2),
+#     T10's bootstrap/identity guards now cover d2b.py and
+#     d2b_plots.py (+2). 118 -> 139 checks.
 # =============================================================================
 from __future__ import annotations
 
@@ -152,6 +179,8 @@ if __package__:  # `python -m seqref_mri.scripts.tdiag_selftest`
     from seqref_mri.tdiag import d1_plots as tplots
     from seqref_mri.tdiag import d2a as td2a
     from seqref_mri.tdiag import d2a_plots as td2aplots
+    from seqref_mri.tdiag import d2b as td2b
+    from seqref_mri.tdiag import d2b_plots as td2bplots
     from seqref_mri.tdiag import estimators as test
     from seqref_mri.tdiag import facts as tfacts
     from seqref_mri.tdiag import invariants as tinv
@@ -161,6 +190,8 @@ else:  # direct script run: scripts/ is on sys.path; tdiag sets repo paths
     from seqref_mri.tdiag import d1_plots as tplots
     from seqref_mri.tdiag import d2a as td2a
     from seqref_mri.tdiag import d2a_plots as td2aplots
+    from seqref_mri.tdiag import d2b as td2b
+    from seqref_mri.tdiag import d2b_plots as td2bplots
     from seqref_mri.tdiag import estimators as test
     from seqref_mri.tdiag import facts as tfacts
     from seqref_mri.tdiag import invariants as tinv
@@ -424,6 +455,16 @@ def t6_state_hash_determinism() -> None:
 # T7 -- facts schema purity (evidence-only)
 # ---------------------------------------------------------------------------
 
+def _ctx_stub():
+    # Minimal ReplayContext for driver-boundary fixtures: the
+    # driver owns the step-0 state lifetime and clears
+    # ctx.state0 before publication, so the patched handover
+    # must return a real context object (all consumers are
+    # patched; model None is never touched).
+    return treplay.ReplayContext(model=None, states=[], selection={},
+                                 spline_b=1.0, s_ref=1.0, state0={})
+
+
 def _r0_result_stub() -> dict:
     facts = _tiny_facts_stub()
     sel, trace, m0, m500 = _replay_match_stub(facts)
@@ -502,12 +543,17 @@ def t8_publication_and_error_taxonomy() -> None:
                td.estimators)
         _patch("run_d2a", lambda *a, **k: {"note": "fixture d2a block"},
                td.d2a)
+        _patch("run_d2b", lambda *a, **k: {"note": "fixture d2b block"},
+               td.d2b)
         _patch("render_d1_figures", lambda d1, out: ["f1.png", "f2.png",
                                                      "f3.png", "f4.png"],
                td.d1_plots)
         _patch("render_d2a_figures",
                lambda d2a, out: ["f5.png", "f6.png", "f7.png"],
                td.d2a_plots)
+        _patch("render_d2b_figures", lambda d2b, out: ["f8.png",
+                                                       "f9.png"],
+               td.d2b_plots)
         _patch("code_record", lambda repo: {"fixture": True}, td.tfacts)
         _patch("environment_record", lambda *a, **k: {"fixture": True},
                td.tfacts)
@@ -520,7 +566,8 @@ def t8_publication_and_error_taxonomy() -> None:
     try:
         _happy_patches()
         _patch("run_r0_with_context",
-               lambda *a, **k: (_r0_result_stub(), None), td.replay)
+               lambda *a, **k: (_r0_result_stub(), _ctx_stub()),
+               td.replay)
         with tempfile.TemporaryDirectory() as td_:
             rc = td.main(base_args + ["--data-root", td_,
                                       "--out-dir", td_] + parents_args)
@@ -563,7 +610,8 @@ def t8_publication_and_error_taxonomy() -> None:
         # plot failure BEFORE publication (2026-08-18 all-or-nothing
         # repair): typed D1_PLOT_FAILURE, exit 2, NO facts artefact
         _patch("run_r0_with_context",
-               lambda *a, **k: (_r0_result_stub(), None), td.replay)
+               lambda *a, **k: (_r0_result_stub(), _ctx_stub()),
+               td.replay)
 
         def _plot_throw(*a, **k):
             raise td.d1_plots.StageError("D1_PLOT_FAILURE",
@@ -613,6 +661,36 @@ def t8_publication_and_error_taxonomy() -> None:
                     rec = json.load(fh)
                 typed = rec.get("error_code") == "D2A_PLOT_FAILURE"
             check("T8 typed D2A_PLOT_FAILURE record, NO facts artefact",
+                  typed and facts_left == [], f"{errs} {facts_left}")
+        # symmetric D2b plot failure (2026-08-19): typed D2B_PLOT_FAILURE,
+        # exit 2, NO facts artefact; d1/d2a figures restored to happy
+        _patch("render_d1_figures", lambda d1, out: ["f1.png", "f2.png",
+                                                     "f3.png", "f4.png"],
+               td.d1_plots)
+        _patch("render_d2a_figures",
+               lambda d2a, out: ["f5.png", "f6.png", "f7.png"],
+               td.d2a_plots)
+
+        def _d2b_plot_throw(*a, **k):
+            raise td.d2b_plots.StageError("D2B_PLOT_FAILURE",
+                                          "injected d2b plot failure")
+        _patch("render_d2b_figures", _d2b_plot_throw, td.d2b_plots)
+        with tempfile.TemporaryDirectory() as td_:
+            rc = td.main(base_args + ["--data-root", td_,
+                                      "--out-dir", td_] + parents_args)
+            check("T8 D2b plot failure pre-publication -> exit 2",
+                  rc == 2)
+            errs = [p for p in os.listdir(td_)
+                    if p.startswith("tdiag_error") and p.endswith(".json")]
+            facts_left = [p for p in os.listdir(td_)
+                          if p.startswith("tdiag_facts")]
+            typed = False
+            if len(errs) == 1:
+                with open(os.path.join(td_, errs[0]),
+                          encoding="utf-8") as fh:
+                    rec = json.load(fh)
+                typed = rec.get("error_code") == "D2B_PLOT_FAILURE"
+            check("T8 typed D2B_PLOT_FAILURE record, NO facts artefact",
                   typed and facts_left == [], f"{errs} {facts_left}")
     finally:
         for (owner, name), value in saved.items():
@@ -684,7 +762,9 @@ def t10_preflight_module_identity() -> None:
           and test.StageError is pp.StageError
           and tplots.StageError is pp.StageError
           and td2a.StageError is pp.StageError
-          and td2aplots.StageError is pp.StageError)
+          and td2aplots.StageError is pp.StageError
+          and td2b.StageError is pp.StageError
+          and td2bplots.StageError is pp.StageError)
     check("T10 reused tiny_gate shares the same StageError identity",
           td.tg.StageError is pp.StageError)
     check("T10 no duplicate qualified preflight_parents module object",
@@ -701,7 +781,7 @@ def t10_preflight_module_identity() -> None:
     # structural guard: the explicit bootstrap import must precede the
     # first preflight import in every TDIAG package module
     for mod in (treplay, tfacts, tinv, test, tplots, td2a,
-                td2aplots):
+                td2aplots, td2b, td2bplots):
         with open(mod.__file__, "r", encoding="utf-8") as fh:
             src = fh.read()
         boot_at = src.find("from seqref_mri.tdiag import _bootstrap")
@@ -1140,15 +1220,32 @@ def t18_gradient_hygiene() -> None:
 # percentile conventions, z_true encode/hash, hygiene, facts, figures.
 # ---------------------------------------------------------------------------
 
+class _StatefulFlow:
+    # Elementwise scaling flow whose log_scale LIVES in the model's
+    # state_dict (buffer), so the step-0/500 state swap changes the
+    # encode and D2b sees nonzero deltas. Known determinant:
+    # log|det| = sum(log_scale) exactly.
+    def __init__(self, model):
+        self._model = model
+
+    def encode(self, u, h):
+        ls = self._model.flow_log_scale
+        return u * torch.exp(ls), ls.sum().expand(u.shape[0])
+
+
 class _StubModelState(_StubModel):
-    """Stub whose decode parameters are REGISTERED buffers, so
-    state_dict/capture_state/state_hash exercise the real hash path
-    (the plain _StubModel attributes never enter state_dict)."""
+    """Stub whose decode parameters AND flow scale are REGISTERED
+    buffers, so state_dict/capture_state/state_hash exercise the real
+    hash path and the step-0/500 swap changes both the decode and the
+    encode (the plain _StubModel attributes never enter state_dict)."""
 
     def __init__(self):
         super().__init__()
         self.register_buffer("s_r", self.s.clone())
         self.register_buffer("b_r", self.b.clone())
+        self.register_buffer("flow_log_scale",
+                             torch.full((td.tg.ffr.FLOW_DIM_REAL,), 0.02))
+        self.flow = _StatefulFlow(self)
 
     def decode_scalars(self, z, cond_in, mask):
         return z.to(torch.float32) * self.s_r + self.b_r
@@ -1183,8 +1280,8 @@ def t19_state_swap_identity() -> None:
           all(si[k]["equal"] for k in ("pre_swap_step500", "step0_loaded",
                                        "step500_restored",
                                        "post_measurement_step500")))
-    check("T19 the step-0 state is discarded after D2a",
-          ctx.state0 is None)
+    check("T19 the step-0 state SURVIVES D2a (driver-owned lifetime; "
+          "D2b/D2c reuse it)", ctx.state0 is not None)
     _, _, ctx2, r0_stub2, d1_2 = _d2a_setup()
     r0_bad = {**r0_stub2, "step500_state_hash": "0" * 64}
     expect_stage_error(
@@ -1384,6 +1481,168 @@ def t24_d2a_figures() -> None:
 
 # ---------------------------------------------------------------------------
 
+
+
+def _stub_nll(model, targets, cond, mask):
+    # Fixture replacement for tg._nll: the production formula (batch
+    # mean, f32) through the stub model.
+    with torch.no_grad():
+        h = model.condition(cond, mask)
+        z, ldj = model.flow.encode(targets, h)
+        return float((-(td.tg.ffr._gaussian_logprob(z) + ldj)).mean())
+
+
+def _d2b_setup(n: int = 2):
+    # Consistent D2b fixture context: real D1 + D2a blocks, the stub
+    # production NLL patched into tg._nll for the whole measurement,
+    # and r0 endpoints matching the stub NLL at both states. Returns
+    # (model, states, ctx, r0_stub, d1, d2a_block, d2b_block) with
+    # tg._nll RESTORED.
+    model, states, ctx, r0_stub, d1 = _d2a_setup(n)
+    d2a_block = td2a.run_d2a(ctx, r0_stub, d1)
+    saved = td.tg._nll
+    td.tg._nll = _stub_nll
+    try:
+        targets, cond, mask = td2b._batch_tensors(states)
+        state500 = treplay.capture_state(model)
+        nll500 = _stub_nll(model, targets, cond, mask)
+        model.load_state_dict(ctx.state0)
+        nll0 = _stub_nll(model, targets, cond, mask)
+        model.load_state_dict(state500)
+        r0_stub["endpoints"]["initial"] = {"nll_batch_mean": nll0}
+        r0_stub["endpoints"]["final"]["nll_batch_mean"] = nll500
+        d2b_block = td2b.run_d2b(ctx, r0_stub, d2a_block)
+    finally:
+        td.tg._nll = saved
+    return model, states, ctx, r0_stub, d1, d2a_block, d2b_block
+
+
+def t25_d2b_sign_and_decomposition() -> None:
+    model, states, ctx, r0_stub, d1, d2a_block, block = _d2b_setup()
+    rec = block["per_slice"][0]["step500"]
+    ldj_known = float(model.flow_log_scale.sum())
+    check("T25 known affine determinant: ldj sign and value exact",
+          rec["ldj"] == ldj_known and ldj_known > 0.0
+          and rec["L_logdet_contribution"] == -ldj_known)
+    ok = all(
+        s[key]["nll_contribution"]
+        == s[key]["L_base_contribution"] + s[key]["L_logdet_contribution"]
+        for s in block["per_slice"] for key in ("step0", "step500"))
+    check("T25 NLL = L_base + L_logdet exact per slice x step", ok)
+    max_ie = max(abs(s["delta"]["identity_error"])
+                 for s in block["per_slice"])
+    check("T25 per-slice delta identity (f64 rounding only)",
+          max_ie <= 1e-9, f"{max_ie!r}")
+    d = block["aggregate"]["delta"]
+    check("T25 aggregate identity + shares sum to 1",
+          abs(d["identity_error"]) <= 1e-9
+          and abs(d["base_share_of_delta"] + d["logdet_share_of_delta"]
+                  - 1.0) <= 1e-12)
+    ct = block["d2a_cross_tie"]
+    check("T25 D2a z_true sha cross-tie exact at both steps",
+          ct["equal"] is True and ct["checked"] == 2 * len(states))
+    sc = block["aggregate"]["sign_counts"]
+    check("T25 sign counts cover all slices per term",
+          all(sc[f"n_slices_delta_{t}_positive"]
+              + sc[f"n_slices_delta_{t}_negative"] == len(states)
+              for t in ("base", "logdet", "nll")))
+
+
+def t26_d2b_gates() -> None:
+    model, states, ctx, r0_stub, d1, d2a_block, block = _d2b_setup()
+    saved = td.tg._nll
+    td.tg._nll = _stub_nll
+    try:
+        d2a_bad = json.loads(json.dumps(d2a_block))
+        d2a_bad["slices"][0]["step0"]["z_true_sha256"] = "0" * 64
+        expect_stage_error("T26 one-byte z drift -> D2B_Z_TRUE_DRIFT",
+                           lambda: td2b.run_d2b(ctx, r0_stub, d2a_bad),
+                           "D2B_Z_TRUE_DRIFT")
+        ctx.states = list(reversed(states))
+        expect_stage_error(
+            "T26 slice order tamper -> D2B_SLICE_ORDER_MISMATCH",
+            lambda: td2b.run_d2b(ctx, r0_stub, d2a_block),
+            "D2B_SLICE_ORDER_MISMATCH")
+        ctx.states = states
+        r0_bad = json.loads(json.dumps(r0_stub))
+        r0_bad["endpoints"]["initial"]["nll_batch_mean"] = 123.0
+        expect_stage_error(
+            "T26 endpoint tamper -> D2B_NLL_ENDPOINT_MISMATCH",
+            lambda: td2b.run_d2b(ctx, r0_bad, d2a_block),
+            "D2B_NLL_ENDPOINT_MISMATCH")
+        saved_state0 = ctx.state0
+        ctx.state0 = None
+        expect_stage_error("T26 missing state0 -> D2B_STATE0_MISSING",
+                           lambda: td2b.run_d2b(ctx, r0_stub, d2a_block),
+                           "D2B_STATE0_MISSING")
+        ctx.state0 = saved_state0
+    finally:
+        td.tg._nll = saved
+    check("T26 D2b leaves the model at the registered step-500 state",
+          treplay.state_hash(treplay.capture_state(model))
+          == r0_stub["step500_state_hash"])
+
+
+def t27_d2b_facts() -> None:
+    model, states, ctx, r0_stub, d1, d2a_block, block = _d2b_setup()
+    saved_code = tfacts.code_record
+    saved_env = tfacts.environment_record
+    tfacts.code_record = lambda repo: {"fixture": "isolated"}  # noqa: E731
+    tfacts.environment_record = lambda *a, **k: {"fixture": True}  # noqa: E731
+    try:
+        tiny = _tiny_facts_stub()
+        impl = {"schema": "seqref-impl-facts/1",
+                "semantic_sha256": "f" * 64, "verdict": "PASS"}
+        parents = {"parents_id": "fixture", "p0": {}, "p0s": {}}
+        f1 = tfacts.build_d2b_facts(_r0_result_stub(), d1, d2a_block,
+                                    block, tiny, "9" * 64, impl,
+                                    "e" * 64, parents, {}, {}, {},
+                                    15.62704, "/nonexistent-repo", ["x"])
+        f2 = tfacts.build_d2b_facts(_r0_result_stub(), d1, d2a_block,
+                                    block, tiny, "9" * 64, impl,
+                                    "e" * 64, parents, {}, {}, {},
+                                    15.62704, "/nonexistent-repo", ["x"])
+    finally:
+        tfacts.code_record, tfacts.environment_record = (saved_code,
+                                                         saved_env)
+    check("T27 D2b facts: nested d2.completeness, top-level D2 partial",
+          f1["completeness"] == {"R0": "complete", "D1": "complete",
+                                 "D2": "partial", "D3": "pending"}
+          and f1["d2"]["completeness"] == {"D2a": "complete",
+                                           "D2b": "complete",
+                                           "D2c": "pending"})
+    check("T27 D2b facts: run_mode and report_status name the D2b "
+          "stage",
+          f1["run_mode"] == "validation-r0-d1-d2a-d2b"
+          and "D2b likelihood decomposition" in f1["report_status"])
+    check("T27 D2b facts: recursive no-verdict + stable semantic hash",
+          "verdict" not in f1
+          and _no_key(f1["d1"], lambda k: k == "verdict")
+          and _no_key(f1["d2"], lambda k: k == "verdict")
+          and f1["semantic_sha256"] == f2["semantic_sha256"])
+    check("T27 d2.d2b embeds the D2b block verbatim",
+          f1["d2"]["d2b"]["aggregate"]["delta"]["delta_NLL"]
+          == block["aggregate"]["delta"]["delta_NLL"])
+
+
+def t28_d2b_figures() -> None:
+    model, states, ctx, r0_stub, d1, d2a_block, block = _d2b_setup()
+    with tempfile.TemporaryDirectory() as tmp:
+        figs = td2bplots.render_d2b_figures(block, tmp)
+        ok = len(figs) == 2 and all(
+            os.path.getsize(p) > 0 for p in figs)
+        check("T28 D2b figures render (2 files, non-empty)", ok,
+              f"{len(figs)}")
+        broken = json.loads(json.dumps(block))
+        broken["aggregate"]["step0"]["L_base"] = "not-a-number"
+        expect_stage_error(
+            "T28 broken D2b payload -> D2B_PLOT_FAILURE",
+            lambda: td2bplots.render_d2b_figures(broken, tmp),
+            "D2B_PLOT_FAILURE")
+
+
+
+
 EXPECTED_COUNTS = {  # static registry: a green suite cannot shrink
     "t1_taxonomy_purity": 3,
     "t2_deferred_probe_guard": 4,
@@ -1393,9 +1652,9 @@ EXPECTED_COUNTS = {  # static registry: a green suite cannot shrink
     "t5_trace_completeness": 1,
     "t6_state_hash_determinism": 3,
     "t7_facts_schema_purity": 4,
-    "t8_publication_and_error_taxonomy": 12,
+    "t8_publication_and_error_taxonomy": 14,
     "t9_startup_logging_robustness": 4,
-    "t10_preflight_module_identity": 11,
+    "t10_preflight_module_identity": 13,
     "t11_locked_banks": 5,
     "t12_e0_r0_equivalence_gate": 4,
     "t13_winner_selection": 6,
@@ -1410,6 +1669,10 @@ EXPECTED_COUNTS = {  # static registry: a green suite cannot shrink
     "t22_d2a_hygiene": 4,
     "t23_d2a_facts": 6,
     "t24_d2a_figures": 2,
+    "t25_d2b_sign_and_decomposition": 6,
+    "t26_d2b_gates": 5,
+    "t27_d2b_facts": 4,
+    "t28_d2b_figures": 2,
 }
 EXPECTED_TOTAL = sum(EXPECTED_COUNTS.values())
 
@@ -1430,7 +1693,9 @@ def main() -> int:
                 t16_estimator_conventions, t17_d1_figures,
                 t18_gradient_hygiene, t19_state_swap_identity,
                 t20_gaussian_identity_percentile, t21_ztrue_encode,
-                t22_d2a_hygiene, t23_d2a_facts, t24_d2a_figures]
+                t22_d2a_hygiene, t23_d2a_facts, t24_d2a_figures,
+                t25_d2b_sign_and_decomposition, t26_d2b_gates,
+                t27_d2b_facts, t28_d2b_figures]
     counts_ok = True
     for fn in fixtures:
         before = len(RESULTS)
@@ -1463,7 +1728,7 @@ def main() -> int:
             logger.error("[%s] coverage registry mismatch -- refusing "
                          "green exit", SCRIPT_ID)
         return 2
-    logger.info("[%s] all fixtures green; tdiag v0.1 R0+D1+D2a-slice "
+    logger.info("[%s] all fixtures green; tdiag v0.1 R0+D1+D2a+D2b-slice "
                 "contracts hold", SCRIPT_ID)
     return 0
 

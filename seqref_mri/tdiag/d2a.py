@@ -25,7 +25,8 @@
 #   against the R0-registered step0/step500 hashes is verified before
 #   the swap, after the load, after the restore and after the last
 #   measurement; any drift is a typed D2A_STATE_MISMATCH. The step-0
-#   state is discarded from live memory when D2a returns.
+#   state's lifetime is DRIVER-OWNED (D2b/D2c need it too; the driver
+#   clears it after the last D2-family consumer).
 # Bank reference: log p_Z over Z_DIAG is IDENTICAL for every slice and
 #   both steps (same standard-Gaussian base, same bank as D1) -- computed
 #   ONCE. The regenerated bank manifest must equal the D1-recorded one.
@@ -40,6 +41,10 @@
 #     the once-computed Z_DIAG density reference, the analytic Gaussian
 #     identity check, the frozen coordinate-statistic set, step deltas
 #     and the top-K drift record.
+#   * D2b slice (2026-08-19, under the same SS10.6 lock; NO contract
+#     change): the step-0 state_dict discard moved OUT of run_d2a --
+#     the driver owns its lifetime because D2b (and later D2c) swap the
+#     same verified state into the same model.
 # Update summary:
 #   v0.1 D2a lands the true-latent geometry measurements on the replay-
 #   validated step-0/step-500 states with full state-identity, bank-
@@ -289,9 +294,10 @@ def _verify_state(model, expected: str, label: str) -> str:
 def run_d2a(ctx, r0: dict, d1: dict) -> dict:
     """Execute the locked D2a measurements on the ReplayContext handed
     over from R0 (after D1). ctx.state0 must carry the captured R0
-    step-0 state_dict; it is discarded (set to None) before return.
-    Returns the JSON-serialisable D2a block (no z_true vectors, only
-    statistics, hashes and the top-K drift)."""
+    step-0 state_dict; its lifetime is DRIVER-OWNED -- run_d2a NEVER
+    discards it (D2b/D2c need the same verified state). Returns the
+    JSON-serialisable D2a block (no z_true vectors, only statistics,
+    hashes and the top-K drift)."""
     t_start = time.perf_counter()
     model = ctx.model
     model.eval()
@@ -373,9 +379,6 @@ def run_d2a(ctx, r0: dict, d1: dict) -> dict:
     # Boundary 4: the measurements did not mutate the model.
     h_post = _verify_state(model, r0["step500_state_hash"],
                            "post-measurement step-500")
-
-    # Discard the step-0 state from live memory (review 2026-08-19).
-    ctx.state0 = None
 
     slices, deltas = [], []
     for i, st in enumerate(ctx.states):
