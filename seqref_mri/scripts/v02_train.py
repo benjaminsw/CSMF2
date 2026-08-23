@@ -1,4 +1,4 @@
-# SEQREF-V02T v0.2 -- scripts.v02_train
+# SEQREF-V02T v0.3 -- scripts.v02_train
 # LIFETIME: KEEP
 # =============================================================================
 # Purpose: candidate v0.2 scientific training driver (V02SPEC v0.1 §3/§12,
@@ -59,7 +59,7 @@ from seqref_mri.scripts.v02_manifests import (BATCH_SIZE, N_EPOCHS,
 
 logger = logging.getLogger("seqref_mri.v02_train")
 
-__version__ = "0.2"
+__version__ = "0.3"
 __abbr__ = "SEQREF-V02T"
 
 LEARNING_RATE = 1e-4                     # locked (V02SPEC §3)
@@ -196,6 +196,10 @@ def run(cfg: dict) -> dict:
     vec_cache: dict[str, tuple] = {}
     telemetry = []
     for ep, man in enumerate(manifests):
+        # Fresh-mask policy (EXEC SS3.7): declare the manifest epoch
+        # before this epoch's DataLoader samples; regression proof
+        # SEQREF-V02S f11.
+        ds.set_epoch(ep)
         order = []
         for e in man["entries"]:
             key = (e["file"], int(e["slice_index"]))

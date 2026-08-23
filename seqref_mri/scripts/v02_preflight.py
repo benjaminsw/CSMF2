@@ -1,4 +1,4 @@
-# SEQREF-V02P v0.3 -- scripts.v02_preflight
+# SEQREF-V02P v0.4 -- scripts.v02_preflight
 # LIFETIME: KEEP
 # =============================================================================
 # Purpose: candidate v0.2 deterministic throughput preflight (V02SPEC v0.1
@@ -67,7 +67,7 @@ from seqref_mri.scripts.v02_train import (BATCH_SIZE, CHECKPOINT_STEPS,
 
 logger = logging.getLogger("seqref_mri.v02_preflight")
 
-__version__ = "0.3"
+__version__ = "0.4"
 __abbr__ = "SEQREF-V02P"
 
 WARMUP_BATCHES = 20          # batches 1-20 of the epoch-0 manifest
@@ -152,6 +152,10 @@ def run(cfg: dict) -> dict:
     opt = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
     ds = FastMRISliceDataset(cfg["data_root"], split="train", mode="train")
+    # Fresh-mask policy (EXEC SS3.7): the frozen protocol times the
+    # epoch-0 manifest batches, so epoch 0 is declared before the
+    # DataLoader samples; regression proof SEQREF-V02S f11.
+    ds.set_epoch(0)
     index_of = {}
     for k, (path, sl) in enumerate(ds.index):
         index_of[(path.relative_to(ds.data_root).as_posix(), int(sl))] = k

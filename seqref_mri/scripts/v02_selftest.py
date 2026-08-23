@@ -1,4 +1,4 @@
-# SEQREF-V02S v0.6 -- scripts.v02_selftest
+# SEQREF-V02S v0.7 -- scripts.v02_selftest
 # LIFETIME: KEEP
 # =============================================================================
 # Purpose: candidate v0.2 selftest (V02PLAN v0.2 SS7 ten-row matrix, SS12
@@ -50,6 +50,11 @@
 #   magnitude, up to 3.2e-3 observed) exceeds any absolute tolerance
 #   below ~4e-3; the pinned 1e-3 absolute was environment-fragile. A
 #   real wiring break still fails by 4+ orders of magnitude.
+# v0.7 (2026-08-24, reviewer NO-GO follow-up): regression row f11
+#   proves the fresh-mask contract -- V02P/V02T declare set_epoch()
+#   before any dataset sampling (recording-double proof; fails by
+#   construction if either call disappears). Companion fixes: V02P
+#   v0.4, V02T v0.3. Bug-fix verification extension only.
 # =============================================================================
 from __future__ import annotations
 
@@ -70,7 +75,7 @@ from seqref_mri.scripts import v02_manifests as v02m
 
 logger = logging.getLogger("seqref_mri.v02_selftest")
 
-__version__ = "0.6"
+__version__ = "0.7"
 __abbr__ = "SEQREF-V02S"
 
 EXIT_PASS = 0
@@ -1030,9 +1035,10 @@ def f09_error_paths() -> dict:
 # ---------------------------------------------------------------------------
 
 def f10_no_silent_pass(results: list) -> dict:
-    _check(len(results) == 9,
+    _check(len(results) == 10,
            f"{len(results)} fixtures returned evidence; the registry "
-           f"declares 9 -- an unexecuted fixture is an ERROR, not a skip")
+           f"declares 10 -- an unexecuted fixture is an ERROR, not a "
+           f"skip")
     for res in results:
         _check(isinstance(res.get("evidence"), dict)
                and len(res["evidence"]) > 0,
@@ -1095,6 +1101,227 @@ def f10_no_silent_pass(results: list) -> dict:
                                 "PUBLICATION_FAILURE"]}}
 
 
+class _Tampers:
+    """Fixture seam registry (f11): every tampered attribute is restored
+    in reverse order even on failure -- the collected form of the f09
+    try/finally pattern."""
+    def __init__(self):
+        self._undo = []
+
+    def set(self, obj, name, value):
+        self._undo.append((obj, name, getattr(obj, name)))
+        setattr(obj, name, value)
+
+    def restore(self):
+        for obj, name, old in reversed(self._undo):
+            setattr(obj, name, old)
+        self._undo.clear()
+
+
+class _RecDS:
+    """Recording dataset double (f11): enforces the fresh-mask contract
+    by construction -- any __getitem__ before set_epoch() raises
+    AssertionError, so a regressed caller fails this fixture outright
+    instead of passing silently."""
+    def __init__(self, root, n, rec):
+        self.data_root = Path(root)
+        self.index = [(self.data_root / f"v{k}.h5", 0) for k in range(n)]
+        self._rec = rec
+        self._epoch = None
+
+    def set_epoch(self, ep):
+        self._rec.append(("set_epoch", int(ep)))
+        self._epoch = int(ep)
+
+    def __len__(self):
+        return len(self.index)
+
+    def __getitem__(self, k):
+        if self._epoch is None:
+            raise AssertionError(
+                "dataset sampled before set_epoch(); fresh-mask "
+                "contract broken (EXEC SS3.7)")
+        self._rec.append(("getitem", self._epoch, int(k)))
+        return {"meta": {"file": str(self.index[k][0]),
+                         "slice_index": self.index[k][1]}}
+
+
+class _TinyModel:
+    """Minimal flow-model stand-in (f11): one real parameter so the
+    genuine Adam optimizer constructs; .to() ignores the tampered CUDA
+    device string on CPU-only verification hosts."""
+    def __init__(self, torch):
+        self.p = torch.nn.Parameter(torch.zeros(1))
+
+    def to(self, *a, **k):
+        return self
+
+    def parameters(self):
+        return [self.p]
+
+    def train(self):
+        pass
+
+    def eval(self):
+        pass
+
+
+class _FixtureCmap:
+    """Coordinate-map stand-in (f11): only payload() is consumed, as
+    the vec_cache key."""
+
+    def payload(self):
+        return {"map_payload_sha256": "f11-fixture"}
+
+
+def f11_set_epoch_contract() -> dict:
+    """Regression row 11 (beyond the SS7 ten-row matrix; reviewer-
+    directed 2026-08-24): V02P and V02T honour the fresh-mask policy
+    (EXEC SS3.7) -- set_epoch() is declared before the DataLoader
+    samples the dataset, V02P exactly once with epoch 0 (its frozen
+    protocol times the epoch-0 manifest window), V02T once per
+    manifest epoch with the matching index. The recording double makes
+    a missing call fail by construction."""
+    torch = v02e._env().torch
+    tmp = Path(tempfile.mkdtemp(prefix="v02s_se_"))
+    try:
+        from seqref_mri.scripts import v02_train as v02t
+        from seqref_mri.scripts import v02_preflight as v02p
+    except ImportError as exc:
+        _fail("ENV_IMPORT_FAILED", f"v02 modules not importable: {exc}")
+
+    # Part A -- V02P: host gate, parents and model are seams; the
+    # dataset loop, manifest windowing and projections run for real.
+    rec_a: list = []
+    manifest0 = {
+        "schema": "seqref-v02-manifest/1", "kind": "train_epoch",
+        "epoch": 0, "n_slices": 3, "batch": 1,
+        "batches": [[0, 1], [1, 2], [2, 3]],
+        "entries": [{"dataset_index": k, "file": f"v{k}.h5",
+                     "slice_index": 0} for k in range(3)],
+        "manifest_sha256": "f11-fixture"}
+    tp = _Tampers()
+    try:
+        tp.set(torch.cuda, "is_available", lambda: True)
+        tp.set(torch.cuda, "reset_peak_memory_stats", lambda: None)
+        tp.set(torch.cuda, "synchronize", lambda: None)
+        tp.set(v02p, "load_epoch_manifest", lambda d, e: manifest0)
+        tp.set(v02p.ffr, "load_p4s2_parent",
+               lambda p: {"file_sha256": "ab" * 32, "location_index": {}})
+        tp.set(v02p.ffr, "load_implb_parent",
+               lambda p: {"file_sha256": "cd" * 32,
+                          "spline_b": v02p.ffr.SPLINE_B})
+        tp.set(v02p.ffr, "build_model",
+               lambda spline_b: _TinyModel(torch))
+        tp.set(v02p, "FastMRISliceDataset",
+               lambda root, split, mode: _RecDS(root, 3, rec_a))
+        tp.set(v02p, "WARMUP_BATCHES", 1)
+        tp.set(v02p, "TIMED_BATCHES", 2)
+        tp.set(v02p, "EVAL_PROBE_BATCHES", 1)
+        tp.set(v02p, "BATCH_SIZE", 1)
+        tp.set(v02p, "_batch_work", lambda *a, **k: (0.001, 0.001))
+        tp.set(v02p, "_peak_memory_bytes", lambda: 0)
+        tp.set(v02p, "_collate",
+               lambda batch: {"meta": [s["meta"] for s in batch],
+                              "mask": torch.zeros(len(batch), 1)})
+        v02p.run({"data_root": str(tmp), "manifest_dir": "fixture-seam",
+                  "p4_stats2": "fixture-seam",
+                  "implb_facts": "fixture-seam",
+                  "out_dir": str(tmp / "p")})
+    finally:
+        tp.restore()
+    se_a = [ev[1] for ev in rec_a if ev[0] == "set_epoch"]
+    ge_a = [ev for ev in rec_a if ev[0] == "getitem"]
+    _check(se_a == [0],
+           f"V02P set_epoch calls {se_a}; the frozen epoch-0 window "
+           f"requires exactly one declaration, epoch 0")
+    _check(bool(rec_a) and rec_a[0] == ("set_epoch", 0),
+           f"V02P touched the dataset before set_epoch(0): {rec_a[:1]}; "
+           f"fresh-mask contract broken")
+    _check(len(ge_a) == 5 and all(ev[1] == 0 for ev in ge_a),
+           f"V02P sampled {len(ge_a)} slices under epochs "
+           f"{sorted({ev[1] for ev in ge_a})}; expected 5 (3 timed + 2 "
+           f"eval-probe pulls: the probe fetches one batch beyond its "
+           f"break index), all under epoch 0")
+
+    # Part B -- V02T: real manifest files (V02M v0.3 writer) and the
+    # real loader; parents, model and per-slice preparation are seams.
+    rec_b: list = []
+    man_dir = tmp / "mans"
+    man_dir.mkdir()
+    for ep in range(3):
+        doc = {"schema": v02m.SCHEMA, "kind": "train_epoch", "epoch": ep,
+               "n_slices": 6, "batch": 32, "batches": [[0, 2]],
+               "entries": [{"dataset_index": 2 * ep + j,
+                            "file": f"v{2 * ep + j}.h5",
+                            "slice_index": 0} for j in range(2)]}
+        doc["manifest_sha256"] = v02m.manifest_sha256(doc)
+        v02m._write_manifest_with_sidecar(
+            man_dir, f"v02_epoch{ep}_manifest.json", doc)
+    tp = _Tampers()
+    try:
+        tp.set(v02t, "N_TRAIN_SLICES", 6)
+        tp.set(v02t, "TOTAL_STEPS", 3)
+        tp.set(v02t, "CHECKPOINT_STEPS", (0,))
+        tp.set(v02t.ffr, "load_p4s2_parent",
+               lambda p: {"file_sha256": "ab" * 32, "location_index": {}})
+        tp.set(v02t.ffr, "load_implb_parent",
+               lambda p: {"file_sha256": "cd" * 32,
+                          "spline_b": v02t.ffr.SPLINE_B})
+        tp.set(v02t.ffr, "build_model",
+               lambda spline_b: _TinyModel(torch))
+        tp.set(v02t.ffr, "standardisation_vectors",
+               lambda cmap, loc: None)
+        tp.set(v02t, "FastMRISliceDataset",
+               lambda root, split, mode: _RecDS(root, 6, rec_b))
+        tp.set(v02t, "save_checkpoint",
+               lambda model, step, out_root, log: log.append(
+                   {"step": int(step)}))
+        tp.set(v02t, "check_gradients_finite", lambda model, step: None)
+        tp.set(v02t, "derive_cmap_from_mask", lambda mask: _FixtureCmap())
+        tp.set(v02t, "_prepare",
+               lambda batch, device, test0: {
+                   "y": None,
+                   "x_norm": torch.zeros(len(batch["meta"]), 1),
+                   "cond_in": torch.zeros(len(batch["meta"]), 1),
+                   "tgt_norm": None, "amax": None, "ops": None})
+        tp.set(v02t, "targets_from_prepared",
+               lambda one, cmap, vecs: torch.zeros(1, 1))
+        tp.set(v02t, "train_step", lambda model, opt, t, c, m: 1.0)
+        tp.set(v02t, "_collate",
+               lambda batch: {"meta": [s["meta"] for s in batch],
+                              "mask": torch.zeros(len(batch), 1)})
+        record = v02t.run({"data_root": str(tmp),
+                           "manifest_dir": str(man_dir),
+                           "p4_stats2": "fixture-seam",
+                           "implb_facts": "fixture-seam",
+                           "out_root": str(tmp / "t")})
+    finally:
+        tp.restore()
+    se_b = [ev[1] for ev in rec_b if ev[0] == "set_epoch"]
+    _check(se_b == [0, 1, 2],
+           f"V02T set_epoch sequence {se_b}; one declaration per "
+           f"manifest epoch, in order")
+    expect: list = []
+    for ep in range(3):
+        expect.append(("set_epoch", ep))
+        expect.extend(("getitem", ep, 2 * ep + j) for j in range(2))
+    _check(rec_b == expect,
+           f"V02T dataset event order violated the fresh-mask "
+           f"contract: {rec_b}")
+    _check(record["steps"] == 3,
+           f"fixture run recorded {record['steps']} steps; the "
+           f"tampered budget is 3")
+    return {"preflight_set_epoch_calls": se_a,
+            "preflight_sample_count": len(ge_a),
+            "train_set_epoch_calls": se_b,
+            "train_events": [list(ev) for ev in rec_b],
+            "contract": "no __getitem__ before set_epoch; V02P declares "
+                        "epoch 0 (frozen epoch-0 window), V02T declares "
+                        "the manifest epoch once per epoch, in order; "
+                        "regression row beyond the SS7 ten-row matrix"}
+
+
 FIXTURES = [
     ("f01_manifest_determinism", 1, f01_manifest_determinism),
     ("f02_partition_exactness", 2, f02_partition_exactness),
@@ -1104,7 +1331,8 @@ FIXTURES = [
     ("f06_bootstrap_reproducibility", 6, f06_bootstrap_reproducibility),
     ("f07_d3_draw_reproducibility", 7, f07_d3_draw_reproducibility),
     ("f08_exposure_accounting", 8, f08_exposure_accounting),
-    ("f09_error_paths", 9, f09_error_paths)]
+    ("f09_error_paths", 9, f09_error_paths),
+    ("f11_set_epoch_contract", 11, f11_set_epoch_contract)]
 
 
 def run_suite() -> dict:
@@ -1126,7 +1354,8 @@ def run_suite() -> dict:
                 10)
     return {"schema": REPORT_SCHEMA,
             "script": f"{__abbr__} v{__version__}",
-            "matrix": "V02PLAN v0.2 SS7 (ten rows)",
+            "matrix": "V02PLAN v0.2 SS7 (ten rows) + regression row "
+                      "11 (fresh-mask set_epoch contract)",
             "results": results,
             "coverage": evidence10,
             "golden_pins": "pinned 2026-08-22 against NumPy PCG64; a "
