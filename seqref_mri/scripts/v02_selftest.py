@@ -1,4 +1,4 @@
-# SEQREF-V02S v0.5 -- scripts.v02_selftest
+# SEQREF-V02S v0.6 -- scripts.v02_selftest
 # LIFETIME: KEEP
 # =============================================================================
 # Purpose: candidate v0.2 selftest (V02PLAN v0.2 SS7 ten-row matrix, SS12
@@ -70,7 +70,7 @@ from seqref_mri.scripts import v02_manifests as v02m
 
 logger = logging.getLogger("seqref_mri.v02_selftest")
 
-__version__ = "0.5"
+__version__ = "0.6"
 __abbr__ = "SEQREF-V02S"
 
 EXIT_PASS = 0
@@ -295,7 +295,38 @@ def f01_manifest_determinism() -> dict:
                   "SEQREF-V02M")
     _expect_error(lambda: v02m.batch_partition(5, 0), "PARTITION_INVALID",
                   "SEQREF-V02M")
-    return {"golden_pin": "epoch_orders(16,3,0)", "streams_checked": 2}
+    # Writer->loader round-trip through the PRODUCTION writer helper:
+    # the sidecar must pin the exact written bytes (which include the
+    # manifest_sha256 field) and BOTH loaders must accept the artefact
+    # (V02T: sidecar+schema/kind; V02E: + internal content-hash field).
+    doc = {"schema": v02m.SCHEMA, "kind": "train_epoch", "epoch": 0,
+           "n_slices": 2, "batch": 32, "batches": [[0, 2]],
+           "entries": [{"dataset_index": 0, "file": "a.h5",
+                        "slice_index": 0},
+                       {"dataset_index": 1, "file": "a.h5",
+                        "slice_index": 1}]}
+    doc["manifest_sha256"] = v02m.manifest_sha256(doc)
+    rtdir = Path(tempfile.mkdtemp(prefix="v02s_rt_"))
+    file_sha = v02m._write_manifest_with_sidecar(
+        rtdir, "v02_epoch0_manifest.json", doc)
+    import hashlib as _hl
+    _check(_hl.sha256((rtdir / "v02_epoch0_manifest.json")
+                      .read_bytes()).hexdigest() == file_sha,
+           "the writer sidecar does not pin the exact written bytes")
+    try:
+        from seqref_mri.scripts import v02_train as v02t
+    except ImportError as exc:
+        _fail("ENV_IMPORT_FAILED", f"v02_train not importable: {exc}")
+    back_t = v02t.load_epoch_manifest(str(rtdir), 0)
+    back_e = v02e._load_manifest(rtdir, "v02_epoch0_manifest.json",
+                                 "train_epoch")
+    _check(back_t["manifest_sha256"] == doc["manifest_sha256"]
+           and back_e["manifest_sha256"] == doc["manifest_sha256"]
+           and back_e["entries"] == doc["entries"],
+           "production-writer output did not round-trip through both "
+           "loaders")
+    return {"golden_pin": "epoch_orders(16,3,0)", "streams_checked": 2,
+            "writer_loader_roundtrip": True}
 
 
 # ---------------------------------------------------------------------------

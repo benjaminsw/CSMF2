@@ -1,4 +1,4 @@
-# SEQREF-V02M v0.2 -- scripts.v02_manifests
+# SEQREF-V02M v0.3 -- scripts.v02_manifests
 # LIFETIME: KEEP
 # =============================================================================
 # Purpose: candidate v0.2 data/manifest construction (V02SPEC v0.1 §3,
@@ -43,7 +43,7 @@ import numpy as np
 
 logger = logging.getLogger("seqref_mri.v02_manifests")
 
-__version__ = "0.2"
+__version__ = "0.3"
 __abbr__ = "SEQREF-V02M"
 
 SCHEMA = "seqref-v02-manifest/1"
@@ -159,6 +159,22 @@ def manifest_sha256(manifest: dict) -> str:
 # Dataset-bound construction (user-side data environment)
 # ---------------------------------------------------------------------------
 
+
+def _write_manifest_with_sidecar(out: Path, name: str,
+                                 manifest: dict) -> str:
+    """Write one manifest and its .sha256 sidecar. The sidecar pins the
+    SHA-256 of the EXACT WRITTEN BYTES -- which include the
+    manifest_sha256 field itself; the internal field remains the content
+    hash of the body and is recomputed by every loader. (v0.2 wrote the
+    BODY hash into the sidecar, so sha256(file) != sidecar by
+    construction and every manifest aborted at first use.) Returns the
+    file hash."""
+    payload = canonical_json(manifest)
+    (out / name).write_bytes(payload)
+    file_sha = hashlib.sha256(payload).hexdigest()
+    (out / (name + ".sha256")).write_text(file_sha + "\n")
+    return file_sha
+
 def _dataset(data_root: str, split: str, mode: str):
     """Total lazy import of the environment-bound dataset class."""
     try:
@@ -245,10 +261,10 @@ def build_all(data_root: str, out_dir: str) -> dict:
         sha = manifest_sha256(manifest)
         manifest["manifest_sha256"] = sha
         name = f"v02_epoch{ep}_manifest.json"
-        (out / name).write_bytes(canonical_json(manifest))
-        (out / (name + ".sha256")).write_text(sha + "\n")
+        file_sha = _write_manifest_with_sidecar(out, name, manifest)
         shas[f"epoch{ep}"] = sha
-        logger.info("[%s] %s written, sha256 %s", __abbr__, name, sha[:12])
+        logger.info("[%s] %s written, content sha256 %s, file sha256 %s",
+                    __abbr__, name, sha[:12], file_sha[:12])
 
     # Holdout: canonical ordered 199-volume list + midpoint slice each.
     ds_val = _dataset(data_root, "val", "eval")
@@ -275,10 +291,10 @@ def build_all(data_root: str, out_dir: str) -> dict:
     sha = manifest_sha256(holdout_manifest)
     holdout_manifest["manifest_sha256"] = sha
     name = "v02_holdout_manifest.json"
-    (out / name).write_bytes(canonical_json(holdout_manifest))
-    (out / (name + ".sha256")).write_text(sha + "\n")
+    file_sha = _write_manifest_with_sidecar(out, name, holdout_manifest)
     shas["holdout"] = sha
-    logger.info("[%s] %s written, sha256 %s", __abbr__, name, sha[:12])
+    logger.info("[%s] %s written, content sha256 %s, file sha256 %s",
+                __abbr__, name, sha[:12], file_sha[:12])
 
     # D3 monitor subset: frozen draw, order preserved.
     positions = d3_monitor_positions()
@@ -298,10 +314,10 @@ def build_all(data_root: str, out_dir: str) -> dict:
     sha = manifest_sha256(d3_manifest)
     d3_manifest["manifest_sha256"] = sha
     name = "v02_d3_monitor_manifest.json"
-    (out / name).write_bytes(canonical_json(d3_manifest))
-    (out / (name + ".sha256")).write_text(sha + "\n")
+    file_sha = _write_manifest_with_sidecar(out, name, d3_manifest)
     shas["d3_monitor"] = sha
-    logger.info("[%s] %s written, sha256 %s", __abbr__, name, sha[:12])
+    logger.info("[%s] %s written, content sha256 %s, file sha256 %s",
+                __abbr__, name, sha[:12], file_sha[:12])
     return shas
 
 
