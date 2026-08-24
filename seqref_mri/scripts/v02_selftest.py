@@ -1,4 +1,4 @@
-# SEQREF-V02S v0.7 -- scripts.v02_selftest
+# SEQREF-V02S v0.8 -- scripts.v02_selftest
 # LIFETIME: KEEP
 # =============================================================================
 # Purpose: candidate v0.2 selftest (V02PLAN v0.2 SS7 ten-row matrix, SS12
@@ -55,6 +55,11 @@
 #   before any dataset sampling (recording-double proof; fails by
 #   construction if either call disappears). Companion fixes: V02P
 #   v0.4, V02T v0.3. Bug-fix verification extension only.
+# v0.8 (2026-08-24, OOM root-cause follow-up): f11 Part A now runs
+#   the REAL _batch_work derive->vectors path (device seam only) and
+#   both parts count standardisation_vectors calls -- one per slice,
+#   recomputed on re-read; a reintroduced persistent cache suppresses
+#   calls and fails. Companion fixes: V02T v0.4, V02P v0.5.
 # =============================================================================
 from __future__ import annotations
 
@@ -75,7 +80,7 @@ from seqref_mri.scripts import v02_manifests as v02m
 
 logger = logging.getLogger("seqref_mri.v02_selftest")
 
-__version__ = "0.7"
+__version__ = "0.8"
 __abbr__ = "SEQREF-V02S"
 
 EXIT_PASS = 0
@@ -1165,6 +1170,9 @@ class _TinyModel:
     def eval(self):
         pass
 
+    def log_prob_free(self, u, c, m):
+        return self.p.sum() * 0.0   # finite scalar for the eval probe
+
 
 class _FixtureCmap:
     """Coordinate-map stand-in (f11): only payload() is consumed, as
@@ -1181,7 +1189,10 @@ def f11_set_epoch_contract() -> dict:
     samples the dataset, V02P exactly once with epoch 0 (its frozen
     protocol times the epoch-0 manifest window), V02T once per
     manifest epoch with the matching index. The recording double makes
-    a missing call fail by construction."""
+    a missing call fail by construction; both parts also count
+    standardisation_vectors calls -- exactly one per slice, recomputed
+    on re-read -- so a reintroduced persistent map-vector cache (the
+    2026-08-24 OOM root cause) fails as well."""
     torch = v02e._env().torch
     tmp = Path(tempfile.mkdtemp(prefix="v02s_se_"))
     try:
@@ -1219,11 +1230,35 @@ def f11_set_epoch_contract() -> dict:
         tp.set(v02p, "TIMED_BATCHES", 2)
         tp.set(v02p, "EVAL_PROBE_BATCHES", 1)
         tp.set(v02p, "BATCH_SIZE", 1)
-        tp.set(v02p, "_batch_work", lambda *a, **k: (0.001, 0.001))
+        real_bw = v02p._batch_work
+        def _bw_cpu(model, opt, batch, p4, *extra, train_mode, device):
+            # the REAL derive->vectors->targets path runs; only the
+            # device string is substituted (host-independent fixture);
+            # *extra keeps the wrapper compatible with the pre-fix
+            # vec_cache signature so the negative control reaches the
+            # call-count assertion instead of a TypeError
+            return real_bw(model, opt, batch, p4, *extra,
+                           train_mode=train_mode, device="cpu")
+        tp.set(v02p, "_batch_work", _bw_cpu)
         tp.set(v02p, "_peak_memory_bytes", lambda: 0)
+        mask1 = torch.zeros(96)
+        mask1[[0, 5, 10, 15, 20, 25, 30, 35, 40, 55, 60, 65, 70, 75,
+               80, 85, 44, 45, 46, 47, 48, 49, 50, 51]] = 1.0
+        sv_a = {"n": 0}
+        def _count_sv_a(cmap, loc):
+            sv_a["n"] += 1
+            return None
+        tp.set(v02p.ffr, "standardisation_vectors", _count_sv_a)
+        tp.set(v02p, "_prepare",
+               lambda batch, device, test0: {
+                   "x_norm": torch.zeros(len(batch["meta"]), 1),
+                   "cond_in": torch.zeros(len(batch["meta"]), 1)})
+        tp.set(v02p, "targets_from_prepared",
+               lambda one, cmap, vecs: torch.zeros(1, 1))
+        tp.set(v02p, "train_step", lambda model, opt, t, c, m: 1.0)
         tp.set(v02p, "_collate",
                lambda batch: {"meta": [s["meta"] for s in batch],
-                              "mask": torch.zeros(len(batch), 1)})
+                              "mask": mask1.repeat(len(batch), 1)})
         v02p.run({"data_root": str(tmp), "manifest_dir": "fixture-seam",
                   "p4_stats2": "fixture-seam",
                   "implb_facts": "fixture-seam",
@@ -1243,6 +1278,11 @@ def f11_set_epoch_contract() -> dict:
            f"{sorted({ev[1] for ev in ge_a})}; expected 5 (3 timed + 2 "
            f"eval-probe pulls: the probe fetches one batch beyond its "
            f"break index), all under epoch 0")
+    _check(sv_a["n"] == 4,
+           f"V02P computed standardisation vectors {sv_a['n']}x; the "
+           f"constant-mask fixture must recompute on every sample "
+           f"(3 timed + 1 eval = 4); a persistent cache suppresses "
+           f"repeats and fails this check")
 
     # Part B -- V02T: real manifest files (V02M v0.3 writer) and the
     # real loader; parents, model and per-slice preparation are seams.
@@ -1270,8 +1310,11 @@ def f11_set_epoch_contract() -> dict:
                           "spline_b": v02t.ffr.SPLINE_B})
         tp.set(v02t.ffr, "build_model",
                lambda spline_b: _TinyModel(torch))
-        tp.set(v02t.ffr, "standardisation_vectors",
-               lambda cmap, loc: None)
+        sv_b = {"n": 0}
+        def _count_sv_b(cmap, loc):
+            sv_b["n"] += 1
+            return None
+        tp.set(v02t.ffr, "standardisation_vectors", _count_sv_b)
         tp.set(v02t, "FastMRISliceDataset",
                lambda root, split, mode: _RecDS(root, 6, rec_b))
         tp.set(v02t, "save_checkpoint",
@@ -1312,8 +1355,14 @@ def f11_set_epoch_contract() -> dict:
     _check(record["steps"] == 3,
            f"fixture run recorded {record['steps']} steps; the "
            f"tampered budget is 3")
+    _check(sv_b["n"] == 6,
+           f"V02T computed standardisation vectors {sv_b['n']}x for "
+           f"6 slices; one per slice, no persistent cache (OOM "
+           f"regression)")
     return {"preflight_set_epoch_calls": se_a,
             "preflight_sample_count": len(ge_a),
+            "preflight_vector_calls": sv_a["n"],
+            "train_vector_calls": sv_b["n"],
             "train_set_epoch_calls": se_b,
             "train_events": [list(ev) for ev in rec_b],
             "contract": "no __getitem__ before set_epoch; V02P declares "

@@ -1,4 +1,4 @@
-# SEQREF-V02T v0.3 -- scripts.v02_train
+# SEQREF-V02T v0.4 -- scripts.v02_train
 # LIFETIME: KEEP
 # =============================================================================
 # Purpose: candidate v0.2 scientific training driver (V02SPEC v0.1 §3/§12,
@@ -59,7 +59,7 @@ from seqref_mri.scripts.v02_manifests import (BATCH_SIZE, N_EPOCHS,
 
 logger = logging.getLogger("seqref_mri.v02_train")
 
-__version__ = "0.3"
+__version__ = "0.4"
 __abbr__ = "SEQREF-V02T"
 
 LEARNING_RATE = 1e-4                     # locked (V02SPEC §3)
@@ -193,7 +193,6 @@ def run(cfg: dict) -> dict:
     step = 0
     save_checkpoint(model, step, out_root, checkpoints)   # step 0 = init
 
-    vec_cache: dict[str, tuple] = {}
     telemetry = []
     for ep, man in enumerate(manifests):
         # Fresh-mask policy (EXEC SS3.7): declare the manifest epoch
@@ -238,13 +237,12 @@ def run(cfg: dict) -> dict:
                           f"{meta['slice_index']!r}) != manifest entry "
                           f"({manifest_entry['file']!r}, "
                           f"{manifest_entry['slice_index']!r})")
+                # Fresh masks never repeat (EXEC SS3.7): no cache --
+                # vectors are computed per slice and released with
+                # the batch (OOM fix 2026-08-24; regression V02S f11).
                 cmap = derive_cmap_from_mask(batch["mask"][j])
-                map_key = cmap.payload()["map_payload_sha256"]
-                if map_key not in vec_cache:
-                    vec_cache[map_key] = (
-                        cmap, ffr.standardisation_vectors(
-                            cmap, p4["location_index"]))
-                cmap, vecs = vec_cache[map_key]
+                vecs = ffr.standardisation_vectors(
+                    cmap, p4["location_index"])
                 one = {"x_norm": prep["x_norm"][j:j + 1],
                        "cond_in": prep["cond_in"][j:j + 1]}
                 targets.append(targets_from_prepared(one, cmap, vecs))

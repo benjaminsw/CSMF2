@@ -1,4 +1,4 @@
-# SEQREF-V02P v0.4 -- scripts.v02_preflight
+# SEQREF-V02P v0.5 -- scripts.v02_preflight
 # LIFETIME: KEEP
 # =============================================================================
 # Purpose: candidate v0.2 deterministic throughput preflight (V02SPEC v0.1
@@ -67,7 +67,7 @@ from seqref_mri.scripts.v02_train import (BATCH_SIZE, CHECKPOINT_STEPS,
 
 logger = logging.getLogger("seqref_mri.v02_preflight")
 
-__version__ = "0.4"
+__version__ = "0.5"
 __abbr__ = "SEQREF-V02P"
 
 WARMUP_BATCHES = 20          # batches 1-20 of the epoch-0 manifest
@@ -93,7 +93,7 @@ def _peak_memory_bytes() -> int:
     return int(torch.cuda.max_memory_allocated())
 
 
-def _batch_work(model, opt, batch, p4, vec_cache, *, train_mode: bool,
+def _batch_work(model, opt, batch, p4, *, train_mode: bool,
                 device: str) -> tuple[float, float]:
     """One production batch. Returns (io_construct_s, step_s): data
     preparation + target construction vs model forward/backward/step
@@ -102,12 +102,11 @@ def _batch_work(model, opt, batch, p4, vec_cache, *, train_mode: bool,
     prep = _prepare(batch, device, test0=False)
     targets, cond_ins, masks = [], [], []
     for j in range(len(batch["meta"])):
+        # Fresh masks never repeat (EXEC SS3.7): no cache -- derive
+        # and compute per slice, release with the batch; preflight
+        # times the exact production path (OOM fix 2026-08-24).
         cmap = derive_cmap_from_mask(batch["mask"][j])
-        key = cmap.payload()["map_payload_sha256"]
-        if key not in vec_cache:
-            vec_cache[key] = (cmap, ffr.standardisation_vectors(
-                cmap, p4["location_index"]))
-        cmap, vecs = vec_cache[key]
+        vecs = ffr.standardisation_vectors(cmap, p4["location_index"])
         one = {"x_norm": prep["x_norm"][j:j + 1],
                "cond_in": prep["cond_in"][j:j + 1]}
         targets.append(targets_from_prepared(one, cmap, vecs))
@@ -178,12 +177,11 @@ def run(cfg: dict) -> dict:
                         batch_size=BATCH_SIZE, shuffle=False,
                         num_workers=0, collate_fn=_collate)
 
-    vec_cache: dict[str, tuple] = {}
     io_times, step_times = [], []
     torch.cuda.reset_peak_memory_stats()
     for bi, batch in enumerate(loader):
         model.train()
-        io_s, step_s = _batch_work(model, opt, batch, p4, vec_cache,
+        io_s, step_s = _batch_work(model, opt, batch, p4,
                                    train_mode=True, device=device)
         if bi >= WARMUP_BATCHES:
             io_times.append(io_s)
@@ -200,7 +198,7 @@ def run(cfg: dict) -> dict:
     for bi, batch in enumerate(loader):
         if bi >= EVAL_PROBE_BATCHES:
             break
-        _, s = _batch_work(model, opt, batch, p4, vec_cache,
+        _, s = _batch_work(model, opt, batch, p4,
                            train_mode=False, device=device)
         eval_step_times.append(s)
     if len(eval_step_times) != EVAL_PROBE_BATCHES:
