@@ -140,8 +140,8 @@ D3_SUBSET_MANIFEST_SHA256 = ("66647202aead2edbbbea338194f464a44dc77b63"
                              "e65824a56ff2998f40879bcd")
 HOLDOUT_MANIFEST_SHA256 = ("ce27550cdcdfa627372a53d51df6c7a97e4c6cff"
                            "0f5a80622e0fa110b0eea165")
-V02H_EVIDENCE_SHA256 = ("c9adf1978a120b2ef4f2553fbf29adb48b43227f71e8"
-                        "011eb344527f1dad3d9")
+V02H_EVIDENCE_SHA256 = ("c9adf1978a120b2ef4f2553fbf29adb48b43227f71e80191"
+                        "eb344527f1dad3d9")
 V02H_EVIDENCE_SCHEMA = "seqref-v02h-selftest-facts/1"
 
 ROUTE_SUPPORT = "READOUT_LIMITATION_SUPPORTED"
