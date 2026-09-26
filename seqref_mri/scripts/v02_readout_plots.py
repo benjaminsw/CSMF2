@@ -1,4 +1,4 @@
-# SEQREF-V02I v0.1 -- scripts.v02_readout_plots
+# SEQREF-V02I v0.2 -- scripts.v02_readout_plots
 # LIFETIME: DIAGNOSTIC
 """Registered optional facts-only figures for the V02 readout
 diagnostic (V02RD report, LudWiki id 155).
@@ -35,7 +35,7 @@ from matplotlib import pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 __abbr__ = "SEQREF-V02I"
-__version__ = "0.1"
+__version__ = "0.2"
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:
@@ -218,9 +218,9 @@ def _fig_f1(facts, workdir: Path):
             ha="right", fontsize=8, color="C3")
     ax.set_xlabel("holdout identity (sorted by paired difference)")
     ax.set_ylabel("dPSNR (dB): final R1 - R0")
-    ax.set_title("Primary comparison: paired dPSNR, final endpoint "
-                 "(199 frozen holdout identities)")
-    ax.text(0.02, 0.98,
+    ax.set_title("Primary comparison: paired dPSNR, final endpoint\n"
+                 "(199 frozen holdout identities)", fontsize=10)
+    ax.text(0.02, 0.86,
             f"observed mean {obs:+.4f} dB; CI95 [{ci[0]:+.4f}, "
             f"{ci[1]:+.4f}]\n{n_pos}/{N_HOLDOUT} > 0; "
             f"{n_ge}/{N_HOLDOUT} >= +0.5 dB\n"
@@ -274,31 +274,37 @@ def _fig_scatter(facts, workdir: Path, key: str, fname: str,
 def _fig_endpoint_means(facts, workdir: Path, key: str, fname: str,
                         ylabel: str, title: str):
     """Endpoint aggregate means (step0/final x R0/R1), read verbatim
-    from metrics.*.aggregates (F4/F5, descriptive only)."""
+    from metrics.*.aggregates (F4/F5, descriptive only). Rendered as a
+    paired-marker dumbbell plot: pure position encoding, no bar area
+    from a truncated non-zero baseline."""
     m = facts["metrics"]
     labels = ["step0", "final"]
     r0 = [m[ep]["aggregates"]["r0"][key]["mean"] for ep in labels]
     r1 = [m[ep]["aggregates"]["r1"][key]["mean"] for ep in labels]
-    x = np.arange(2)
-    w = 0.35
+    x = [0, 1]
     fig, ax = plt.subplots(figsize=FIGSIZE, dpi=DPI)
-    b0 = ax.bar(x - w / 2, r0, w, label="R0 (z=0)", color="C1")
-    b1 = ax.bar(x + w / 2, r1, w, label="R1 (posterior mean)",
-                color="C2")
-    for bars in (b0, b1):
-        for b in bars:
-            ax.text(b.get_x() + b.get_width() / 2, b.get_height(),
-                    f"{b.get_height():.4f}", ha="center", va="bottom",
-                    fontsize=7)
+    for i in x:  # dumbbell connector per endpoint
+        ax.plot([i, i], [r0[i], r1[i]], color="0.6", lw=1.0, zorder=1)
+    ax.plot(x, r0, "o", color="C1", ms=9, zorder=2, label="R0 (z=0)")
+    ax.plot(x, r1, "s", color="C2", ms=9, zorder=2,
+            label="R1 (posterior mean)")
+    for i in x:  # value labels split left/right of the marker pair
+        ax.annotate(f"{r0[i]:.4f}", (i, r0[i]), xytext=(-10, -3),
+                    textcoords="offset points", ha="right", fontsize=8,
+                    color="C1")
+        ax.annotate(f"{r1[i]:.4f}", (i, r1[i]), xytext=(10, -3),
+                    textcoords="offset points", ha="left", fontsize=8,
+                    color="C2")
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
+    ax.set_xlim(-0.6, 1.6)
     lo = min(r0 + r1)
     hi = max(r0 + r1)
-    pad = 0.15 * (hi - lo) if hi > lo else 0.01
-    ax.set_ylim(lo - 2 * pad, hi + 3 * pad)
+    span = (hi - lo) if hi > lo else 0.01
+    ax.set_ylim(lo - 0.4 * span, hi + 0.4 * span)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
-    ax.legend(fontsize=8)
+    ax.legend(fontsize=8, loc="upper left")
     ax.text(0.98, 0.02, "descriptive only; not a routing input",
             transform=ax.transAxes, ha="right", va="bottom", fontsize=8,
             style="italic")
@@ -650,3 +656,13 @@ if __name__ == "__main__":
 #   branch covers both a per-volume value and
 #   primary_comparison.d1.observed) plus a full render audit. No
 #   fallback, no mock, no placeholder, no silent pass on any path.
+#
+# v0.2 (2026-09-26): presentation-only patch after the v0.1 render
+#   review. No verification logic, pin, schema, statistic, source
+#   field, or figure filename changed. F1: title wrapped to two lines
+#   (the one-line title was clipped at the right edge) and the
+#   annotation block lowered clear of the +0.5 dB threshold line.
+#   F4/F5: bar charts replaced by paired-marker dumbbell plots -- pure
+#   position encoding instead of bar area from a truncated non-zero
+#   baseline, which visually exaggerated the tiny endpoint
+#   differences. Selftest unchanged (8/8); render remains write-once.
