@@ -89,7 +89,7 @@ import numpy as np
 
 from seqref_mri.scripts import v02_eval as v02e
 from seqref_mri.scripts import v02_readout_common as v02c
-from seqref_mri.scripts import v02_train as v02m
+from seqref_mri.scripts import v02_manifests as v02m
 
 logger = logging.getLogger(__name__)
 
