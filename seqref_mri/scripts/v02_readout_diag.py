@@ -1,4 +1,4 @@
-# SEQREF-V02G v0.2 -- scripts.v02_readout_diag
+# SEQREF-V02G v0.3 -- scripts.v02_readout_diag
 # LIFETIME: KEEP
 """Authoritative V02 readout-diagnostic driver (V02AMEND v1.0 LOCKED,
 LudWiki id 147).
@@ -94,7 +94,7 @@ from seqref_mri.scripts import v02_manifests as v02m
 logger = logging.getLogger(__name__)
 
 __abbr__ = "SEQREF-V02G"
-__version__ = "0.2"
+__version__ = "0.3"
 
 STAGE = "v02_readout_diag"
 FACTS_PREFIX = "v02_readout_facts"
@@ -1417,6 +1417,39 @@ def _f09_refusal_paths(tmp_dir: str) -> None:
             "12 refusal branches exercised; all typed, none coerced")
 
 
+def _f10_d3_subset_gate() -> None:
+    """The D3-subset gate seam (v02m.d3_monitor_positions): a synthetic
+    manifest reproducing the frozen PCG64(2) draw -- bound to a
+    synthetic holdout and carrying the registered manifest-SHA pin --
+    is accepted; a positions-only corruption is refused with
+    D3_DRAW_MISMATCH. This closes the coverage gap behind the v0.2
+    authoritative-only wrong-alias defect (v02m bound to the wrong
+    module), which the v0.2 fixture suite never reached."""
+    positions = [int(p) for p in v02m.d3_monitor_positions()]
+    entries = [{"file": f"synthetic/vol{j:03d}.h5", "slice_index": j}
+               for j in range(N_HOLDOUT)]
+    holdman = {"manifest_sha256": HOLDOUT_MANIFEST_SHA256,
+               "n_volumes": N_HOLDOUT, "entries": entries}
+    d3_entries = [{"holdout_position": pos, "draw_rank": r,
+                   "file": entries[pos]["file"],
+                   "slice_index": entries[pos]["slice_index"]}
+                  for r, pos in enumerate(positions)]
+    d3man = {"n": N_D3_SUBSET, "entries": d3_entries,
+             "manifest_sha256": D3_SUBSET_MANIFEST_SHA256}
+    _verify_d3_subset(d3man, holdman)       # frozen draw: no raise
+    corrupt = [dict(e) for e in d3_entries]
+    (corrupt[0]["holdout_position"],
+     corrupt[1]["holdout_position"]) = positions[1], positions[0]
+    corrupt_d3man = {"n": N_D3_SUBSET, "entries": corrupt,
+                     "manifest_sha256": D3_SUBSET_MANIFEST_SHA256}
+    _expect_error(lambda: _verify_d3_subset(corrupt_d3man, holdman),
+                  "D3_DRAW_MISMATCH", "positions-only corruption")
+    _record("f10_d3_subset_gate", True,
+            "frozen-draw reproduction accepted via the "
+            "v02m.d3_monitor_positions seam; positions-only "
+            "corruption refused with D3_DRAW_MISMATCH")
+
+
 def run_fixtures() -> dict:
     """The assembly fixture suite. Any FAIL -> exit 2; no fixture
     touches the real holdout or publishes anything."""
@@ -1434,6 +1467,7 @@ def run_fixtures() -> dict:
         _f07_no_verdict()
         _f08_semantic_reproducibility(env)
         _f09_refusal_paths(str(tmp_dir))
+        _f10_d3_subset_gate()
     except (V02GError, v02c.V02CError) as exc:
         _record("suite_abort", False, f"{exc.error_code}: {exc.reason}")
     n_fail = sum(1 for r in _FIXTURE_RESULTS if not r["ok"])
@@ -1566,3 +1600,23 @@ if __name__ == "__main__":
 #   run_fixtures() now clears _FIXTURE_RESULTS on entry so repeated
 #   in-process invocation cannot accumulate stale rows; the exit-2
 #   boundary comment reworded (behaviour unchanged: logged -> exit 2).
+#
+# v0.3 (2026-09-26): post-result fixture-only hardening. New fixture
+#   f10_d3_subset_gate exercises the D3-subset gate seam
+#   (v02m.d3_monitor_positions): a synthetic manifest reproducing the
+#   frozen PCG64(2) draw -- bound to a synthetic holdout and carrying
+#   the registered manifest-SHA pin -- is accepted; a positions-only
+#   corruption is refused with the actual typed code D3_DRAW_MISMATCH
+#   (reviewer-corrected; the gate has no D3_SUBSET_MISMATCH code --
+#   count drift is MANIFEST_CONTENT_MISMATCH, holdout binding drift is
+#   D3_SUBSET_NOT_IN_HOLDOUT, SHA drift is D3_SUBSET_MANIFEST_DRIFT).
+#   This closes the coverage gap behind the v0.2 authoritative-only
+#   wrong-alias defect (v02m bound to v02_train instead of
+#   v02_manifests), which the v0.2 fixture suite never reached. v0.3
+#   does NOT supersede or alter the authoritative V02G result produced
+#   by v0.2 at commit 6ffce4e555f90a48daa5fbff8b841adc3dfd7b18
+#   (semantic SHA
+#   92b2ee1ff449d7a4e561945d6de98667f343bd52674cab017a98b1ed6a06df59);
+#   no scientific logic, locked constant, decision gate, or semantic
+#   scope changed, and no authoritative rerun is required or
+#   performed. Suite: f01-f10.
