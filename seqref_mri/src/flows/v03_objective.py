@@ -1,14 +1,16 @@
-# SEQREF-V03L v0.2 -- src.flows.v03_objective
+# SEQREF-V03L v0.3 -- src.flows.v03_objective
 # LIFETIME: KEEP
 # =============================================================================
 # Purpose: V03 hybrid objective (V03SPEC v0.3 SS6, article 163 FROZEN;
 #          V03PLAN v0.3 SS4 step 1, article 164 FROZEN).
-#            L = L_density + lambda_rec * L_rec
+#            L = L_density + lambda_rec * (s * L_rec_base), s = 1e7 (A6)
 # Locked quantities (quoted, never CLI-tunable):
 #   * L_density = train_free_flow.nll_objective -- the V02 production NLL
 #     path CONSUMED, never reimplemented
-#   * L_rec = normalised-space MSE on the z=0 deterministic readout (R0),
-#     mean reduction over batch AND pixels; the R0 image is built by the
+#   * L_rec = s * L_rec_base with pinned scale s = 1e7 (SPEC Amendment
+#     A6, article 171, FROZEN 2026-10-07); L_rec_base = normalised-space
+#     MSE on the z=0 deterministic readout (R0), mean reduction over
+#     batch AND pixels; the R0 image is built by the
 #     registered decode chain (decode_scalars -> unpack -> unstandardise
 #     -> decode_normalised), mirrored 1:1 in torch so autograd flows
 #   * lambda_rec = 0 returns the V02 NLL tensor object UNTOUCHED
@@ -40,10 +42,11 @@ from seqref_mri.scripts import train_free_flow as tff
 
 logger = logging.getLogger("seqref_mri.v03_objective")
 
-__version__ = "0.2"
+__version__ = "0.3"
 __abbr__ = "SEQREF-V03L"
 
 DECODE_EQ_TOL = 1e-9          # f03 forward-equivalence tolerance (locked)
+L_REC_SCALE = 1e7             # locked (SPEC Amendment A6, article 171, FROZEN)
 
 
 class V03LError(RuntimeError):
@@ -125,20 +128,22 @@ def mse_normalised(mag_hat: torch.Tensor,
 def l_rec(model, cond_in: torch.Tensor, mask: torch.Tensor,
           y_raw: torch.Tensor, amax: torch.Tensor, tgt_norm: torch.Tensor,
           maps: list) -> torch.Tensor:
-    """Scalar L_rec: MSE between |R0 image| and the normalised target
-    magnitude tgt_norm (B,1,H,W from train_base._prepare)."""
+    """Scalar L_rec: pinned scale s (Amendment A6) times the MSE between
+    |R0 image| and the normalised target magnitude tgt_norm (B,1,H,W
+    from train_base._prepare)."""
     x = r0_reconstruction_differentiable(model, cond_in, mask, y_raw,
                                          amax, maps)
     mag = x.abs()
     tgt = tgt_norm.view(mag.shape).to(torch.float64)
-    return mse_normalised(mag, tgt)
+    return L_REC_SCALE * mse_normalised(mag, tgt)
 
 
 def combined_loss(model, u_scaled: torch.Tensor, cond_in: torch.Tensor,
                   mask: torch.Tensor, *, lam: float,
                   y_raw: torch.Tensor, amax: torch.Tensor,
                   tgt_norm: torch.Tensor, maps: list) -> torch.Tensor:
-    """L = L_density + lam * L_rec. lam == 0.0 returns the V02 NLL tensor
+    """L = L_density + lam * L_rec (L_rec carries the pinned A6 scale).
+    lam == 0.0 returns the V02 NLL tensor
     UNTOUCHED (fixture f02: object identity with nll_objective output)."""
     nll = tff.nll_objective(model, u_scaled, cond_in, mask)
     if float(lam) == 0.0:
@@ -308,4 +313,10 @@ if __name__ == "__main__":
 #   a direct V02 nll_objective backward (incremental SHA-256 over raw
 #   grad bytes; no clones). Scalar equality retained as f02. No
 #   production-path change.
+# v0.3 (2026-10-07): Amendment A6 (article 171, FROZEN) -- pinned
+#   constant scale s = 1e7 applied inside l_rec (L_REC_SCALE);
+#   effective objective invariant under lambda' * s = lambda. f02/f02b
+#   lam=0 identities and f03 contracts are scale-invariant, so no
+#   fixture values change (correcting A6 SS4's imprecise "pinned L_rec
+#   expectation" wording: f03 pins contracts, not numbers).
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-# SEQREF-V03P v0.4 -- scripts.v03_probe
+# SEQREF-V03P v0.5 -- scripts.v03_probe
 # LIFETIME: KEEP
 # =============================================================================
 # Purpose: V03 lambda probe (V03SPEC v0.3 SS9, article 163 FROZEN;
@@ -52,7 +52,7 @@ from seqref_mri.src.flows import v03_objective as v03l
 
 logger = logging.getLogger("seqref_mri.v03_probe")
 
-__version__ = "0.4"
+__version__ = "0.5"
 __abbr__ = "SEQREF-V03P"
 
 N_PROBE_BATCHES = 100                       # locked (SPEC SS9)
@@ -241,6 +241,7 @@ def _run(data_root: str, p4_stats2: str, out_dir: str) -> int:
         "lambdas": lambdas,
         "lambda_band": list(LAMBDA_BAND),
         "norm_floor": NORM_FLOOR,
+        "l_rec_scale": v03l.L_REC_SCALE,
         "parents": {"p4_stats2": {"path": p4["path"],
                                   "file_sha256": p4["file_sha256"],
                                   "semantic_sha256": p4["semantic_sha256"]}},
@@ -379,4 +380,9 @@ if __name__ == "__main__":
 #   SS14), so val-split probing would have been pre-evaluation holdout
 #   contact. Record fields updated (split/role/amendment). Estimator,
 #   gates and fixtures unchanged.
+# v0.5 (2026-10-07): Amendment A6 alignment -- probe record gains
+#   l_rec_scale (the pinned V03L constant) so the training-stage
+#   contract can verify probe/train scale agreement. Estimator, gates,
+#   and fixtures unchanged. (Note: this changelog has no v0.4 entry --
+#   pre-existing documentation gap, left as found.)
 # ---------------------------------------------------------------------------

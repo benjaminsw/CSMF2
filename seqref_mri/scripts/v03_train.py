@@ -1,4 +1,4 @@
-# SEQREF-V03T v0.4 -- scripts.v03_train
+# SEQREF-V03T v0.5 -- scripts.v03_train
 # LIFETIME: KEEP
 # =============================================================================
 # Purpose: V03 training driver + append-only run ledger (V03SPEC v0.3
@@ -73,7 +73,7 @@ from seqref_mri.scripts.v03_probe import (V03PError,
 
 logger = logging.getLogger("seqref_mri.v03_train")
 
-__version__ = "0.4"
+__version__ = "0.5"
 __abbr__ = "SEQREF-V03T"
 
 LEARNING_RATE = 1e-4                      # locked (V03PLAN SS8)
@@ -169,6 +169,10 @@ def load_probe_record(path: str) -> dict:
         _fail("PROBE_RECORD_CONFIG_MISMATCH",
               "probe record n_batches/batch_size diverge from the locked "
               "100/32 contract")
+    if rec.get("l_rec_scale") != v03l.L_REC_SCALE:
+        _fail("PROBE_RECORD_CONFIG_MISMATCH",
+              f"probe record l_rec_scale {rec.get('l_rec_scale')!r} != "
+              f"the pinned Amendment A6 scale {v03l.L_REC_SCALE!r}")
     if rec.get("split") != "train" or rec.get("mode") != "eval" \
             or rec.get("validation_source_amendment") != "A2":
         _fail("PROBE_RECORD_CONFIG_MISMATCH",
@@ -717,6 +721,7 @@ def _selftest() -> int:
             "batch_size": BATCH_SIZE,
             "split": "train", "mode": "eval",
             "validation_source_amendment": "A2",
+            "l_rec_scale": v03l.L_REC_SCALE,
             "lambdas": {"0.1": 0.2, "0.5": 2.0, "0.9": 18.0}}
     gp = tmp / "probe_good.json"
     _write_with_sidecar(gp, canonical_json(good))
@@ -727,6 +732,7 @@ def _selftest() -> int:
             ("schema", lambda r: r.update(schema="wrong/9")),
             ("validation source", lambda r: r.update(split="val")),
             ("lambda band", lambda r: r["lambdas"].update({"0.5": 1e9})),
+            ("l_rec_scale", lambda r: r.update(l_rec_scale=1.0)),
             ("n_batches", lambda r: r.update(n_batches=99))):
         bad_rec = json.loads(canonical_json(good))
         mutate(bad_rec)
@@ -855,4 +861,9 @@ if __name__ == "__main__":
 #   pre-evaluation holdout contact. (5) _validate uses model.eval() and
 #   restores training mode. f06 expanded: attempt-scoped naming, order
 #   gate (5 branches), error classification.
+# v0.5 (2026-10-07): Amendment A6 alignment -- training consumes the
+#   scaled l_rec via V03L v0.3 (no call-site change); load_probe_record
+#   gains the l_rec_scale agreement gate (probe/train scale drift =
+#   PROBE_RECORD_CONFIG_MISMATCH); contract selftest updated (good
+#   fixture carries l_rec_scale; new drift branch).
 # ---------------------------------------------------------------------------
