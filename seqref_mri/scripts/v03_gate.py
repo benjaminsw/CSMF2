@@ -1,4 +1,4 @@
-# SEQREF-V03G1 v0.1 -- scripts.v03_gate
+# SEQREF-V03G1 v0.2 -- scripts.v03_gate
 # LIFETIME: KEEP
 # =============================================================================
 # Purpose: V02-parent reproduction gate (V03SPEC v0.3 SS17, article 163
@@ -68,11 +68,12 @@ from seqref_mri.scripts.train_free_flow import (targets_from_prepared,
 from seqref_mri.scripts.v02_train import (LEARNING_RATE,
                                           derive_cmap_from_mask,
                                           state_sha256)
-from seqref_mri.scripts.v02_manifests import V02Error, canonical_json
+from seqref_mri.scripts.v02_manifests import (N_EPOCHS, V02Error,
+                                            canonical_json)
 
 logger = logging.getLogger("seqref_mri.v03_gate")
 
-__version__ = "0.1"
+__version__ = "0.2"
 __abbr__ = "SEQREF-V03G1"
 
 GATE_SCHEMA = "seqref-v03-gate-record/1"
@@ -278,6 +279,23 @@ def _env() -> SimpleNamespace:
         d2b=d2b, state_sha256=state_sha256)
 
 
+def _epoch_manifests(manifests: list) -> list:
+    """Select the train_epoch manifests in epoch order -- the exact
+    list the V02E production loader verifies the train record against
+    (v02_eval builds [_load_manifest(epoch{ep}, train_epoch) for ep in
+    range(N_EPOCHS)]). The gate state carries all five frozen
+    manifests; the train record pins exactly the N_EPOCHS epoch
+    hashes, so the holdout/d3 manifests must not enter the
+    comparison.
+    """
+    epoch = [m for m in manifests if m.get("kind") == "train_epoch"]
+    if len(epoch) != N_EPOCHS:
+        _fail("MANIFEST_SCHEMA_INVALID",
+              f"expected {N_EPOCHS} train_epoch manifests, got "
+              f"{len(epoch)}")
+    return epoch
+
+
 def _check_pipeline(env: SimpleNamespace, cfg: dict, state: dict,
                     work_root: Path) -> dict:
     """Check 1 (SPEC SS17.1, fixture f01): frozen manifest/tensor
@@ -329,12 +347,15 @@ def _check_pipeline(env: SimpleNamespace, cfg: dict, state: dict,
 def _check_checkpoint_identity(env: SimpleNamespace, cfg: dict,
                                state: dict) -> dict:
     """Check 2a (Amendment A3): frozen-checkpoint identity. The V02T
-    train record is hash-verified against the verified manifests; the
+    train record is hash-verified against the verified epoch manifests
+    (the train_epoch subset, mirroring the V02E production loader);
+    the
     step-0/3258 checkpoints verify against its pins through the V02E
     production loader (file sha256 + reloaded state sha256)."""
     try:
         record = v02e._load_train_record(cfg["train_record"],
-                                         state["manifests"])
+                                         _epoch_manifests(
+                                             state["manifests"]))
     except V02Error as exc:
         _fail(_v02_code(exc, "TRAIN_RECORD_MISMATCH"), str(exc))
     try:
@@ -650,6 +671,21 @@ def _selftest() -> int:
         "MANIFEST_CONTENT_MISMATCH", "f01 missing rebuilt file")
     logger.info("[%s] f01 PASS: manifest-set bit-exactness", __abbr__)
 
+    # Regression (v0.2): epoch-manifest selection mirrors the V02E
+    # production loader; the train record pins exactly N_EPOCHS epoch
+    # hashes, never the holdout/d3 manifests (gate attempt-1 abort).
+    five = ([{"kind": "train_epoch", "manifest_sha256": f"e{i}"}
+             for i in range(N_EPOCHS)]
+            + [{"kind": "holdout", "manifest_sha256": "h"},
+               {"kind": "d3_monitor", "manifest_sha256": "d"}])
+    if [m["manifest_sha256"] for m in _epoch_manifests(five)] != \
+            [f"e{i}" for i in range(N_EPOCHS)]:
+        _fail("PROBE_SELFTEST_WRONG_VALUE",
+              "epoch selection must keep the train_epoch order exactly")
+    _expect_fail(lambda: _epoch_manifests(five[:N_EPOCHS - 1]),
+                 "MANIFEST_SCHEMA_INVALID", "epoch count guard")
+    logger.info("[%s] epoch-selection regression PASS", __abbr__)
+
     # Sidecar layer: missing input, missing sidecar, drift, ok.
     good = tmp / "good.json"
     good.write_bytes(canonical_json({"schema": "x/1", "v": 1}))
@@ -793,7 +829,7 @@ def _selftest() -> int:
     logger.info("[%s] f10 PASS: static audit clean", __abbr__)
 
     print(f"PASS {__abbr__} v{__version__} selftest (f01, helpers, "
-          f"orchestration, f10)")
+          f"epoch-selection, orchestration, f10)")
     return 0
 
 
