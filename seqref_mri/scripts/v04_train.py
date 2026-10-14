@@ -1,5 +1,5 @@
 # =============================================================================
-# SEQREF-MRI-V04T v0.1 -- scripts.v04_train
+# SEQREF-MRI-V04T v0.3 -- scripts.v04_train
 # LIFETIME: KEEP
 # Purpose: V04 training driver + append-only run ledger (V04SPEC v1.0
 #          article 176 FROZEN SS7/SS18; V04PLAN v1.0 article 178 FROZEN
@@ -77,7 +77,7 @@ from seqref_mri.scripts.v04_model import build_v04_model
 
 logger = logging.getLogger("seqref_mri.v04_train")
 
-__version__ = "0.1"
+__version__ = "0.3"
 __abbr__ = "SEQREF-MRI-V04T"
 
 LEARNING_RATE = 1e-4                      # locked (178 SS8)
@@ -654,6 +654,14 @@ def _run(data_root: str, p4_stats2: str, probe_record_path: str,
                      __abbr__, exc.code, step, exc)
         raise V04TError(exc.code, f"gradient-norm failure: {exc}") \
             from exc
+    except KeyboardInterrupt:
+        # F1 repair (v0.2): BaseException path (Ctrl+C) -- an infrastructure
+        # interruption, never a settled run. Record as interrupted so the
+        # registered rerun policy permits the legitimate same-seed restart
+        # and the pair never settles incomplete.
+        status, error_code = "interrupted", "KEYBOARD_INTERRUPT"
+        logger.error("[%s] keyboard interruption at step %d", __abbr__, step)
+        raise
     except Exception as exc:
         status, error_code = "interrupted", type(exc).__name__
         logger.exception("[%s] infrastructure interruption at step %d",
@@ -662,17 +670,43 @@ def _run(data_root: str, p4_stats2: str, probe_record_path: str,
                         f"{type(exc).__name__}: {exc}") from exc
     finally:
         diag = None
+        diag_interrupted = False
         if checkpoints:
-            dgen = torch.Generator().manual_seed(seed)
-            db = dgen  # conditioning pair for the non-gating diagnostic
-            cond_a = torch.randn(2, v04p.ffr.COND_IN_CHANNELS, 96, 96,
-                                 generator=db)
-            mask_a = (torch.rand(2, 96, generator=db) > 0.5).float()
-            cond_b = torch.randn(2, v04p.ffr.COND_IN_CHANNELS, 96, 96,
-                                 generator=db)
-            mask_b = (torch.rand(2, 96, generator=db) > 0.5).float()
-            diag = post_training_conditioning_diagnostic(
-                model, cond_a, mask_a, cond_b, mask_b, seed)
+            try:
+                dgen = torch.Generator().manual_seed(seed)
+                db = dgen  # conditioning pair for the non-gating diagnostic
+                cond_a = torch.randn(2, v04p.ffr.COND_IN_CHANNELS, 96, 96,
+                                     generator=db)
+                mask_a = (torch.rand(2, 96, generator=db) > 0.5).float()
+                cond_b = torch.randn(2, v04p.ffr.COND_IN_CHANNELS, 96, 96,
+                                     generator=db)
+                mask_b = (torch.rand(2, 96, generator=db) > 0.5).float()
+                diag = post_training_conditioning_diagnostic(
+                    model, cond_a, mask_a, cond_b, mask_b, seed)
+            except KeyboardInterrupt:
+                # F3 repair (v0.3): Ctrl+C DURING the non-gating
+                # diagnostic is a BaseException -- the v0.2 wrapper's
+                # except-Exception let it skip the record/ledger writes.
+                # The diagnostic never rewrites the training-determined
+                # status (non-gating: terminal stays terminal,
+                # interrupted stays interrupted, completed stays
+                # completed); the interruption is recorded in the
+                # diagnostic payload; evidence is written; the interrupt
+                # is re-raised below so the invocation exits non-zero.
+                logger.error("[%s] keyboard interruption during "
+                             "post-training diagnostic (non-gating)",
+                             __abbr__)
+                diag = {"error": "KeyboardInterrupt", "gating": False}
+                diag_interrupted = True
+            except Exception as exc:
+                # F2 repair (v0.2): the non-gating diagnostic must never
+                # prevent record/ledger writes -- log it and record it
+                # explicitly; the primary training outcome is preserved.
+                logger.error("[%s] post-training conditioning diagnostic "
+                             "failed (non-gating): %s: %s", __abbr__,
+                             type(exc).__name__, exc)
+                diag = {"error": f"{type(exc).__name__}: {exc}",
+                        "gating": False}
         record = {
             "schema": RECORD_SCHEMA,
             "script": f"{__abbr__} v{__version__}",
@@ -715,6 +749,12 @@ def _run(data_root: str, p4_stats2: str, probe_record_path: str,
             "checkpoints": [c["file_sha256"] for c in checkpoints]})
         logger.info("[%s] ledger entry appended: arm %d seed %d attempt "
                     "%d status %s", __abbr__, arm, seed, attempt, status)
+        if diag_interrupted:
+            # F3 repair (v0.3): record + ledger + sidecars are on disk;
+            # now surface the operator abort (non-zero exit, no PASS
+            # line). Replaces any in-flight exception; the settled
+            # training-determined status is already persisted.
+            raise KeyboardInterrupt
     if step != TOTAL_STEPS:                                  # safeguard C
         _fail("STEP_COUNT_MISMATCH",
               f"run completed {step} steps; the locked budget is "
@@ -755,6 +795,11 @@ def main() -> int:
         return _run(args.data_root, args.p4_stats2, args.probe_record,
                     args.gate_record, args.commit_pin, args.out,
                     args.arm, args.seed)
+    except KeyboardInterrupt:
+        # F1 repair (v0.2): Ctrl+C exits non-zero; the run record/ledger
+        # were already written (status interrupted) by _run's finally.
+        logger.error("[%s] keyboard interruption", __abbr__)
+        return 2
     except V04TError as exc:
         logger.error("[%s] ERROR: %s", __abbr__, exc)
         return 2
@@ -771,6 +816,32 @@ if __name__ == "__main__":
 
 # ---------------------------------------------------------------------------
 # Changelog
+# v0.3 (2026-10-13): SEQREF-MRI-V04T-FIX v0.3 reviewer round -- residual
+#   defect at the diagnostic boundary: a Ctrl+C arriving DURING the
+#   non-gating post-training diagnostic (BaseException) bypassed the
+#   v0.2 except-Exception wrapper and skipped the record/ledger writes.
+#   The diagnostic wrapper now catches KeyboardInterrupt explicitly:
+#   training-determined status/error_code preserved verbatim (the
+#   diagnostic is non-gating -- a terminal failure stays terminal, an
+#   interrupted run stays interrupted, a completed run stays
+#   completed), the interruption is recorded in the diagnostic payload,
+#   record/ledger/sidecars are written, and the interrupt is re-raised
+#   afterwards so the invocation still exits non-zero with no PASS
+#   line. No change to successful-path calculations, RNG order,
+#   checkpoint contents or any locked quantity.
+# v0.2 (2026-10-13): SEQREF-MRI-V04T-FIX v0.1 reviewed repair of the two
+#   launch-review source defects. F1: KeyboardInterrupt (BaseException)
+#   previously bypassed every except-Exception handler, leaving the
+#   pre-initialised status "completed" to be written to the record and
+#   ledger for a partial run -- now recorded as interrupted
+#   (KEYBOARD_INTERRUPT) with record/ledger/sidecars intact and a
+#   non-zero exit, so the registered rerun policy permits the legitimate
+#   same-seed restart and the pair never settles incomplete. F2: the
+#   non-gating post-training diagnostic (setup and execution) is
+#   protected inside finally -- a diagnostic failure is logged and
+#   recorded as {"error": ...} while record/ledger writes proceed
+#   unconditionally. No change to successful-path calculations, RNG
+#   order, checkpoint contents or any locked quantity.
 # v0.1 (2026-10-12): initial implementation under V04SPEC v1.0 (176,
 #   FROZEN) SS7/SS18 / V04PLAN v1.0 (178, FROZEN) SS8/SS9 (advisor GO,
 #   Option 2 + safeguards A-D). Structure mirrored from V03T v0.5:
