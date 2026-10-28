@@ -1,4 +1,4 @@
-# SEQREF-MRI-V05LTF v0.45 -- scripts.v05lt_fixtures
+# SEQREF-MRI-V05LTF v0.46 -- scripts.v05lt_fixtures
 # LIFETIME: KEEP
 # =============================================================================
 # Purpose: fixtures of SEQREF-MRI-V05LT (195 §7 + PA1). This version holds
@@ -40,6 +40,13 @@
 #   NOT power loss / lost page cache); torn ledger tail written directly.
 # CONVENTION: exit 0 = all selected groups PASS (or PASS-SYNTHETIC without
 #   --host), 2 = any failure; every failure logged with a typed code.
+# Changelog (v0.46, 2026-10-28; SEQREF-MRI-V05LTPIN v0.1, clean-checkout review):
+#   * PRD: removed the environment-dependent assertion that the production
+#     pin check refuses the CURRENT source tree (it passed only while sources
+#     were uncommitted and failed in any clean committed checkout).
+#   * Pin refusals stay covered by the isolated Git tests in PRD (clean tree
+#     accepted; changed dependency, matching-but-uncommitted record,
+#     untracked source and moved HEAD refused). No other change.
 # Changelog (v0.45, 2026-10-28; I1.10 revision-1 review):
 #   * SMK: complete optimiser-state comparison (step counters, param-group
 #     settings, moments; synthetic and real resume state); stability
@@ -397,7 +404,7 @@ from seqref_mri.scripts import v05lt_evidence_check as EV
 
 logger = logging.getLogger("seqref_mri.v05lt_fixtures")
 
-__version__ = "0.45"
+__version__ = "0.46"
 __abbr__ = "SEQREF-MRI-V05LTF"
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -10700,9 +10707,6 @@ def prd_group(cx: Ctx) -> None:
         cx.raises("PROD_INPUT_PATH", lambda: pm._check_inputs(
             recA["inputs"], A["tmp"]), "production: input paths other than "
             "the registered locations refused")
-        cx.raises("PROD_PIN_MISMATCH", lambda: pm._check_pin(recA["pin"]),
-                  "production: code files not identical to the pinned "
-                  "commit refused (uncommitted working tree)")
         # == refinement 5 (addition C): stage-boundary recording ============
         lt = td / "lc"
         lt.mkdir()
