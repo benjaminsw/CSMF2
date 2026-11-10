@@ -1,6 +1,9 @@
-# SEQREF-MRI-DIAGJSHEXPTEST v0.3 -- throwaway-repository refusal tests for DIAG-JSH export helper v0.3 (hardcoded sandbox paths; evidence only, not for host execution)
+# SEQREF-MRI-DIAGJSHEXPTEST v0.4 -- throwaway-repository refusal tests for DIAG-JSH export helper v0.4 (hardcoded sandbox paths; evidence only, not for host execution)
 # LIFETIME: KEEP
 set -u
+# Changelog (v0.4, 2026-11-10): fixtures copied from the v0.6 staging folder
+#   (F1 prepare v0.6) for helper v0.4; D1 gives the old v0.2 helper the
+#   v0.6 F1 hash (declared test double) so it still reproduces its finding.
 # Changelog (v0.3, 2026-11-10): R12-R14 failed sed / sort in the source-scan
 #   comparison refused (stub commands on PATH); D1 reproduces the v0.2
 #   finding (failed producer accepted). v0.2.1: R1 / R1b split.
@@ -14,7 +17,7 @@ git remote add origin $T/o.git; git push -q origin seqref-v05lt 2>/dev/null
 echo "v06lt_evidence/" >> .git/info/exclude; mkdir v06lt_evidence
 mkdir -p seqref_mri/.venv_mri/lib; echo v > seqref_mri/.venv_mri/lib/site.py; mkdir -p seqref_mri/results; echo r > seqref_mri/results/r.py
 git switch -qc ch2-diag; mkdir -p seqref_mri/scripts/diag_jsh
-cp /home/claude/v06lt_dev/diag_jsh/code/diag_jsh_{core,adapter,f1_prepare,i3}.py /home/claude/v06lt_dev/diag_jsh/code/diag_jsh_f1_cmd.sh seqref_mri/scripts/diag_jsh/
+cp /home/claude/v06lt_dev/diag_jsh/next/diag_jsh_{core,adapter,f1_prepare,i3}.py /home/claude/v06lt_dev/diag_jsh/next/diag_jsh_f1_cmd.sh seqref_mri/scripts/diag_jsh/
 sed -e "s#^V05=.*#V05=$T/R#" -e "s#^PIN=.*#PIN=$P#" "$HERE/diag_jsh_export.sh" > seqref_mri/scripts/diag_jsh/diag_jsh_export.sh
 git add seqref_mri; git add -f seqref_mri/scripts/diag_jsh/*.sh; git commit -qm dev; C=$(git rev-parse HEAD)
 mkdir -p $T/stub
@@ -62,7 +65,9 @@ FAILCMD=sed PATH=$T/stub:$PATH run "2:sed over the source scan failed" "R12 fail
 FAILCMD=sort_scan PATH=$T/stub:$PATH run "2:sort of the source scan failed" "R13 failed sort of the scan list refused" $C; git switch -q ch2-diag
 FAILCMD=sort_trk PATH=$T/stub:$PATH run "2:sort of the tracked list failed" "R14 failed sort of the tracked list refused" $C; git switch -q ch2-diag
 if [[ -f "$HERE/diag_jsh_export_v0.2.sh" ]]; then
-  sed -e "s#^V05=.*#V05=$T/R#" -e "s#^PIN=.*#PIN=$P#" "$HERE/diag_jsh_export_v0.2.sh" > $T/v02.sh
+  sed -e "s#^V05=.*#V05=$T/R#" -e "s#^PIN=.*#PIN=$P#" \
+      -e "s#3472714752948d5fbf63d7a96ffa64db2b787d6f9a40b6720e944537242fd739#dc74b0693b1eb0c0ecaa88fd813e22b925c6d99025d834c20c01cbcd71995a1f#" \
+      "$HERE/diag_jsh_export_v0.2.sh" > $T/v02.sh   # test double: v0.2 given the v0.6 F1 hash
   echo s > seqref_mri/scripts/stray2.py; echo "seqref_mri/scripts/stray2.py" >> .git/info/exclude
   out=$(FAILCMD=sed PATH=$T/stub:$PATH bash $T/v02.sh $C 2>&1); rc=$?; N=$((N+1))
   if [[ $rc == 0 ]]; then echo "ok   D1 v0.2 accepts a failed sed as an empty comparison despite an extra .py (reproduces the finding)"; else F=$((F+1)); echo "FAIL D1 (rc=$rc)"; fi

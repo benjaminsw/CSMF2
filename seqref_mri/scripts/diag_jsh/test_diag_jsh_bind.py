@@ -1,4 +1,4 @@
-# SEQREF-MRI-DIAGJSHBINDTEST v0.1 -- guarded production-binding test: F1 bind_from() under the strict write guard on a pinned fixture campaign
+# SEQREF-MRI-DIAGJSHBINDTEST v0.2 -- guarded production-binding test: F1 bind_from() under the strict write guard on a pinned fixture campaign
 # LIFETIME: KEEP
 # =============================================================================
 # Runs the SAME binding code F1 uses in production (diag_jsh_f1_prepare
@@ -32,6 +32,11 @@
 # fixture registers an atexit temp-folder cleanup that the strict guard
 # would (correctly) halt; it is fixture housekeeping, not binding code.
 # Usage: python -B test_diag_jsh_bind.py
+# Changelog (v0.2, 2026-11-10): F1 v0.6 -- B1j the binding produced from
+#   the pinned _bound() (raw path fields are Path objects) serialises with
+#   F1.json_text (strict) and records every input path as str; B1k the raw
+#   pinned shape itself is NOT JSON-serialisable (the host run-1 failure,
+#   reproduced). v0.1 binding cases unchanged.
 # Changelog (v0.1, 2026-11-09): first guarded binding test.
 # =============================================================================
 from __future__ import annotations
@@ -112,7 +117,21 @@ try:
     except K.DiagError as e:
         sel_code = e.code
     b = ctx["binding"]
-    res = {"result": "PASS", "pin": b["pin"], "head": P["head"],
+    raw = stages._bound()
+    raw_type = type(raw["zf"]["path"]).__name__
+    try:
+        json.dumps({k: raw[k] for k in F1.INPUT_KEYS})
+        raw_json = True
+    except TypeError:
+        raw_json = False
+    try:
+        F1.json_text(b, "binding", K)
+        b_json = True
+    except K.DiagError:
+        b_json = False
+    in_types = sorted({type(v["path"]).__name__ for v in b["inputs"].values()})
+    res = {"result": "PASS", "raw_type": raw_type, "raw_json": raw_json,
+           "b_json": b_json, "in_types": in_types, "pin": b["pin"], "head": P["head"],
            "li": b["launch_inputs_sha256"], "li_expect": P["li_sha"],
            "ev": b["completion_evidence_sha256"], "backend": b["backend"],
            "n_mods": len(mods), "sel_code": sel_code,
@@ -152,6 +171,14 @@ def main() -> int:
            "pin, data, ZF, loaded-module rule",
            json.dumps({k: r.get(k) for k in ("result", "code", "err",
                                              "n_mods")}))
+        ok(r.get("b_json") is True and r.get("in_types") == ["str"],
+           "B1j binding from the pinned _bound() serialises strictly "
+           "(F1.json_text); every bound-input path recorded as str",
+           json.dumps({k: r.get(k) for k in ("b_json", "in_types")}))
+        ok(r.get("raw_json") is False and r.get("raw_type", "").endswith("Path"),
+           "B1k the raw pinned _bound() shape is not JSON-serialisable "
+           "(path field is a Path: host run-1 failure reproduced)",
+           json.dumps({k: r.get(k) for k in ("raw_type", "raw_json")}))
         sc = r.get("sel_code")
         ok(sc == "DIAG_INPUT_INVALID",
            "B1c pinned load_run refuses a fixture-trained run "

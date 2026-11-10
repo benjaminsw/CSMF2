@@ -1,4 +1,4 @@
-# SEQREF-MRI-DIAGJSHF1IT v0.4 -- synthetic end-to-end integration test of F1 prepare() (DIAG-I2 v0.2)
+# SEQREF-MRI-DIAGJSHF1IT v0.5 -- synthetic end-to-end integration test of F1 prepare() (DIAG-I2 v0.2)
 # LIFETIME: KEEP
 # =============================================================================
 # SYNTHETIC DATA ONLY. The parent builds fixtures with the pinned code
@@ -10,6 +10,14 @@
 # (launch chain, completion, backend, load_run) is replaced by a fixture
 # context, because the sandbox has no campaign; that part stays host-only.
 # Usage: python -B test_diag_jsh_f1_integration.py PINNED_REPO_ROOT
+# Changelog (v0.5, 2026-11-10): F1 v0.6 -- the fixture binding's bound
+#   inputs now have the pinned _bound() shape ({"path": Path, "sha256"})
+#   and pass through F1.record_inputs (the production conversion); P16
+#   manifest input paths are str; P17 raw Path in the binding -> STOP
+#   DIAG_MANIFEST_TYPE at the early check (before STAGE 5, no manifest);
+#   P18 non-serialisable field generated later -> STOP DIAG_MANIFEST_TYPE
+#   at the final check (after STAGE 5, no manifest); P19 unexpected
+#   bound-input structure -> DIAG_BINDING; P15 version 0.6.
 # Changelog (v0.4, 2026-11-09): F1 v0.5 -- P10b early timing refusal
 #   before the full replay (no STAGE 5, no manifest); P15 manifest version
 #   0.5 with the early-refusal projection recorded.
@@ -80,10 +88,17 @@ def child(fx: Path, out: Path, mode: str) -> int:
         if mode == "tamper" and k == (2027, "lam2"):
             sel["rows"]["rows"][3]["psnr"] += 0.01
         return sel
+    raw_inputs = {k: {"path": fx / f"{k}.input", "sha256": "0" * 64}
+                  for k in F1.INPUT_KEYS}      # pinned _bound() shape
+    inputs = (raw_inputs if mode == "pathleak"
+              else F1.record_inputs(raw_inputs, K))
+    if mode == "late_type":
+        real_retained = A.retained_slices
+        A.retained_slices = lambda *a: real_retained(*a) + [Path("/late")]  # not JSON
     ctx = {"binding": {"pin": "SYNTHETIC", "launch_chain": "SYNTHETIC",
                        "launch_inputs_sha256": "SYNTHETIC",
                        "completion_evidence_sha256": "SYNTHETIC",
-                       "backend": "SYNTHETIC (1 thread)", "inputs": "SYNTHETIC"},
+                       "backend": "SYNTHETIC (1 thread)", "inputs": inputs},
            "data": {"vv": vv, "eligibility": elig, "p4": FX._unit_p4(),
                     "s_ref": 1.0},
            "zf_rows": json.loads((fx / "zf.json").read_text()),
@@ -110,6 +125,7 @@ def parent() -> int:
     import torch
     torch.set_num_threads(1)
     import diag_jsh_adapter as A
+    import diag_jsh_f1_prepare as F1
     from seqref_mri.scripts import v05lt_common as C
     from seqref_mri.scripts import v05lt_eligibility as E
     from seqref_mri.scripts import v05lt_eval as EV
@@ -228,10 +244,16 @@ def parent() -> int:
            "P7 only the three supported files written; within the budget",
            f"{used} bytes")
         er = man["preparation_limits"].get("early_refusal", {})
-        ok(man["f1"]["version"] == "0.5" and er.get("t_boot_est_s", 0) > 0 and
+        ok(man["f1"]["version"] == "0.6" and er.get("t_boot_est_s", 0) > 0 and
            er.get("projected_s", 1e18) <= er.get("remaining_s", -1),
-           "P15 manifest records F1 version 0.5 and the early-refusal "
+           "P15 manifest records F1 version 0.6 and the early-refusal "
            "projection (fits)", f"{man['f1']['version']} {er}")
+        ins_ = man.get("inputs", {})
+        ok(set(ins_) == set(F1.INPUT_KEYS) and
+           all(isinstance(v["path"], str) and
+               v["path"] == str(fx / f"{k}.input") for k, v in ins_.items()),
+           "P16 bound-input paths recorded as str through record_inputs "
+           "(pinned _bound() shape)", str(ins_)[:80])
         ok(man["sm_parity"]["label"].startswith("magnitude-spectrum error")
            and "NOT ADOPTED" in man["sm_parity"]["criterion"],
            "P7b S-M: frozen fallback label, criterion not adopted")
@@ -252,6 +274,43 @@ def parent() -> int:
         ok(p.returncode == 1 and f"STOP {code}" in p.stdout and
            not (out / "diag_jsh_manifest.json").exists(),
            label + " (no manifest)", p.stdout.strip()[-60:])
+    p, out = run_child("pathleak")
+    flog = (out / "f1.log").read_text() if (out / "f1.log").exists() else ""
+    ok(p.returncode == 1 and "STOP DIAG_MANIFEST_TYPE" in p.stdout and
+       "early manifest fields" in flog and "STAGE 5" not in flog and
+       not (out / "diag_jsh_manifest.json").exists(),
+       "P17 raw Path in the binding: STOP DIAG_MANIFEST_TYPE at the early "
+       "check (before STAGE 5, no manifest)", p.stdout.strip()[-70:])
+    p, out = run_child("late_type")
+    flog = (out / "f1.log").read_text() if (out / "f1.log").exists() else ""
+    ok(p.returncode == 1 and "STOP DIAG_MANIFEST_TYPE" in p.stdout and
+       "STAGE 2b" in flog and "STAGE 5" in flog and
+       "manifest: TypeError" in flog and
+       not (out / "diag_jsh_manifest.json").exists(),
+       "P18 non-serialisable field generated later: STOP DIAG_MANIFEST_TYPE "
+       "at the final check (after STAGE 5, no manifest)",
+       p.stdout.strip()[-70:])
+    import diag_jsh_core as K_
+    import diag_jsh_f1_prepare as F1_
+    good = {k: {"path": Path("/x") / k, "sha256": "a" * 64}
+            for k in F1_.INPUT_KEYS}
+    bad = []
+    for label, mut in (("extra key", lambda d: d["zf"].update(size=1)),
+                       ("path int", lambda d: d["zf"].update(path=7)),
+                       ("short sha", lambda d: d["zf"].update(sha256="ab")),
+                       ("missing", lambda d: d.pop("zf"))):
+        d = {k: dict(v) for k, v in good.items()}
+        mut(d)
+        try:
+            F1_.record_inputs(d, K_)
+            bad.append(label)
+        except K_.DiagError as exc:
+            if exc.code != "DIAG_BINDING":
+                bad.append(label)
+    conv = F1_.record_inputs(good, K_)
+    ok(not bad and all(isinstance(v["path"], str) for v in conv.values()),
+       "P19 record_inputs: Path converted; extra key / non-path / short "
+       "sha / missing input refused (DIAG_BINDING)", str(bad))
     p, out = run_child("projected")
     flog = (out / "f1.log").read_text() if (out / "f1.log").exists() else ""
     ok(p.returncode == 1 and "STOP DIAG_DEADLINE_PROJECTED" in p.stdout and

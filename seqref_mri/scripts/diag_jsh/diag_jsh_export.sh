@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SEQREF-MRI-DIAGJSHEXP v0.3 -- export reviewed DIAG-JSH run files from a ch2-diag commit to v06lt_evidence/DIAG_JSH/code with CSMFII back on the V05LT pin
+# SEQREF-MRI-DIAGJSHEXP v0.4 -- export reviewed DIAG-JSH run files from a ch2-diag commit to v06lt_evidence/DIAG_JSH/code with CSMFII back on the V05LT pin
 # LIFETIME: KEEP
 # =============================================================================
 # Plan SEQREF-MRI-DEVTREE v0.3, step 3. Run by the owner on the host, read
@@ -27,6 +27,8 @@
 #      folder in v06lt_evidence/). Never overwrites or deletes deployed files.
 # Prints RESULT DIAGJSH_EXPORT PASS commit=... and the 5 hashes.
 # Not done here: the F1 run itself (separate reviewed command and GO).
+# Changelog (v0.4, 2026-11-10): reviewed F1 prepare hash updated to v0.6
+#   (dc74b069...a1f; manifest path-field fix). No other change.
 # Changelog (v0.3, 2026-11-10; reviewer finding on v0.2): the source-scan
 #   comparison no longer uses process substitution (a failed producer was
 #   accepted as an empty list); both sorted lists are written to files with
@@ -54,7 +56,7 @@ C=${1:-}
 REVIEWED=$(cat <<'TAB'
 diag_jsh_core.py 85410c77472cf876021a49bd72254ac98461227887178e24cdb6d0ce5295c0fb
 diag_jsh_adapter.py c566858189be4a3dee822ce4eef46b156986881a92cb6d4360b386ca785707c1
-diag_jsh_f1_prepare.py 3472714752948d5fbf63d7a96ffa64db2b787d6f9a40b6720e944537242fd739
+diag_jsh_f1_prepare.py dc74b0693b1eb0c0ecaa88fd813e22b925c6d99025d834c20c01cbcd71995a1f
 diag_jsh_f1_cmd.sh 0d67a2df4cbec089eccace3bd15885e0d1eb5c12e477d51cd88f519dfe9b1d93
 diag_jsh_i3.py 70f6b57511f62b3f178fa53ffcda938740b584e491da139895f17396e9aa1dca
 TAB

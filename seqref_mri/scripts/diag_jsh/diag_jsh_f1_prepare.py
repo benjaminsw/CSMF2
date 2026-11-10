@@ -1,4 +1,4 @@
-# SEQREF-MRI-DIAGJSHF1 v0.5 -- DIAG-JSH preparation step F1 (frozen mini-spec v1.0 §0 F1, §1.3, §5, §6, §8)
+# SEQREF-MRI-DIAGJSHF1 v0.6 -- DIAG-JSH preparation step F1 (frozen mini-spec v1.0 §0 F1, §1.3, §5, §6, §8)
 # LIFETIME: KEEP
 # =============================================================================
 # Run ONLY through diag_jsh_f1_cmd.sh (reviewed), from the V05LT tree, with
@@ -13,6 +13,12 @@
 #   2. pinned binding (bind_production): launch chain vs approved sha256 ->
 #      launch-inputs record (pin, inputs, HEAD = pin); completion re-verified
 #      (read-only); registered backend (12/12, deterministic off) checked;
+#      bound inputs recorded with their path fields converted explicitly to
+#      str (v0.6);
+#   2b. early JSON check (v0.6): the manifest fields known after binding
+#      (binding, code hashes, ZF record) must serialise strictly (no
+#      default=; allow_nan=False) -> else STOP DIAG_MANIFEST_TYPE within
+#      seconds, before any replay;
 #   3. inputs: data, eligibility, P4, s_ref, ZF; six runs by pinned
 #      load_run; selected checkpoints; population check (§1.3 item 1);
 #   4. early check + probe: 2 slices of the first checkpoint reproduce the
@@ -22,7 +28,10 @@
 #      (§1.3 item 2); disk checked after each checkpoint;
 #   6. loaded modules, H-D/H-F thirds, retained slices, measured timing
 #      components for the main-run limit;
-#   7. manifest SEQREF-MRI-DIAG-JSH-MAN (disk check first; write-once).
+#   7. manifest SEQREF-MRI-DIAG-JSH-MAN (disk check first; write-once);
+#      the complete manifest is serialised by the same strict check (fields
+#      generated later are validated here) -> STOP DIAG_MANIFEST_TYPE, no
+#      manifest, instead of an unexpected error.
 # The main-run limits (T with plot time; disk projection of DIAG-I3 outputs)
 #   are NOT final here: they are completed and bound at F2 (flagged in the
 #   manifest as "pending F2"). S-M parity: recorded against a PROPOSED
@@ -44,6 +53,13 @@
 #   overall Python deadline, F1 STOPS (DIAG_DEADLINE_PROJECTED) before the
 #   full replay. The command terminates at
 #   MAX_WALL_S - 90 s (TERM) and kills at MAX_WALL_S - 30 s: a hard cap.
+# Changelog (v0.6, 2026-11-10; F1 host run 1 failed at the manifest:
+#   TypeError, PosixPath not JSON serialisable): record_inputs() converts
+#   the bound inputs' known path field to str explicitly and refuses any
+#   other structure (DIAG_BINDING); json_text() serialises strictly and
+#   turns TypeError / ValueError into STOP DIAG_MANIFEST_TYPE; early check
+#   of the binding-time fields (2b) and final check of the whole manifest.
+#   No change to the science, the replay or the limits.
 # Changelog (v0.5, 2026-11-09; F1 review 3): early timing refusal before
 #   the full replay (projected replay + bootstrap timing + summaries and
 #   manifest vs the remaining Python deadline); __version__ corrected to 0.5
@@ -82,7 +98,7 @@ import traceback
 from pathlib import Path
 
 __abbr__ = "SEQREF-MRI-DIAGJSHF1"
-__version__ = "0.5"
+__version__ = "0.6"
 DIAG_ROOT = Path("/home/benjamin/CSMFII/v06lt_evidence/DIAG_JSH")
 V05LT = Path("/home/benjamin/CSMFII")
 PIN = "7455da8027f33a6cca4dbf72f04e72420e938f45"
@@ -131,6 +147,36 @@ def check_out(out: Path, parent: Path) -> None:
         raise SystemExit(f"STOP usage: {out} must be an existing empty "
                          f"folder directly in {parent}, reached without "
                          "symlinks")
+
+
+INPUT_KEYS = ("split_manifest", "eligibility", "zf", "data_content")
+
+
+def record_inputs(ins: dict, K) -> dict:
+    """Bound inputs (pinned ProductionStages._bound: {"path": Path,
+    "sha256": str}) -> JSON-safe manifest record. Only the known path field
+    is converted (os.fspath); any other structure is refused, so no other
+    type can slip through (no blanket default=str)."""
+    rec = {}
+    for k in INPUT_KEYS:
+        e = ins.get(k)
+        K.require(isinstance(e, dict) and set(e) == {"path", "sha256"} and
+                  isinstance(e["path"], (str, os.PathLike)) and
+                  isinstance(e["sha256"], str) and len(e["sha256"]) == 64,
+                  "DIAG_BINDING", f"bound input {k}: unexpected structure "
+                  f"{type(e).__name__} {sorted(e) if isinstance(e, dict) else ''}")
+        rec[k] = {"path": os.fspath(e["path"]), "sha256": e["sha256"]}
+    return rec
+
+
+def json_text(obj, what: str, K) -> str:
+    """Strict serialisation used for the early check and the manifest:
+    sort_keys, allow_nan=False, no default= hook. TypeError / ValueError ->
+    typed STOP DIAG_MANIFEST_TYPE (logged by K.fail)."""
+    try:
+        return json.dumps(obj, sort_keys=True, indent=1, allow_nan=False)
+    except (TypeError, ValueError) as exc:
+        K.fail("DIAG_MANIFEST_TYPE", f"{what}: {type(exc).__name__}: {exc}")
 
 
 def start(out: Path, A, reserve: int):
@@ -231,9 +277,7 @@ def bind_from(camp, stages, repo, chain, chain_sha256, A, K, *,
                         "launch_inputs_sha256": ins["record_sha256"],
                         "completion_evidence_sha256": ev_sha,
                         "backend": backend,
-                        "inputs": {k: ins[k] for k in (
-                            "split_manifest", "eligibility", "zf",
-                            "data_content")}},
+                        "inputs": record_inputs(ins, K)},
             "data": data, "zf_rows": zf["rows"],
             "zf_record_sha256": zf["record_sha256"],
             "load_selected": lambda k: A.load_selected(stages, *k),
@@ -276,6 +320,10 @@ def prepare(ctx: dict, out: Path, lim: dict, code: dict, A, K,
     t_all = time.monotonic()
     hard = lim["deadline"]                   # overall Python deadline
     budget.check(0, "before preparation")
+    json_text({"binding": ctx["binding"], "code_sha256": code,
+               "zf_record_sha256": ctx["zf_record_sha256"]},
+              "early manifest fields", K)
+    logger.info("STAGE 2b early manifest fields serialise (strict JSON)")
     data = ctx["data"]
     vv, elig, p4, s_ref = (data["vv"], data["eligibility"], data["p4"],
                            data["s_ref"])
@@ -403,8 +451,7 @@ def prepare(ctx: dict, out: Path, lim: dict, code: dict, A, K,
                                  "spearman": N_SPEARMAN,
                                  "subgroup": N_SUBGROUP},
             "measured_full_replay_s": t_reps, "measured_load_s": t_loads}}
-    body = (json.dumps(man, sort_keys=True, indent=1, allow_nan=False)
-            + "\n").encode()
+    body = (json_text(man, "manifest", K) + "\n").encode()
     sha = A.sha256_bytes(body)
     side = f"{sha}  diag_jsh_manifest.json\n".encode()
     budget.check(len(body) + len(side), "before manifest")
