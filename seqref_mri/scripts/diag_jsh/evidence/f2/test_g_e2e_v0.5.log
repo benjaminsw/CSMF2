@@ -1,0 +1,65 @@
+ok   E0 synthetic fixture built (6 checkpoints, 8 slices, 4 volumes)
+ok   E1 fixture F1 manifest produced by F1 prepare() (real code dict)  [manifest_sha256=75c9b2662bbe0258afede467b340e6528a19cbad7cdfdc2284b28eee8cb2b2fa]
+ok   E2 complete G run under the guard and budget: PASS  [_G PASS run_record_sha256=c9157b25e8f731d9d412c2aebf04145f237b50e18639387c436f4301a42da357]
+ok   E3 exactly the registered outputs, each with a sidecar, + g.log + mplconfig  [[]]
+ok   E4 every sidecar equals its file's sha256  [[]]
+ok   E5 results and run record are strict JSON (no NaN/Infinity), bound to the manifest  [{'code_sha256': {'diag_jsh_adapter.py': 'c566858189be4a3dee822ce4eef46b156986881a92cb6d4360b386ca785707c1', 'diag_jsh_co]
+ok   E5b registered G-D4 result reported alongside (own estimand and resampling label, not pooled)  [{'ci95': [-0.25, 0.5], 'comparison_id': 'between|selected|r0|psnr', 'estimand': "mean over the three seeds and the valid]
+ok   E5c imported pinned modules verified and recorded in the run record  [36]
+ok   E6 bytes within the budget; the only pre-guard files are the matplotlib cache inside OUT  [2051157 B, [['mplconfig/fontlist-v3.11.0.json', 180154]]]
+ok   E7 recorded subgroup sizes used; six reproduction records
+ok   E8 per-volume table: 3 seeds x 4 volumes x {lam0, lam2, lam2-lam0}  [37]
+ok   E9 log: stages G1-G6; each checkpoint decoded once
+ok   E10 no matplotlib cache or temp folder created outside OUT  [set() ['fontlist-v3.11.0.json']]
+ok   E11 wrong manifest sha256 (no run record)  [RESULT DIAG_G STOP DIAG_MANIFEST]
+ok   E12 resource record bound to another manifest (no run record)  [RESULT DIAG_G STOP DIAG_RESOURCES]
+ok   E13 command cap != registered cap (no run record)  [RESULT DIAG_G STOP DIAG_RESOURCES]
+ok   E14 selected epoch differs from the manifest (no run record)  [RESULT DIAG_G STOP DIAG_MANIFEST_MISMATCH]
+ok   E15 recomputed thirds differ from the manifest (no run record)  [RESULT DIAG_G STOP DIAG_MANIFEST_MISMATCH]
+ok   E16 retained slices differ from the manifest (no run record)  [RESULT DIAG_G STOP DIAG_MANIFEST_MISMATCH]
+ok   E17 Python deadline enforced (no run record)  [RESULT DIAG_G STOP DIAG_DEADLINE]
+ok   E18 stored-row deviation in checkpoint 4 of 6 stops G (no run record)  [RESULT DIAG_G STOP DIAG_REPRODUCTION_MISMATCH]
+ok   E19 outputs larger than the budget refused before writing (no run record)  [RESULT DIAG_G STOP DIAG_DISK]
+ok   E19b budget refusal logged; any written output keeps its sidecar (write-once, partial outputs preserved)
+ok   E20 native (unaudited) write inside OUT caught by the final byte reconciliation  [RESULT DIAG_G STOP DIAG_UNBUDGETED_BYTES]
+ok   E28 changed imported pinned module refused before outputs (no run record)  [RESULT DIAG_G STOP DIAG_PIN_MISMATCH]
+ok   E29 G-D4 document hash != registered (no run record)  [RESULT DIAG_G STOP DIAG_GD4]
+ok   E30 registered G-D4 comparison missing (no run record)  [RESULT DIAG_G STOP DIAG_GD4]
+ok   E31 deadline passed during output writing: STOP before the run record, no PASS (outputs kept)  [RESULT DIAG_G STOP DIAG_DEADLINE]
+ok   E21 plotting failure: logged with traceback, exit 2, no outputs
+ok   E22 unregistered write inside OUT halts (77)
+ok   E23 write outside OUT halts (77)
+ok   E2b REAL G.main() entry point: PASS, outputs and run record  [n_record_sha256=02ea210acfe23876ed95b5bd6aea64f7432a522b5d16eeb3e30228d77196c4e2]
+ok   E2c REAL entry point: cap argument != registered cap -> STOP (1)  [RESULT DIAG_G STOP DIAG_RESOURCES]
+ok   E2d REAL entry point: code hash argument != file -> STOP (1)  [RESULT DIAG_G STOP DIAG_CODE_MISMATCH]
+ok   E25 init phase: write inside OUT/mplconfig and fc-list allowed
+ok   E26 init phase: write outside OUT/mplconfig halts (77)
+ok   E27 init phase: other subprocess halts (77)  [DIAG_INIT_PHASE subprocess.Popen ('true', ['true'], False)]
+ok   E32 init phase: write-open on a descriptor to an outside file halts (77)  [DIAG_INIT_PHASE write outside OUT/mplconfig 3]
+ok   E33 init phase: descriptor to a file inside OUT/mplconfig allowed
+ok   E34 explicit executable /bin/true with fc-list argv halts (77)  [DIAG_INIT_PHASE subprocess.Popen ('/bin/true', ['fc-list', '--help'], False)]
+ok   E35 a different fc-list earlier on PATH halts (77)  [DIAG_INIT_PHASE subprocess.Popen ('fc-list', ['fc-list', '--help'], False)]
+ok   E36 explicit env halts (77)  [DIAG_INIT_PHASE subprocess.Popen ('fc-list', ['fc-list', '--help'], True)]
+ok   E37 fc-list with other arguments halts (77)  [DIAG_INIT_PHASE subprocess.Popen ('fc-list', ['fc-list', '--verbose'], False)]
+ok   E38 init phase: file kernel-capped at INIT_FILE_CAP (EFBIG)  [EFBIG 27 size=4194304]
+ok   E39 init phase: sequential writes -- total > INIT_TOTAL_CAP halts at the next event  [DIAG_INIT_PHASE cache total > INIT_TOTAL_CAP 8388608]
+ok   E38b PRODUCTION init_plotting installs the 4 MiB per-file cap (EFBIG at 4 MiB inside the live phase) and restores it after  [{'rlimit': 4194304, 'sigxfsz_ignored': True, 'xdg': '/tmp/diaggit_j36z1u4d/real_real_cap_0/mplconfig/fontconfig-ro', 'event': 'os.mkdir', 'ro_mode': None, 'efbig': 27, 'big_size': 4194304, 'after_rlim]
+ok   E43 PRODUCTION init_plotting: at the fc-list call XDG_CACHE_HOME is the read-only folder inside OUT; restored after; home fontconfig cache unchanged  [{'rlimit': 4194304, 'sigxfsz_ignored': True, 'xdg': '/tmp/diaggit_j36z1u4d/real_real_fc_0/mplconfig/fontconfig-ro', 'event': 'subprocess.Popen', 'ro_mode': '0o555', 'after_rlimit': -1, 'after_xdg': No]
+ok   E41 PRODUCTION init_plotting: 4 files open at once, each capped -> total <= 4 x 4 MiB = 16 MiB; the next file or event halts (77)  [[16777216] 16777216 DIAG_INIT_PHASE cache total > INIT_TOTAL_CAP 8388608]
+ok   E48 PRODUCTION phase: same path opened 4 times with rename / replace / delete while the descriptors stay open -> 4 x 4 MiB = 16 MiB at most; the 5th write-open halts (77)  [[16777216] iaggit_j36z1u4d/real_real_rename_0/mplconfig/cache.tmp', '/tmp/diaggit_j36z1u4d/real_real_rename_0/mplconfig/cache.tmp']]
+ok   E48b PRODUCTION phase: the review sequence (open cache.tmp, rename, reuse) -> 5th write-open halts (77); 16 MiB at most  [[16777216] DIAG_INIT_PHASE cache total > INIT_TOTAL_CAP 8388608]
+ok   E49 PRODUCTION normal initialisation (fresh font cache) stays within the allowance (write-opens <= 4, cache <= 8 MiB)  [2 [['mplconfig/fontlist-v3.11.0.json', 180154]]]
+ok   E40 init phase: a 5th write-open halts (77)  [/tmp/diaggit_j36z1u4d/init_init_maxfiles/mplconfig/m3.txt', '/tmp/diaggit_j36z1u4d/init_init_maxfiles/mplconfig/m4.txt']]
+ok   E42 init phase: os.link halts (77)  [('/tmp/diaggit_j36z1u4d/init_init_link/mplconfig/a.txt', '/tmp/diaggit_j36z1u4d/init_init_link/mplconfig/b.txt', -1, -1)]
+ok   E42b init phase: os.symlink halts (77)  [/tmp/diaggit_j36z1u4d/init_init_symlink/mplconfig/a.txt', '/tmp/diaggit_j36z1u4d/init_init_symlink/mplconfig/c.txt', -1)]
+ok   E44 after the phase: descriptor write outside OUT halts (77) although the adapter guard accepts descriptors  [DIAG_INIT_PHASE DIAG_G_GUARD descriptor write (3, '/tmp/diaggit_j36z1u4d/init_post_fd_out_outside.txt')]
+ok   E45 strict: descriptor write to an unregistered file inside OUT halts (77)  [DIAG_INIT_PHASE DIAG_G_GUARD descriptor write (4, '/tmp/diaggit_j36z1u4d/init_post_fd_unreg/unregistered.txt')]
+ok   E46 after the phase: git argv with executable /bin/true halts (77)  [IT_PHASE DIAG_G_GUARD executable ('/bin/true', ['git', '-C', '/home/claude/v06lt_dev/pin_a68346d', 'rev-parse', 'HEAD'])]
+ok   E47 after the phase: the genuine git -C repo rev-parse is allowed  [POST_GIT_OK 0 a68346dd2735]
+ok   E24 fixture folder removed
+RESULT 59/59 checks passed
+
+real	16m17.498s
+user	12m26.515s
+sys	3m32.739s
+rc=0

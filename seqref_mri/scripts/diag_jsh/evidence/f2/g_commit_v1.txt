@@ -1,0 +1,29 @@
+(
+  set -euo pipefail
+  cd /home/benjamin/CSMFII
+  B=$(git branch --show-current)
+  [ "$B" = ch2-diag ] || { echo "STOP: branch $B"; exit 1; }
+  D=seqref_mri/scripts/diag_jsh
+  sha256sum -c <<'SUMS'
+80677eede40f88a9e1c2b771d355e9e08d89ecec4ccd7385a918a45761fe9761  seqref_mri/scripts/diag_jsh/diag_jsh_g_run.py
+7536091103f18c5cfd423df98ac1f4ac3a3c1fc662b8a9bbb7cf0bcc8923eb4e  seqref_mri/scripts/diag_jsh/diag_jsh_f2_resources.py
+cbb39acedec519825eef57ec5bf204f5cc5b3de0b18f1acb9e06b1a2425470b4  seqref_mri/scripts/diag_jsh/diag_jsh_g_cmd.sh
+71fa63e1ae59e4b2302bfc23c58bf38b9b20a28789751fb4cd94a53859551a35  seqref_mri/scripts/diag_jsh/diag_jsh_f2_probe.py
+46f9f992d5e2289fcf4045673f6e761151f0b5e359ad26a91ebf2d63d07cf374  seqref_mri/scripts/diag_jsh/test_diag_jsh_g_e2e.py
+db809e3e46ed870c217ad84d0b031cc17edc16b6a5f7dd262bc67ba2dc2e4524  seqref_mri/scripts/diag_jsh/diag_jsh_export.sh
+8301e1f31ab03d7dbbbcbfd20bed713d07732bafdfac5d2409d8571d2b93e294  seqref_mri/scripts/diag_jsh/diag_jsh_export_v0.4.sh
+a6fd25f29a7ca4dafdef4ff9e949101c960dc658d422a747e90b032bd2406470  seqref_mri/scripts/diag_jsh/test_diag_jsh_export.sh
+SUMS
+  git diff --cached --quiet || { echo "STOP: other changes already staged"; exit 1; }
+  git add -f -- "$D/diag_jsh_g_run.py" "$D/diag_jsh_f2_resources.py" \
+    "$D/diag_jsh_g_cmd.sh" "$D/diag_jsh_f2_probe.py" "$D/test_diag_jsh_g_e2e.py" \
+    "$D/diag_jsh_export.sh" "$D/diag_jsh_export_v0.4.sh" "$D/test_diag_jsh_export.sh"
+  git diff --cached --check
+  git commit -m "DIAG-JSH F2: G runner v0.1, F2 resource record v0.1, G command v0.1, probe, G e2e test; export helper v0.5; preserve v0.4"
+  git push origin ch2-diag
+  ST=$(git status --porcelain)
+  [ -z "$ST" ] || { echo "STOP: not clean after commit"; printf '%s\n' "$ST"; exit 1; }
+  git rev-parse HEAD
+  git ls-remote --heads origin refs/heads/ch2-diag
+)
+echo "commit_exit=$?"

@@ -1,0 +1,32 @@
+ok   E0 synthetic fixture built (6 checkpoints, 8 slices, 4 volumes)
+ok   E1 fixture F1 manifest produced by F1 prepare() (real code dict)  [manifest_sha256=3cd861f611d9810c56067be9b187c004c330f9bf4099efb0c14d0091ae0ba3a8]
+ok   E2 complete G run under the guard and budget: PASS  [_G PASS run_record_sha256=870713365bc5ee02fdcca2310d10c57eadadc8f45ecad83f1e8146b40f4890b1]
+ok   E3 exactly the registered outputs, each with a sidecar, + g.log + mplconfig  [[]]
+ok   E4 every sidecar equals its file's sha256  [[]]
+ok   E5 results and run record are strict JSON (no NaN/Infinity), bound to the manifest  [{'code_sha256': {'diag_jsh_adapter.py': 'c566858189be4a3dee822ce4eef46b156986881a92cb6d4360b386ca785707c1', 'diag_jsh_co]
+ok   E6 bytes within the budget; the only pre-guard files are the matplotlib cache inside OUT  [2041730 B, [['mplconfig/fontlist-v3.11.0.json', 180154]]]
+ok   E7 recorded subgroup sizes used; six reproduction records
+ok   E8 per-volume table: 3 seeds x 4 volumes x {lam0, lam2, lam2-lam0}  [37]
+ok   E9 log: stages G1-G6; each checkpoint decoded once
+ok   E10 no matplotlib cache or temp folder created outside OUT  [set() ['fontlist-v3.11.0.json']]
+ok   E11 wrong manifest sha256 (no run record)  [RESULT DIAG_G STOP DIAG_MANIFEST]
+ok   E12 resource record bound to another manifest (no run record)  [RESULT DIAG_G STOP DIAG_RESOURCES]
+ok   E13 command cap != registered cap (no run record)  [RESULT DIAG_G STOP DIAG_RESOURCES]
+ok   E14 selected epoch differs from the manifest (no run record)  [RESULT DIAG_G STOP DIAG_MANIFEST_MISMATCH]
+ok   E15 recomputed thirds differ from the manifest (no run record)  [RESULT DIAG_G STOP DIAG_MANIFEST_MISMATCH]
+ok   E16 retained slices differ from the manifest (no run record)  [RESULT DIAG_G STOP DIAG_MANIFEST_MISMATCH]
+ok   E17 Python deadline enforced (no run record)  [RESULT DIAG_G STOP DIAG_DEADLINE]
+ok   E18 stored-row deviation in checkpoint 4 of 6 stops G (no run record)  [RESULT DIAG_G STOP DIAG_REPRODUCTION_MISMATCH]
+ok   E19 outputs larger than the budget refused before writing (no run record)  [RESULT DIAG_G STOP DIAG_DISK]
+ok   E19b budget refusal logged; any written output keeps its sidecar (write-once, partial outputs preserved)
+ok   E20 native (unaudited) write inside OUT caught by the final byte reconciliation  [RESULT DIAG_G STOP DIAG_UNBUDGETED_BYTES]
+ok   E21 plotting failure: logged with traceback, exit 2, no outputs
+ok   E22 unregistered write inside OUT halts (77)
+ok   E23 write outside OUT halts (77)
+ok   E24 fixture folder removed
+RESULT 26/26 checks passed
+
+real	12m0.243s
+user	9m7.804s
+sys	2m36.471s
+rc=0

@@ -1,0 +1,76 @@
+(
+  set -euo pipefail
+  cd /home/benjamin/CSMFII
+  B=$(git branch --show-current)
+  [ "$B" = ch2-diag ] || { echo "STOP: branch $B"; exit 1; }
+  cd seqref_mri/scripts/diag_jsh
+  sha256sum -c <<'SUMS'
+c7460a2543cec8766612f77c2118a52eaca51e490959cf10e9185825675102ab  diag_jsh_export.sh
+8301e1f31ab03d7dbbbcbfd20bed713d07732bafdfac5d2409d8571d2b93e294  diag_jsh_export_v0.4.sh
+db809e3e46ed870c217ad84d0b031cc17edc16b6a5f7dd262bc67ba2dc2e4524  diag_jsh_export_v0.5.sh
+71fa63e1ae59e4b2302bfc23c58bf38b9b20a28789751fb4cd94a53859551a35  diag_jsh_f2_probe.py
+9af68faebe49d02d23aa9843023e0aaa4b4423611ebf1d9b7a27063775009b67  diag_jsh_f2_resources.py
+7536091103f18c5cfd423df98ac1f4ac3a3c1fc662b8a9bbb7cf0bcc8923eb4e  diag_jsh_f2_resources_v0.1.py
+cbb39acedec519825eef57ec5bf204f5cc5b3de0b18f1acb9e06b1a2425470b4  diag_jsh_g_cmd.sh
+db94f7974aa4ed94cf52627106edcb484b6ee44feb18bb6ed5ff873af6b2f2cb  diag_jsh_g_run.py
+80677eede40f88a9e1c2b771d355e9e08d89ecec4ccd7385a918a45761fe9761  diag_jsh_g_run_v0.1.py
+60ee0783e3ee18a4634ff404dba3e08991e363cfe080f955482df679bfb305e0  evidence/f2/f2_probe_v0.1_output.json
+f3009d8216d5adb5b2c1d6785d0708a67d996ad88086174ca464da2be365e0ac  evidence/f2/g_export.txt
+2917d8a1e9ca81dbdf3b2a84d9682c7b6d71cb1b97730451f20dff22371313ec  evidence/f2/g_launch.txt
+38a7ca1461673abdc8434d2037cf4ecd88897a050c5d9e4a876d08825a5939e9  evidence/f2/g_launch_v1.txt
+82dd4cdcc0e9840e02905f47afc4fcdbbec1d05134dcfdd825b529b896c7fb1b  evidence/f2/g_moveaside.txt
+1f99206351d9e1cc49c37650d9290a66769ed2078ae0e2e29ddccc8c4a2e8738  evidence/f2/g_precheck.txt
+8fe9492a41b2249070fa7bf85e7ea39388f25e5b6e0df881ae61c5c6931fd95d  evidence/f2/g_precheck_v1.txt
+d51c6295547f9f60c6bc5010f2711b1b4539eadfa5a30a672b0535efe853301d  evidence/f2/test_export_v0.5.log
+d51c6295547f9f60c6bc5010f2711b1b4539eadfa5a30a672b0535efe853301d  evidence/f2/test_export_v0.6.log
+7b4bfe283a3ca2126e695ececd3491fcca424c558f7eb46bee0004526d54508d  evidence/f2/test_g_blocks_v0.1.log
+7e1389eb687290027a90f07c8b023b82fb6ba1502cd5fe1f7b6bbeebffbc0e93  evidence/f2/test_g_blocks_v0.2.log
+9f2be86dd850034cff53b23cb13e3c49b59d506eb92620bc1534032869580792  evidence/f2/test_g_e2e_v0.1.log
+cd19313315d35b19d6f2798bea049d38b420dce79d944b2bd3af841b94836276  evidence/f2/test_g_e2e_v0.2.log
+e7ba10f29b7bd3e9bd280c17d9b4c1a40d203fc6e2595931db2f5ca142e50af5  test_diag_jsh_export.sh
+257d809c5b4a0e0aec2f5df000f236df7e0357d96c4c6a7870c690f9e317e472  test_diag_jsh_g_e2e.py
+46f9f992d5e2289fcf4045673f6e761151f0b5e359ad26a91ebf2d63d07cf374  test_diag_jsh_g_e2e_v0.1.py
+3a1313f64f428a30fcb84bf41ee5a3c5739ea2eed2c9e85be6194701a0e3b079  test_g_blocks.sh
+fdce338eefaa440735869527b596fbf583ea80559a02c8f3f4dbf2930eb26f60  test_g_blocks_v0.1.sh
+SUMS
+  cd /home/benjamin/CSMFII
+  git diff --cached --quiet || { echo "STOP: other changes already staged"; exit 1; }
+  D=seqref_mri/scripts/diag_jsh
+  git add -f -- \
+    "$D/diag_jsh_export.sh" \
+    "$D/diag_jsh_export_v0.4.sh" \
+    "$D/diag_jsh_export_v0.5.sh" \
+    "$D/diag_jsh_f2_probe.py" \
+    "$D/diag_jsh_f2_resources.py" \
+    "$D/diag_jsh_f2_resources_v0.1.py" \
+    "$D/diag_jsh_g_cmd.sh" \
+    "$D/diag_jsh_g_run.py" \
+    "$D/diag_jsh_g_run_v0.1.py" \
+    "$D/evidence/f2/f2_probe_v0.1_output.json" \
+    "$D/evidence/f2/g_export.txt" \
+    "$D/evidence/f2/g_launch.txt" \
+    "$D/evidence/f2/g_launch_v1.txt" \
+    "$D/evidence/f2/g_moveaside.txt" \
+    "$D/evidence/f2/g_precheck.txt" \
+    "$D/evidence/f2/g_precheck_v1.txt" \
+    "$D/evidence/f2/test_export_v0.5.log" \
+    "$D/evidence/f2/test_export_v0.6.log" \
+    "$D/evidence/f2/test_g_blocks_v0.1.log" \
+    "$D/evidence/f2/test_g_blocks_v0.2.log" \
+    "$D/evidence/f2/test_g_e2e_v0.1.log" \
+    "$D/evidence/f2/test_g_e2e_v0.2.log" \
+    "$D/test_diag_jsh_export.sh" \
+    "$D/test_diag_jsh_g_e2e.py" \
+    "$D/test_diag_jsh_g_e2e_v0.1.py" \
+    "$D/test_g_blocks.sh" \
+    "$D/test_g_blocks_v0.1.sh" \
+    "$D/diag_jsh_g_run.py"
+  git diff --cached --check
+  git commit -m "DIAG-JSH F2 v0.2: G runner v0.2, resource record v0.2 (G-D4 binding), G command v0.1, probe, G e2e test v0.2, block tests v0.2; export helper v0.6; preserved reviewed v0.1/v0.4/v0.5 files; F2 test evidence"
+  git push origin ch2-diag
+  ST=$(git status --porcelain)
+  [ -z "$ST" ] || { echo "STOP: not clean after commit"; printf '%s\n' "$ST"; exit 1; }
+  git rev-parse HEAD
+  git ls-remote --heads origin refs/heads/ch2-diag
+)
+echo "commit_exit=$?"

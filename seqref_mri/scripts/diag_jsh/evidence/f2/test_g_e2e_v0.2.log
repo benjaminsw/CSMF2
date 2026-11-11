@@ -1,0 +1,44 @@
+ok   E0 synthetic fixture built (6 checkpoints, 8 slices, 4 volumes)
+ok   E1 fixture F1 manifest produced by F1 prepare() (real code dict)  [manifest_sha256=7c6a9ac4194380cf5cf1a90472d47036880641a7740defd1430f044f9895124f]
+ok   E2 complete G run under the guard and budget: PASS  [_G PASS run_record_sha256=258e7c2031735f6c6ee04acc46fb504e8c763eb846221b8b9135eaba01fd3303]
+ok   E3 exactly the registered outputs, each with a sidecar, + g.log + mplconfig  [[]]
+ok   E4 every sidecar equals its file's sha256  [[]]
+ok   E5 results and run record are strict JSON (no NaN/Infinity), bound to the manifest  [{'code_sha256': {'diag_jsh_adapter.py': 'c566858189be4a3dee822ce4eef46b156986881a92cb6d4360b386ca785707c1', 'diag_jsh_co]
+ok   E5b registered G-D4 result reported alongside (own estimand and resampling label, not pooled)  [{'ci95': [-0.25, 0.5], 'comparison_id': 'between|selected|r0|psnr', 'estimand': "mean over the three seeds and the valid]
+ok   E5c imported pinned modules verified and recorded in the run record  [36]
+ok   E6 bytes within the budget; the only pre-guard files are the matplotlib cache inside OUT  [2051151 B, [['mplconfig/fontlist-v3.11.0.json', 180154]]]
+ok   E7 recorded subgroup sizes used; six reproduction records
+ok   E8 per-volume table: 3 seeds x 4 volumes x {lam0, lam2, lam2-lam0}  [37]
+ok   E9 log: stages G1-G6; each checkpoint decoded once
+ok   E10 no matplotlib cache or temp folder created outside OUT  [set() ['fontlist-v3.11.0.json']]
+ok   E11 wrong manifest sha256 (no run record)  [RESULT DIAG_G STOP DIAG_MANIFEST]
+ok   E12 resource record bound to another manifest (no run record)  [RESULT DIAG_G STOP DIAG_RESOURCES]
+ok   E13 command cap != registered cap (no run record)  [RESULT DIAG_G STOP DIAG_RESOURCES]
+ok   E14 selected epoch differs from the manifest (no run record)  [RESULT DIAG_G STOP DIAG_MANIFEST_MISMATCH]
+ok   E15 recomputed thirds differ from the manifest (no run record)  [RESULT DIAG_G STOP DIAG_MANIFEST_MISMATCH]
+ok   E16 retained slices differ from the manifest (no run record)  [RESULT DIAG_G STOP DIAG_MANIFEST_MISMATCH]
+ok   E17 Python deadline enforced (no run record)  [RESULT DIAG_G STOP DIAG_DEADLINE]
+ok   E18 stored-row deviation in checkpoint 4 of 6 stops G (no run record)  [RESULT DIAG_G STOP DIAG_REPRODUCTION_MISMATCH]
+ok   E19 outputs larger than the budget refused before writing (no run record)  [RESULT DIAG_G STOP DIAG_DISK]
+ok   E19b budget refusal logged; any written output keeps its sidecar (write-once, partial outputs preserved)
+ok   E20 native (unaudited) write inside OUT caught by the final byte reconciliation  [RESULT DIAG_G STOP DIAG_UNBUDGETED_BYTES]
+ok   E28 changed imported pinned module refused before outputs (no run record)  [RESULT DIAG_G STOP DIAG_PIN_MISMATCH]
+ok   E29 G-D4 document hash != registered (no run record)  [RESULT DIAG_G STOP DIAG_GD4]
+ok   E30 registered G-D4 comparison missing (no run record)  [RESULT DIAG_G STOP DIAG_GD4]
+ok   E31 deadline passed during output writing: STOP before the run record, no PASS (outputs kept)  [RESULT DIAG_G STOP DIAG_DEADLINE]
+ok   E21 plotting failure: logged with traceback, exit 2, no outputs
+ok   E22 unregistered write inside OUT halts (77)
+ok   E23 write outside OUT halts (77)
+ok   E2b REAL G.main() entry point: PASS, outputs and run record  [n_record_sha256=39855a962d110ea50dc31b5f7594ebdf95582f1bd68c21b0c4e996a31de7789c]
+ok   E2c REAL entry point: cap argument != registered cap -> STOP (1)  [RESULT DIAG_G STOP DIAG_RESOURCES]
+ok   E2d REAL entry point: code hash argument != file -> STOP (1)  [RESULT DIAG_G STOP DIAG_CODE_MISMATCH]
+ok   E25 init phase: write inside OUT/mplconfig and fc-list allowed
+ok   E26 init phase: write outside OUT/mplconfig halts (77)
+ok   E27 init phase: other subprocess halts (77)  [DIAG_INIT_PHASE subprocess.Popen ['true']]
+ok   E24 fixture folder removed
+RESULT 38/38 checks passed
+
+real	16m59.826s
+user	13m1.089s
+sys	3m38.897s
+rc=0

@@ -1,0 +1,18 @@
+ok   C1 pass (all checks; timers far)
+ok   C1b seven code files + manifest OK, plotting found, two timers
+ok   C2 real threshold 68,754,079,744 B refuses the small sandbox disk
+ok   C3 timer within cap + 15 min refused
+ok   C4 timer without next elapse refused
+ok   C5 plotting libraries missing refused
+ok   C6 wrong branch refused
+ok   C7 dirty tree refused
+ok   C8 changed code file refused
+ok   C9 changed manifest refused
+ok   C10 running DIAG-JSH job refused
+ok   C12 apt service already running refused
+ok   C13 apt service starting refused
+ok   C11 pass again after restoring everything
+ok   L1 launch passes exactly the 12 registered arguments in order
+ok   L2 order matches the G command's usage line
+ok   L3 cap 16,246 s and G budget 32 MiB agree with the resource record
+RESULT 17/17 checks passed

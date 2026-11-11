@@ -1,0 +1,45 @@
+(
+  set -euo pipefail
+  cd /home/benjamin/CSMFII
+  B=$(git branch --show-current)
+  [ "$B" = seqref-v05lt ] || { echo "STOP: branch $B"; exit 1; }
+  H=$(git rev-parse HEAD)
+  [ "$H" = 7455da8027f33a6cca4dbf72f04e72420e938f45 ] || { echo "STOP: HEAD $H"; exit 1; }
+  ST=$(git status --porcelain)
+  [ -z "$ST" ] || { echo "STOP: not clean"; printf '%s\n' "$ST"; exit 1; }
+  cd v06lt_evidence/DIAG_JSH/code
+  sha256sum -c <<'SUMS'
+85410c77472cf876021a49bd72254ac98461227887178e24cdb6d0ce5295c0fb  diag_jsh_core.py
+c566858189be4a3dee822ce4eef46b156986881a92cb6d4360b386ca785707c1  diag_jsh_adapter.py
+dc74b0693b1eb0c0ecaa88fd813e22b925c6d99025d834c20c01cbcd71995a1f  diag_jsh_f1_prepare.py
+70f6b57511f62b3f178fa53ffcda938740b584e491da139895f17396e9aa1dca  diag_jsh_i3.py
+db94f7974aa4ed94cf52627106edcb484b6ee44feb18bb6ed5ff873af6b2f2cb  diag_jsh_g_run.py
+9af68faebe49d02d23aa9843023e0aaa4b4423611ebf1d9b7a27063775009b67  diag_jsh_f2_resources.py
+cbb39acedec519825eef57ec5bf204f5cc5b3de0b18f1acb9e06b1a2425470b4  diag_jsh_g_cmd.sh
+SUMS
+  ( cd ../out/F1_20261110T190054Z && sha256sum -c diag_jsh_manifest.json.sha256 )
+  [ "$(cut -d' ' -f1 ../out/F1_20261110T190054Z/diag_jsh_manifest.json.sha256)" = d3e8176ef91dc1eb319b42f8510170eb6fe658a1ad1d99c561523fecd121d765 ] || { echo "STOP: manifest"; exit 1; }
+  /home/benjamin/CSMFII/seqref_mri/.venv_mri/bin/python -B -E -s -c 'import importlib.util as u, sys; m = [n for n in ("matplotlib", "PIL") if u.find_spec(n) is None]; sys.exit("missing: " + " ".join(m) if m else 0)' || { echo "STOP: plotting libraries missing in the V05LT environment"; exit 1; }
+  echo "PLOTTING LIBRARIES present (found, not imported)"
+  AV=$(df -B1 --output=avail ../out | tail -1 | tr -d ' ')
+  [[ "$AV" =~ ^[0-9]+$ ]] || { echo "STOP: df output '$AV'"; exit 1; }
+  [ "$AV" -ge 68754079744 ] || { echo "STOP: free $AV < 68754079744"; exit 1; }
+  echo "FREE $AV"
+  set +e; P=$(pgrep -af 'seqref_mri[.]scripts[.](v05lt|v06lt)_|diag_jsh_'); PRC=$?; set -e
+  [ "$PRC" -eq 1 ] || { echo "STOP: pgrep rc $PRC"; printf '%s\n' "$P"; exit 1; }
+  for U in apt-daily.service apt-daily-upgrade.service; do
+    A=$(systemctl is-active "$U" || true)
+    [ "$A" = inactive ] || [ "$A" = failed ] || { echo "STOP: $U is $A"; exit 1; }
+    echo "SERVICE OK $U $A"
+  done
+  END=$(( $(date +%s) + 16246 + 900 ))
+  for T in apt-daily.timer apt-daily-upgrade.timer; do
+    N=$(systemctl show -p NextElapseUSecRealtime --value "$T")
+    [ -n "$N" ] || { echo "STOP: $T has no next elapse time"; exit 1; }
+    E=$(date -d "$N" +%s)
+    [ "$END" -lt "$E" ] || { echo "STOP: cap + 15 min ends $(date -d @$END '+%F %T %Z') >= $T $N"; exit 1; }
+    echo "TIMER OK $T next $N; capped end + 15 min $(date -d @$END '+%F %T %Z')"
+  done
+  echo "PRECHECK OK $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+)
+echo "precheck_exit=$?"

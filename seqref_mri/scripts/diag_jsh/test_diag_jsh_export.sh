@@ -1,6 +1,12 @@
-# SEQREF-MRI-DIAGJSHEXPTEST v0.4 -- throwaway-repository refusal tests for DIAG-JSH export helper v0.4 (hardcoded sandbox paths; evidence only, not for host execution)
+# SEQREF-MRI-DIAGJSHEXPTEST v0.9 -- throwaway-repository refusal tests for DIAG-JSH export helper v0.9 (hardcoded sandbox paths; evidence only, not for host execution)
 # LIFETIME: KEEP
 set -u
+# Changelog (v0.9, 2026-11-11): for helper v0.9 (G v0.5).
+# Changelog (v0.8, 2026-11-11): for helper v0.8 (G v0.4).
+# Changelog (v0.7, 2026-11-11): for helper v0.7 (G v0.3).
+# Changelog (v0.6, 2026-11-11): for helper v0.6 (G v0.2, resources v0.2).
+# Changelog (v0.5, 2026-11-11): fixtures include the stage G files
+#   (g_run, f2_resources, g_cmd) for helper v0.5.
 # Changelog (v0.4, 2026-11-10): fixtures copied from the v0.6 staging folder
 #   (F1 prepare v0.6) for helper v0.4; D1 gives the old v0.2 helper the
 #   v0.6 F1 hash (declared test double) so it still reproduces its finding.
@@ -17,7 +23,7 @@ git remote add origin $T/o.git; git push -q origin seqref-v05lt 2>/dev/null
 echo "v06lt_evidence/" >> .git/info/exclude; mkdir v06lt_evidence
 mkdir -p seqref_mri/.venv_mri/lib; echo v > seqref_mri/.venv_mri/lib/site.py; mkdir -p seqref_mri/results; echo r > seqref_mri/results/r.py
 git switch -qc ch2-diag; mkdir -p seqref_mri/scripts/diag_jsh
-cp /home/claude/v06lt_dev/diag_jsh/next/diag_jsh_{core,adapter,f1_prepare,i3}.py /home/claude/v06lt_dev/diag_jsh/next/diag_jsh_f1_cmd.sh seqref_mri/scripts/diag_jsh/
+cp /home/claude/v06lt_dev/diag_jsh/next/diag_jsh_{core,adapter,f1_prepare,i3,g_run,f2_resources}.py /home/claude/v06lt_dev/diag_jsh/next/diag_jsh_{f1,g}_cmd.sh seqref_mri/scripts/diag_jsh/
 sed -e "s#^V05=.*#V05=$T/R#" -e "s#^PIN=.*#PIN=$P#" "$HERE/diag_jsh_export.sh" > seqref_mri/scripts/diag_jsh/diag_jsh_export.sh
 git add seqref_mri; git add -f seqref_mri/scripts/diag_jsh/*.sh; git commit -qm dev; C=$(git rev-parse HEAD)
 mkdir -p $T/stub

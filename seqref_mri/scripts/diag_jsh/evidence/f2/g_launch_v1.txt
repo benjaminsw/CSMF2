@@ -1,0 +1,14 @@
+DJ=/home/benjamin/CSMFII/v06lt_evidence/DIAG_JSH
+bash "$DJ/code/diag_jsh_g_cmd.sh" \
+  /home/benjamin/CSMFII/seqref_mri/results/v05lt/launch/v05lt_launch_chain.json \
+  6f751f0387bb15dd3c70c82d4f247f6f2b51f62df8f66f1884f0f4381a6b478a \
+  68719476736 16246 \
+  "$DJ/out/F1_20261110T190054Z/diag_jsh_manifest.json" \
+  d3e8176ef91dc1eb319b42f8510170eb6fe658a1ad1d99c561523fecd121d765 \
+  85410c77472cf876021a49bd72254ac98461227887178e24cdb6d0ce5295c0fb \
+  c566858189be4a3dee822ce4eef46b156986881a92cb6d4360b386ca785707c1 \
+  dc74b0693b1eb0c0ecaa88fd813e22b925c6d99025d834c20c01cbcd71995a1f \
+  70f6b57511f62b3f178fa53ffcda938740b584e491da139895f17396e9aa1dca \
+  80677eede40f88a9e1c2b771d355e9e08d89ecec4ccd7385a918a45761fe9761 \
+  7536091103f18c5cfd423df98ac1f4ac3a3c1fc662b8a9bbb7cf0bcc8923eb4e
+echo "g_exit=$?"

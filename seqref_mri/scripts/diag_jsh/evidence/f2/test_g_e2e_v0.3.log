@@ -1,0 +1,52 @@
+ok   E0 synthetic fixture built (6 checkpoints, 8 slices, 4 volumes)
+ok   E1 fixture F1 manifest produced by F1 prepare() (real code dict)  [manifest_sha256=d6e23ec94c0920125bc0a7d9ce3fe10477eba3acdc91297c6c1ca7f4a3ac96ed]
+ok   E2 complete G run under the guard and budget: PASS  [_G PASS run_record_sha256=4706f6ea63997691b607b18e03b6886a926ed0fb1aaf39577dbf209559595fb7]
+ok   E3 exactly the registered outputs, each with a sidecar, + g.log + mplconfig  [[]]
+ok   E4 every sidecar equals its file's sha256  [[]]
+ok   E5 results and run record are strict JSON (no NaN/Infinity), bound to the manifest  [{'code_sha256': {'diag_jsh_adapter.py': 'c566858189be4a3dee822ce4eef46b156986881a92cb6d4360b386ca785707c1', 'diag_jsh_co]
+ok   E5b registered G-D4 result reported alongside (own estimand and resampling label, not pooled)  [{'ci95': [-0.25, 0.5], 'comparison_id': 'between|selected|r0|psnr', 'estimand': "mean over the three seeds and the valid]
+ok   E5c imported pinned modules verified and recorded in the run record  [36]
+ok   E6 bytes within the budget; the only pre-guard files are the matplotlib cache inside OUT  [2051154 B, [['mplconfig/fontlist-v3.11.0.json', 180154]]]
+ok   E7 recorded subgroup sizes used; six reproduction records
+ok   E8 per-volume table: 3 seeds x 4 volumes x {lam0, lam2, lam2-lam0}  [37]
+ok   E9 log: stages G1-G6; each checkpoint decoded once
+ok   E10 no matplotlib cache or temp folder created outside OUT  [set() ['fontlist-v3.11.0.json']]
+ok   E11 wrong manifest sha256 (no run record)  [RESULT DIAG_G STOP DIAG_MANIFEST]
+ok   E12 resource record bound to another manifest (no run record)  [RESULT DIAG_G STOP DIAG_RESOURCES]
+ok   E13 command cap != registered cap (no run record)  [RESULT DIAG_G STOP DIAG_RESOURCES]
+ok   E14 selected epoch differs from the manifest (no run record)  [RESULT DIAG_G STOP DIAG_MANIFEST_MISMATCH]
+ok   E15 recomputed thirds differ from the manifest (no run record)  [RESULT DIAG_G STOP DIAG_MANIFEST_MISMATCH]
+ok   E16 retained slices differ from the manifest (no run record)  [RESULT DIAG_G STOP DIAG_MANIFEST_MISMATCH]
+ok   E17 Python deadline enforced (no run record)  [RESULT DIAG_G STOP DIAG_DEADLINE]
+ok   E18 stored-row deviation in checkpoint 4 of 6 stops G (no run record)  [RESULT DIAG_G STOP DIAG_REPRODUCTION_MISMATCH]
+ok   E19 outputs larger than the budget refused before writing (no run record)  [RESULT DIAG_G STOP DIAG_DISK]
+ok   E19b budget refusal logged; any written output keeps its sidecar (write-once, partial outputs preserved)
+ok   E20 native (unaudited) write inside OUT caught by the final byte reconciliation  [RESULT DIAG_G STOP DIAG_UNBUDGETED_BYTES]
+ok   E28 changed imported pinned module refused before outputs (no run record)  [RESULT DIAG_G STOP DIAG_PIN_MISMATCH]
+ok   E29 G-D4 document hash != registered (no run record)  [RESULT DIAG_G STOP DIAG_GD4]
+ok   E30 registered G-D4 comparison missing (no run record)  [RESULT DIAG_G STOP DIAG_GD4]
+ok   E31 deadline passed during output writing: STOP before the run record, no PASS (outputs kept)  [RESULT DIAG_G STOP DIAG_DEADLINE]
+ok   E21 plotting failure: logged with traceback, exit 2, no outputs
+ok   E22 unregistered write inside OUT halts (77)
+ok   E23 write outside OUT halts (77)
+ok   E2b REAL G.main() entry point: PASS, outputs and run record  [n_record_sha256=ce3fa5794dc2d9f18096d59883758ae0851838db7e568d20901e8a1f4dbd143f]
+ok   E2c REAL entry point: cap argument != registered cap -> STOP (1)  [RESULT DIAG_G STOP DIAG_RESOURCES]
+ok   E2d REAL entry point: code hash argument != file -> STOP (1)  [RESULT DIAG_G STOP DIAG_CODE_MISMATCH]
+ok   E25 init phase: write inside OUT/mplconfig and fc-list allowed
+ok   E26 init phase: write outside OUT/mplconfig halts (77)
+ok   E27 init phase: other subprocess halts (77)  [DIAG_INIT_PHASE subprocess.Popen ('true', ['true'], False)]
+ok   E32 init phase: write-open on a descriptor to an outside file halts (77)  [DIAG_INIT_PHASE write outside OUT/mplconfig 3]
+ok   E33 init phase: descriptor to a file inside OUT/mplconfig allowed
+ok   E34 explicit executable /bin/true with fc-list argv halts (77)  [DIAG_INIT_PHASE subprocess.Popen ('/bin/true', ['fc-list', '--help'], False)]
+ok   E35 a different fc-list earlier on PATH halts (77)  [DIAG_INIT_PHASE subprocess.Popen ('fc-list', ['fc-list', '--help'], False)]
+ok   E36 explicit env halts (77)  [DIAG_INIT_PHASE subprocess.Popen ('fc-list', ['fc-list', '--help'], True)]
+ok   E37 fc-list with other arguments halts (77)  [DIAG_INIT_PHASE subprocess.Popen ('fc-list', ['fc-list', '--verbose'], False)]
+ok   E38 init phase: file kernel-capped at INIT_FILE_CAP (EFBIG)  [EFBIG 27 size=4194304]
+ok   E39 init phase: total cache bytes > INIT_TOTAL_CAP halt at the next event (overshoot <= one file)  [DIAG_INIT_PHASE cache total > INIT_TOTAL_CAP 8388608]
+ok   E24 fixture folder removed
+RESULT 46/46 checks passed
+
+real	17m41.216s
+user	13m1.710s
+sys	3m43.170s
+rc=0

@@ -1,0 +1,23 @@
+ok   R1 branch not on origin refused (rc=2)
+ok   R1b commit not pushed refused (rc=2)
+ok   R2 running V05LT job refused before switching (rc=2)
+ok   R2b branch unchanged after job refusal
+ok   R3 uncommitted change refused (rc=2)
+ok   R4 unknown commit refused (rc=2)
+ok   R5 ignored extra .py refused (venv/results/data skipped) (rc=2)
+ok   R6 extra untracked config file refused (rc=2)
+ok   R7 symlink in source scan refused (rc=2)
+ok   R8 DIAG_JSH symlink refused before creation (rc=2)
+ok   R8b nothing created through the symlink
+ok   R12 failed sed in the scan comparison refused (rc=2)
+ok   R13 failed sort of the scan list refused (rc=2)
+ok   R14 failed sort of the tracked list refused (rc=2)
+ok   D1 v0.2 accepts a failed sed as an empty comparison despite an extra .py (reproduces the finding)
+ok   P1 pass (venv/results/data .py ignored, as the pinned scan) (rc=0)
+ok   P1b on seqref-v05lt after pass
+ok   P2 identical repeat leaves the deployed files unchanged (rc=0)
+ok   R9 identical-content symlink in code/ refused (rc=2)
+ok   R10 extra file in code/ refused (rc=2)
+ok   R11 differing file in code/ refused (rc=2)
+ok   T temp folders removed
+RESULT 22/22 checks passed

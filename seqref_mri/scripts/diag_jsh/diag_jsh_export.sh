@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SEQREF-MRI-DIAGJSHEXP v0.4 -- export reviewed DIAG-JSH run files from a ch2-diag commit to v06lt_evidence/DIAG_JSH/code with CSMFII back on the V05LT pin
+# SEQREF-MRI-DIAGJSHEXP v0.9 -- export reviewed DIAG-JSH run files from a ch2-diag commit to v06lt_evidence/DIAG_JSH/code with CSMFII back on the V05LT pin
 # LIFETIME: KEEP
 # =============================================================================
 # Plan SEQREF-MRI-DEVTREE v0.3, step 3. Run by the owner on the host, read
@@ -16,17 +16,28 @@
 #      and every file under seqref_mri/configs/, skipping any path with a
 #      part in {.venv_mri, results, data, __pycache__}, as SOURCE_EXCLUDE in
 #      v05lt_prodstages) holds only files tracked at the pin and no symlink;
-#   4. export the 5 run files from COMMIT to a temporary folder; each = its
+#   4. export the 8 run files from COMMIT to a temporary folder; each = its
 #      blob in COMMIT = the reviewed sha256 below;
 #   5. destination ancestors validated before anything is created
 #      (CSMFII, v06lt_evidence, DIAG_JSH, out, code: real directories, not
 #      symlinks); code/ created if absent; if present it must hold exactly
-#      the 5 files, each a regular non-symlink file with the reviewed
+#      the 8 files, each a regular non-symlink file with the reviewed
 #      content (then the deployed files are left unchanged; the helper
 #      still fetches from origin and creates and removes its own temporary
 #      folder in v06lt_evidence/). Never overwrites or deletes deployed files.
-# Prints RESULT DIAGJSH_EXPORT PASS commit=... and the 5 hashes.
+# Prints RESULT DIAGJSH_EXPORT PASS commit=... and the 8 hashes.
 # Not done here: the F1 run itself (separate reviewed command and GO).
+# Changelog (v0.9, 2026-11-11; F2 review 4): reviewed hash of G runner v0.5.
+#   No other change.
+# Changelog (v0.8, 2026-11-11; F2 review 3): reviewed hash of G runner v0.4.
+#   No other change.
+# Changelog (v0.7, 2026-11-11; F2 review 2): reviewed hash of G runner v0.3.
+#   No other change.
+# Changelog (v0.6, 2026-11-11; F2 review): reviewed hashes of G runner v0.2
+#   and F2 resource record v0.2. No other change.
+# Changelog (v0.5, 2026-11-11; plan DIAGJSHF2 v0.1): reviewed table adds
+#   the stage G files (diag_jsh_g_run.py v0.1, diag_jsh_f2_resources.py
+#   v0.1, diag_jsh_g_cmd.sh v0.1); 8 run files. No other change.
 # Changelog (v0.4, 2026-11-10): reviewed F1 prepare hash updated to v0.6
 #   (dc74b069...a1f; manifest path-field fix). No other change.
 # Changelog (v0.3, 2026-11-10; reviewer finding on v0.2): the source-scan
@@ -59,6 +70,9 @@ diag_jsh_adapter.py c566858189be4a3dee822ce4eef46b156986881a92cb6d4360b386ca7857
 diag_jsh_f1_prepare.py dc74b0693b1eb0c0ecaa88fd813e22b925c6d99025d834c20c01cbcd71995a1f
 diag_jsh_f1_cmd.sh 0d67a2df4cbec089eccace3bd15885e0d1eb5c12e477d51cd88f519dfe9b1d93
 diag_jsh_i3.py 70f6b57511f62b3f178fa53ffcda938740b584e491da139895f17396e9aa1dca
+diag_jsh_g_run.py 1e097d3f5ce555837cf212b6e5879883f006ad172bf380bd2308a5751eadb2c0
+diag_jsh_f2_resources.py 9af68faebe49d02d23aa9843023e0aaa4b4423611ebf1d9b7a27063775009b67
+diag_jsh_g_cmd.sh cbb39acedec519825eef57ec5bf204f5cc5b3de0b18f1acb9e06b1a2425470b4
 TAB
 )
 NAMES=$(cut -d' ' -f1 <<< "$REVIEWED" | sort)
