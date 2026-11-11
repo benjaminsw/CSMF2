@@ -1,6 +1,8 @@
-# SEQREF-MRI-DIAGJSHEXPTEST v0.9 -- throwaway-repository refusal tests for DIAG-JSH export helper v0.9 (hardcoded sandbox paths; evidence only, not for host execution)
+# SEQREF-MRI-DIAGJSHEXPTEST v0.10 -- throwaway-repository refusal tests for DIAG-JSH export helper v0.10 (hardcoded sandbox paths; evidence only, not for host execution)
 # LIFETIME: KEEP
 set -u
+# Changelog (v0.10, 2026-11-11): for helper v0.10 (G v0.6); P1c final
+#   message names the G command, not F1.
 # Changelog (v0.9, 2026-11-11): for helper v0.9 (G v0.5).
 # Changelog (v0.8, 2026-11-11): for helper v0.8 (G v0.4).
 # Changelog (v0.7, 2026-11-11): for helper v0.7 (G v0.3).
@@ -81,6 +83,7 @@ if [[ -f "$HERE/diag_jsh_export_v0.2.sh" ]]; then
 fi
 run "0:RESULT DIAGJSH_EXPORT PASS" "P1 pass (venv/results/data .py ignored, as the pinned scan)" $C
 [[ $(br) == seqref-v05lt ]] && echo "ok   P1b on seqref-v05lt after pass" || { F=$((F+1)); echo "FAIL P1b"; }; N=$((N+1))
+[[ "$out" == *"Next: the reviewed G pre-check and G command"* && "$out" != *"F1 command"* ]] && echo "ok   P1c final message names the G command, not F1" || { F=$((F+1)); echo "FAIL P1c"; }; N=$((N+1))
 run "0:already identical" "P2 identical repeat leaves the deployed files unchanged" $C
 K=v06lt_evidence/DIAG_JSH/code
 chmod u+w $K/diag_jsh_i3.py; mv $K/diag_jsh_i3.py $T/i3.py; ln -s $T/i3.py $K/diag_jsh_i3.py

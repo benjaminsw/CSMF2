@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SEQREF-MRI-DIAGJSHEXP v0.9 -- export reviewed DIAG-JSH run files from a ch2-diag commit to v06lt_evidence/DIAG_JSH/code with CSMFII back on the V05LT pin
+# SEQREF-MRI-DIAGJSHEXP v0.10 -- export reviewed DIAG-JSH run files from a ch2-diag commit to v06lt_evidence/DIAG_JSH/code with CSMFII back on the V05LT pin
 # LIFETIME: KEEP
 # =============================================================================
 # Plan SEQREF-MRI-DEVTREE v0.3, step 3. Run by the owner on the host, read
@@ -26,7 +26,11 @@
 #      still fetches from origin and creates and removes its own temporary
 #      folder in v06lt_evidence/). Never overwrites or deletes deployed files.
 # Prints RESULT DIAGJSH_EXPORT PASS commit=... and the 8 hashes.
-# Not done here: the F1 run itself (separate reviewed command and GO).
+# Not done here: the G run itself (separate reviewed command and GO; F1 is
+# complete and must not be rerun).
+# Changelog (v0.10, 2026-11-11; G attempt 1 STOP DIAG_GD4, 217 J19):
+#   reviewed hash of G runner v0.6; final message names the G command
+#   (was: "the reviewed F1 command"; F1 must not be rerun).
 # Changelog (v0.9, 2026-11-11; F2 review 4): reviewed hash of G runner v0.5.
 #   No other change.
 # Changelog (v0.8, 2026-11-11; F2 review 3): reviewed hash of G runner v0.4.
@@ -70,7 +74,7 @@ diag_jsh_adapter.py c566858189be4a3dee822ce4eef46b156986881a92cb6d4360b386ca7857
 diag_jsh_f1_prepare.py dc74b0693b1eb0c0ecaa88fd813e22b925c6d99025d834c20c01cbcd71995a1f
 diag_jsh_f1_cmd.sh 0d67a2df4cbec089eccace3bd15885e0d1eb5c12e477d51cd88f519dfe9b1d93
 diag_jsh_i3.py 70f6b57511f62b3f178fa53ffcda938740b584e491da139895f17396e9aa1dca
-diag_jsh_g_run.py 1e097d3f5ce555837cf212b6e5879883f006ad172bf380bd2308a5751eadb2c0
+diag_jsh_g_run.py ee6580fe354310ce43e593d193f3460f219cd2a9520b059f3363a6272e499cd6
 diag_jsh_f2_resources.py 9af68faebe49d02d23aa9843023e0aaa4b4423611ebf1d9b7a27063775009b67
 diag_jsh_g_cmd.sh cbb39acedec519825eef57ec5bf204f5cc5b3de0b18f1acb9e06b1a2425470b4
 TAB
@@ -167,4 +171,4 @@ while read -r n h; do
 done <<< "$REVIEWED"
 echo "RESULT DIAGJSH_EXPORT PASS commit=$C pin=$PIN code=$CODE"
 sha256sum "$CODE"/*
-echo "Next: the reviewed F1 command (only after its GO). Afterwards: git switch $DEVBR"
+echo "Next: the reviewed G pre-check and G command (only after their GO; do not rerun F1). Afterwards: git switch $DEVBR"

@@ -2,19 +2,22 @@
   set -euo pipefail
   cd /home/benjamin/CSMFII/v06lt_evidence/DIAG_JSH
   [ -d code ] && [ ! -L code ] || { echo "STOP: code is not a plain folder"; exit 1; }
-  [ ! -e code_F1v06_run3 ] && [ ! -L code_F1v06_run3 ] || { echo "STOP: code_F1v06_run3 exists"; exit 1; }
+  [ ! -e code_Gv05_run1 ] && [ ! -L code_Gv05_run1 ] || { echo "STOP: code_Gv05_run1 exists"; exit 1; }
   N=$(find code -mindepth 1 -maxdepth 1 | wc -l)
-  [ "$N" -eq 5 ] || { echo "STOP: code holds $N entries, expected 5"; exit 1; }
+  [ "$N" -eq 8 ] || { echo "STOP: code holds $N entries, expected 8"; exit 1; }
   (cd code && sha256sum -c <<'SUMS'
-85410c77472cf876021a49bd72254ac98461227887178e24cdb6d0ce5295c0fb  diag_jsh_core.py
 c566858189be4a3dee822ce4eef46b156986881a92cb6d4360b386ca785707c1  diag_jsh_adapter.py
-dc74b0693b1eb0c0ecaa88fd813e22b925c6d99025d834c20c01cbcd71995a1f  diag_jsh_f1_prepare.py
+85410c77472cf876021a49bd72254ac98461227887178e24cdb6d0ce5295c0fb  diag_jsh_core.py
 0d67a2df4cbec089eccace3bd15885e0d1eb5c12e477d51cd88f519dfe9b1d93  diag_jsh_f1_cmd.sh
+dc74b0693b1eb0c0ecaa88fd813e22b925c6d99025d834c20c01cbcd71995a1f  diag_jsh_f1_prepare.py
+9af68faebe49d02d23aa9843023e0aaa4b4423611ebf1d9b7a27063775009b67  diag_jsh_f2_resources.py
+cbb39acedec519825eef57ec5bf204f5cc5b3de0b18f1acb9e06b1a2425470b4  diag_jsh_g_cmd.sh
+1e097d3f5ce555837cf212b6e5879883f006ad172bf380bd2308a5751eadb2c0  diag_jsh_g_run.py
 70f6b57511f62b3f178fa53ffcda938740b584e491da139895f17396e9aa1dca  diag_jsh_i3.py
 SUMS
   )
-  mv -n -- code code_F1v06_run3
-  [ ! -e code ] && [ -d code_F1v06_run3 ] || { echo "STOP: move not completed"; exit 1; }
-  echo "MOVED code -> code_F1v06_run3 (F1 run-3 files kept)"
+  mv -n -- code code_Gv05_run1
+  [ ! -e code ] && [ -d code_Gv05_run1 ] || { echo "STOP: move not completed"; exit 1; }
+  echo "MOVED code -> code_Gv05_run1 (G attempt-1 files kept)"
 )
 echo "move_exit=$?"

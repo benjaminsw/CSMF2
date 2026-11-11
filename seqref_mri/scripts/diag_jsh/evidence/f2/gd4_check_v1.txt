@@ -1,0 +1,60 @@
+# SEQREF-MRI-GD4CHK v0.1 -- read-only checks before G v0.6: (B) pinned writer identity, (A) G-D4 structure only
+# LIFETIME: DIAGNOSTIC
+# Paste unchanged on the host. Reads only; writes nothing; prints no comparison values,
+# epochs, memberships or other results. Stays on seqref-v05lt.
+(
+  set -euo pipefail
+  cd /home/benjamin/CSMFII
+  PIN=7455da8027f33a6cca4dbf72f04e72420e938f45
+  echo "BRANCH $(git branch --show-current) HEAD $(git rev-parse HEAD)"
+  git cat-file -e "$PIN^{commit}" || { echo "STOP: pin commit missing"; exit 1; }
+  echo "== B: pinned writer (commit blob vs working copy; sandbox copy for reference)"
+  for f in v05lt_analysis.py v05lt_stats.py; do
+    P=seqref_mri/scripts/$f
+    C=$(git show "$PIN:$P" | sha256sum | cut -d' ' -f1)
+    W=$(sha256sum "$P" | cut -d' ' -f1)
+    if git diff --quiet "$PIN" -- "$P"; then D=same; else D=DIFFERENT; fi
+    echo "$f commit=$C working=$W git_diff=$D"
+  done
+  echo "sandbox: v05lt_analysis.py=c3c4230c61cb7296fff96acc9358b1f6bd555e5edc8cdd2340f631668cfefe42 v05lt_stats.py=78c4d967555f06a541cafc50c55c4ee47f63aad3de8e9989a624ef6691806178"
+  echo "== A: G-D4 document structure (no values)"
+  python3 -I - /home/benjamin/CSMFII/seqref_mri/results/v05lt/analysis/v05lt_analysis.json <<'PY'
+import hashlib, json, math, sys
+p = sys.argv[1]
+b = open(p, "rb").read()
+sha = hashlib.sha256(b).hexdigest()
+print("sha256_ok", sha == "5b267d3aa7ccb48bf3d7ccbfa2e2497d7f02df845aff8786c0fbe9b9dff2afa2")
+nonfinite = []
+d = json.loads(b, parse_constant=lambda c: nonfinite.append(c) or float("nan"))
+print("nonfinite_constants", len(nonfinite))
+T = lambda x: type(x).__name__
+print("outer.schema", d.get("schema"))
+print("outer.keys", {k: T(v) for k, v in sorted(d.items())})
+a = d.get("analysis")
+print("analysis.type", T(a))
+if isinstance(a, dict):
+    print("analysis.schema", a.get("schema"))
+    print("analysis.keys", {k: T(v) for k, v in sorted(a.items())})
+    cs = a.get("comparisons")
+    print("analysis.comparisons", T(cs), len(cs) if isinstance(cs, list) else "-")
+    ID = "between|selected|r0|psnr"
+    hits = [c for c in (cs or []) if isinstance(c, dict) and c.get("id") == ID]
+    print("gd4_entries", len(hits))
+    if len(hits) == 1:
+        c = hits[0]
+        print("gd4.keys", {k: T(v) for k, v in sorted(c.items())})
+        print("gd4.status_is_ok", c.get("status") == "ok")
+        e = c.get("estimate")
+        print("gd4.estimate", T(e), isinstance(e, float) and math.isfinite(e))
+        ci = c.get("ci")
+        print("gd4.ci", T(ci), len(ci) if isinstance(ci, list) else "-",
+              [T(x) for x in ci] if isinstance(ci, list) else "-",
+              isinstance(ci, list) and all(isinstance(x, float) and math.isfinite(x) for x in ci))
+        for k in ("per_seed", "support", "practical"):
+            v = c.get(k)
+            print(f"gd4.{k}", T(v), len(v) if isinstance(v, (list, dict)) else "-")
+print("top_level_comparisons_key", "comparisons" in d)
+PY
+  echo "GD4CHK DONE"
+)
+echo "gd4chk_exit=$?"

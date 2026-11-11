@@ -1,9 +1,11 @@
-# SEQREF-MRI-DIAGJSHGBLK v0.5 -- mock-tree tests of the stage G pre-check and launch blocks (sandbox paths; evidence only)
+# SEQREF-MRI-DIAGJSHGBLK v0.6 -- mock-tree tests of the stage G pre-check, launch and move-aside blocks (sandbox paths; evidence only)
 # LIFETIME: KEEP
 # Paths and the pin are rewritten to a throwaway mock tree. DECLARED TEST
 # DOUBLES: systemctl (timer times), the V05LT python (find_spec only), the G
 # command (records its arguments), and a pass-path copy of the pre-check
 # with the free-space minimum set to 1 B (the sandbox has < 64 GiB free).
+# Changelog (v0.6, 2026-11-11): pre-check v6 / launch v6 (G v0.6 hash);
+#   move-aside v2 (code/ = G v0.5 set -> code_Gv05_run1): M1-M5.
 # Changelog (v0.5, 2026-11-11): pre-check v5 / launch v5 (G v0.5 hash).
 # Changelog (v0.4, 2026-11-11): pre-check v4 / launch v4 (G v0.4 hash).
 # Changelog (v0.3, 2026-11-11): pre-check v3 / launch v3 (G v0.3 hash).
@@ -39,8 +41,8 @@ esac
 S
 chmod +x $T/stub/systemctl
 mk() { sed -e "s#/home/benjamin/CSMFII#$R#g" -e "s#7455da8027f33a6cca4dbf72f04e72420e938f45#$P#" "$HERE/$1"; }
-mk g_precheck.txt > $T/pre_real.sh
-mk g_precheck.txt | sed 's/68754079744/1/g' > $T/pre_pass.sh
+mk g_precheck__v6.txt > $T/pre_real.sh
+mk g_precheck__v6.txt | sed 's/68754079744/1/g' > $T/pre_pass.sh
 N=0; F=0
 chk() { local want=$1 lab=$2 script=$3; shift 3
   out=$(env PATH=$T/stub:$PATH "$@" bash $script 2>&1); N=$((N+1))
@@ -66,11 +68,21 @@ chk "precheck_exit=0" "C11 pass again after restoring everything" $T/pre_pass.sh
 # launch: stub command records its arguments
 cp $DJ/code/diag_jsh_g_cmd.sh $T/g_cmd_real.sh
 printf '#!/bin/bash\nprintf "%%s\\n" "$@" > %s/args.txt\nexit 0\n' "$T" > $DJ/code/diag_jsh_g_cmd.sh
-o=$(mk g_launch.txt | bash 2>&1); N=$((N+1))
+o=$(mk g_launch__v6.txt | bash 2>&1); N=$((N+1))
 mapfile -t A < $T/args.txt
-W=( "$R/seqref_mri/results/v05lt/launch/v05lt_launch_chain.json" 6f751f0387bb15dd3c70c82d4f247f6f2b51f62df8f66f1884f0f4381a6b478a 68719476736 16246 "$DJ/out/F1_20261110T190054Z/diag_jsh_manifest.json" d3e8176ef91dc1eb319b42f8510170eb6fe658a1ad1d99c561523fecd121d765 85410c77472cf876021a49bd72254ac98461227887178e24cdb6d0ce5295c0fb c566858189be4a3dee822ce4eef46b156986881a92cb6d4360b386ca785707c1 dc74b0693b1eb0c0ecaa88fd813e22b925c6d99025d834c20c01cbcd71995a1f 70f6b57511f62b3f178fa53ffcda938740b584e491da139895f17396e9aa1dca 1e097d3f5ce555837cf212b6e5879883f006ad172bf380bd2308a5751eadb2c0 9af68faebe49d02d23aa9843023e0aaa4b4423611ebf1d9b7a27063775009b67 )
+W=( "$R/seqref_mri/results/v05lt/launch/v05lt_launch_chain.json" 6f751f0387bb15dd3c70c82d4f247f6f2b51f62df8f66f1884f0f4381a6b478a 68719476736 16246 "$DJ/out/F1_20261110T190054Z/diag_jsh_manifest.json" d3e8176ef91dc1eb319b42f8510170eb6fe658a1ad1d99c561523fecd121d765 85410c77472cf876021a49bd72254ac98461227887178e24cdb6d0ce5295c0fb c566858189be4a3dee822ce4eef46b156986881a92cb6d4360b386ca785707c1 dc74b0693b1eb0c0ecaa88fd813e22b925c6d99025d834c20c01cbcd71995a1f 70f6b57511f62b3f178fa53ffcda938740b584e491da139895f17396e9aa1dca ee6580fe354310ce43e593d193f3460f219cd2a9520b059f3363a6272e499cd6 9af68faebe49d02d23aa9843023e0aaa4b4423611ebf1d9b7a27063775009b67 )
 [[ "${A[*]}" == "${W[*]}" && ${#A[@]} == 12 && "$o" == *"g_exit=0"* ]] && echo "ok   L1 launch passes exactly the 12 registered arguments in order" || { F=$((F+1)); echo "FAIL L1"; printf '%s\n' "${A[@]}"; }
 N=$((N+1)); grep -q 'Usage: bash diag_jsh_g_cmd.sh CHAIN CHAIN_SHA RESERVE_BYTES MAX_WALL_S \\' $T/g_cmd_real.sh && grep -q 'MANIFEST MANIFEST_SHA CORE_SHA ADAPTER_SHA F1_SHA I3_SHA G_SHA F2RES_SHA' $T/g_cmd_real.sh && echo "ok   L2 order matches the G command's usage line" || { F=$((F+1)); echo "FAIL L2"; }
 N=$((N+1)); python3 -c "import sys; sys.path.insert(0,'/home/claude/v06lt_dev/diag_jsh/next'); import diag_jsh_f2_resources as R; sys.exit(0 if R.MAX_WALL_S == 16246 and R.G_BUDGET_BYTES == 32*2**20 else 1)" && grep -q 'G_BUDGET=$((32 \* 1024 \* 1024))' $T/g_cmd_real.sh && echo "ok   L3 cap 16,246 s and G budget 32 MiB agree with the resource record" || { F=$((F+1)); echo "FAIL L3"; }
+# move-aside v2: separate mock tree whose code/ holds the 8 exported G v0.5 files
+R2=$T/R2; M=$R2/v06lt_evidence/DIAG_JSH
+mkm() { mkdir -p $M/code; for f in diag_jsh_{core,adapter,f1_prepare,i3,f2_resources}.py diag_jsh_{f1,g}_cmd.sh; do cp /home/claude/v06lt_dev/diag_jsh/next/$f $M/code/; done
+  cp /home/claude/v06lt_dev/diag_jsh/prev_f2v05/diag_jsh_g_run_v0.5.py $M/code/diag_jsh_g_run.py; }
+ma() { sed -e "s#/home/benjamin/CSMFII#$R2#g" "$HERE/g_moveaside__v2.txt" | bash 2>&1; }
+mkm; mkdir -p $M/code_Gv05_run1; o=$(ma); N=$((N+1)); [[ "$o" == *"STOP: code_Gv05_run1 exists"* && "$o" == *"move_exit=1"* && -d $M/code ]] && echo "ok   M1 target exists refused" || { F=$((F+1)); echo "FAIL M1"; echo "$o"; }; rmdir $M/code_Gv05_run1
+echo '#' >> $M/code/diag_jsh_g_run.py; o=$(ma); N=$((N+1)); [[ "$o" == *"FAILED"* && "$o" == *"move_exit=1"* && -d $M/code ]] && echo "ok   M2 changed file refused (e.g. G v0.6 deployed instead of v0.5)" || { F=$((F+1)); echo "FAIL M2"; echo "$o"; }; rm -rf $M/code; mkm
+echo x > $M/code/extra.txt; o=$(ma); N=$((N+1)); [[ "$o" == *"expected 8"* && "$o" == *"move_exit=1"* ]] && echo "ok   M3 extra file refused" || { F=$((F+1)); echo "FAIL M3"; echo "$o"; }; rm $M/code/extra.txt
+rm $M/code/diag_jsh_i3.py; o=$(ma); N=$((N+1)); [[ "$o" == *"expected 8"* && "$o" == *"move_exit=1"* ]] && echo "ok   M4 missing file refused" || { F=$((F+1)); echo "FAIL M4"; echo "$o"; }; rm -rf $M/code; mkm
+o=$(ma); N=$((N+1)); [[ "$o" == *"MOVED code -> code_Gv05_run1"* && "$o" == *"move_exit=0"* && ! -e $M/code && $(ls $M/code_Gv05_run1 | wc -l) == 8 ]] && echo "ok   M5 pass: the 8 G v0.5 files moved, nothing else changed" || { F=$((F+1)); echo "FAIL M5"; echo "$o"; }
 echo "RESULT $((N-F))/$N checks passed"
 cd /; rm -rf $T

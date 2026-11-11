@@ -1,0 +1,144 @@
+(
+  set -euo pipefail
+  cd /home/benjamin/CSMFII
+  B=$(git branch --show-current)
+  [ "$B" = ch2-diag ] || { echo "STOP: branch $B"; exit 1; }
+  cd seqref_mri/scripts/diag_jsh
+  sha256sum -c <<'SUMS'
+37a38a3b8932d85ed3f3d59acdc594744f93617c508e0a02840f94da59d3cfb9  diag_jsh_export.sh
+8301e1f31ab03d7dbbbcbfd20bed713d07732bafdfac5d2409d8571d2b93e294  diag_jsh_export_v0.4.sh
+db809e3e46ed870c217ad84d0b031cc17edc16b6a5f7dd262bc67ba2dc2e4524  diag_jsh_export_v0.5.sh
+c7460a2543cec8766612f77c2118a52eaca51e490959cf10e9185825675102ab  diag_jsh_export_v0.6.sh
+7cdc8cef8303499911bc0c68078c0c65d1fe3dc08cf8674b28115d932f91081d  diag_jsh_export_v0.7.sh
+caf383a7dda4827b9981dd8eaa27404a965a83374b9ecc2cb6d9b1b3f4f24657  diag_jsh_export_v0.8.sh
+71fa63e1ae59e4b2302bfc23c58bf38b9b20a28789751fb4cd94a53859551a35  diag_jsh_f2_probe.py
+9af68faebe49d02d23aa9843023e0aaa4b4423611ebf1d9b7a27063775009b67  diag_jsh_f2_resources.py
+7536091103f18c5cfd423df98ac1f4ac3a3c1fc662b8a9bbb7cf0bcc8923eb4e  diag_jsh_f2_resources_v0.1.py
+cbb39acedec519825eef57ec5bf204f5cc5b3de0b18f1acb9e06b1a2425470b4  diag_jsh_g_cmd.sh
+1e097d3f5ce555837cf212b6e5879883f006ad172bf380bd2308a5751eadb2c0  diag_jsh_g_run.py
+80677eede40f88a9e1c2b771d355e9e08d89ecec4ccd7385a918a45761fe9761  diag_jsh_g_run_v0.1.py
+db94f7974aa4ed94cf52627106edcb484b6ee44feb18bb6ed5ff873af6b2f2cb  diag_jsh_g_run_v0.2.py
+20d16ae4cd92692783adbcabc7a9e9dd2cb08271c300a4fa736a2c6645cb2743  diag_jsh_g_run_v0.3.py
+392f82fd8fc7c9879424eecac170085e16d6cfaead66fdddfa85276e07013f20  diag_jsh_g_run_v0.4.py
+60ee0783e3ee18a4634ff404dba3e08991e363cfe080f955482df679bfb305e0  evidence/f2/f2_probe_v0.1_output.json
+7a52df601507419b93b6a1c993b5e036aeac43f4f02f5768df17f28c249d5341  evidence/f2/g_commit_v1.txt
+f96dbbce00ce92db05739a6c48bc91af6844c1bc3b5ec43a4e3c30ad19a94ccf  evidence/f2/g_commit_v2.txt
+17236fb0385e69eb2250b0066357d0736440fad96df6fe3ad0082878a875d237  evidence/f2/g_commit_v3.txt
+6a360836261f82de9bb5e3c75d02e5a7cbbd38fa56bc2c7b81d4ec4e99805e32  evidence/f2/g_commit_v4.txt
+f3009d8216d5adb5b2c1d6785d0708a67d996ad88086174ca464da2be365e0ac  evidence/f2/g_export.txt
+4ab3b458ca643089d13d9af61ff9267361f7eb3c2aeae9e06319075559c4a0b5  evidence/f2/g_launch.txt
+38a7ca1461673abdc8434d2037cf4ecd88897a050c5d9e4a876d08825a5939e9  evidence/f2/g_launch_v1.txt
+2917d8a1e9ca81dbdf3b2a84d9682c7b6d71cb1b97730451f20dff22371313ec  evidence/f2/g_launch_v2.txt
+f6dd56403612785677c5e823cec8a4dce6404017e3b95bc00d71422f05a6fb69  evidence/f2/g_launch_v3.txt
+743b1c07113334a3f806956f0fac1e7007df89151082b36c3a2d875d944673a9  evidence/f2/g_launch_v4.txt
+82dd4cdcc0e9840e02905f47afc4fcdbbec1d05134dcfdd825b529b896c7fb1b  evidence/f2/g_moveaside.txt
+5922262a20e8c23ea9745eb7caa20868995e676368cbff43cab89d6df43f4ee7  evidence/f2/g_precheck.txt
+8fe9492a41b2249070fa7bf85e7ea39388f25e5b6e0df881ae61c5c6931fd95d  evidence/f2/g_precheck_v1.txt
+1f99206351d9e1cc49c37650d9290a66769ed2078ae0e2e29ddccc8c4a2e8738  evidence/f2/g_precheck_v2.txt
+d5728df247032d40b27d0232d8cea2511b2f14ee8f8df7284aa546ad3252efd1  evidence/f2/g_precheck_v3.txt
+434e7b04ea022857c0d600018deb022de9f4c905f3a56e5feb44468503ed2cb5  evidence/f2/g_precheck_v4.txt
+d51c6295547f9f60c6bc5010f2711b1b4539eadfa5a30a672b0535efe853301d  evidence/f2/test_export_v0.5.log
+d51c6295547f9f60c6bc5010f2711b1b4539eadfa5a30a672b0535efe853301d  evidence/f2/test_export_v0.6.log
+d51c6295547f9f60c6bc5010f2711b1b4539eadfa5a30a672b0535efe853301d  evidence/f2/test_export_v0.7.log
+d51c6295547f9f60c6bc5010f2711b1b4539eadfa5a30a672b0535efe853301d  evidence/f2/test_export_v0.8.log
+d51c6295547f9f60c6bc5010f2711b1b4539eadfa5a30a672b0535efe853301d  evidence/f2/test_export_v0.9.log
+7b4bfe283a3ca2126e695ececd3491fcca424c558f7eb46bee0004526d54508d  evidence/f2/test_g_blocks_v0.1.log
+7e1389eb687290027a90f07c8b023b82fb6ba1502cd5fe1f7b6bbeebffbc0e93  evidence/f2/test_g_blocks_v0.2.log
+7e1389eb687290027a90f07c8b023b82fb6ba1502cd5fe1f7b6bbeebffbc0e93  evidence/f2/test_g_blocks_v0.3.log
+7e1389eb687290027a90f07c8b023b82fb6ba1502cd5fe1f7b6bbeebffbc0e93  evidence/f2/test_g_blocks_v0.4.log
+7e1389eb687290027a90f07c8b023b82fb6ba1502cd5fe1f7b6bbeebffbc0e93  evidence/f2/test_g_blocks_v0.5.log
+9f2be86dd850034cff53b23cb13e3c49b59d506eb92620bc1534032869580792  evidence/f2/test_g_e2e_v0.1.log
+cd19313315d35b19d6f2798bea049d38b420dce79d944b2bd3af841b94836276  evidence/f2/test_g_e2e_v0.2.log
+c6c5f8bab896a993684bdd78424f343c36dee4a07ca01854cfef084e8f0edf0b  evidence/f2/test_g_e2e_v0.3.log
+59c356e5a19909724618a91668c44c6280ea282c595eeb447bef1d715e27b067  evidence/f2/test_g_e2e_v0.4.log
+4bd0f8d391cb814fd158f07406e1bc0bf3c698156738b259c3cd88bba41a2a5b  evidence/f2/test_g_e2e_v0.5.log
+186146e44e5e05892703e85efe7fae8694383ac76c9235fb5d94375302410f11  test_diag_jsh_export.sh
+e7ba10f29b7bd3e9bd280c17d9b4c1a40d203fc6e2595931db2f5ca142e50af5  test_diag_jsh_export_v0.6.sh
+626fd0fd82a39abe2d9fa6010ee7742f5461cc7c7ac21dba87825b018bf8a1e4  test_diag_jsh_export_v0.7.sh
+58ead034c257516c540915422f6884b8690d79c5f2041203ceb7094cb453035c  test_diag_jsh_export_v0.8.sh
+19d5365041e2fd345fc7fc425f6269d32c00b98df84f2462c0dc93d1e133bb9d  test_diag_jsh_g_e2e.py
+46f9f992d5e2289fcf4045673f6e761151f0b5e359ad26a91ebf2d63d07cf374  test_diag_jsh_g_e2e_v0.1.py
+257d809c5b4a0e0aec2f5df000f236df7e0357d96c4c6a7870c690f9e317e472  test_diag_jsh_g_e2e_v0.2.py
+4cfd3fcf465fd4b5a11d13d17ed5dc3c8bfec6b88d9c5237b826a3bc0f6cf3b2  test_diag_jsh_g_e2e_v0.3.py
+0d57d8a5573f49e8a8977f310892219ecb3f1fab9a933167c14498564e171178  test_diag_jsh_g_e2e_v0.4.py
+d1eafc388138fc87b2801a3bf735e68bc410951e45e68ca2e46271551ce6c181  test_g_blocks.sh
+fdce338eefaa440735869527b596fbf583ea80559a02c8f3f4dbf2930eb26f60  test_g_blocks_v0.1.sh
+3a1313f64f428a30fcb84bf41ee5a3c5739ea2eed2c9e85be6194701a0e3b079  test_g_blocks_v0.2.sh
+115f29f53d52a05b4c4eb822182a149d55e6d70ff876372b78af7cbc5043dd96  test_g_blocks_v0.3.sh
+1d3e668907f1a6e7bb7754d1dd92aa312bba5bb43e9e53c831c69fb692675512  test_g_blocks_v0.4.sh
+SUMS
+  cd /home/benjamin/CSMFII
+  git diff --cached --quiet || { echo "STOP: other changes already staged"; exit 1; }
+  D=seqref_mri/scripts/diag_jsh
+  git add -f -- \
+    "$D/diag_jsh_export.sh" \
+    "$D/diag_jsh_export_v0.4.sh" \
+    "$D/diag_jsh_export_v0.5.sh" \
+    "$D/diag_jsh_export_v0.6.sh" \
+    "$D/diag_jsh_export_v0.7.sh" \
+    "$D/diag_jsh_export_v0.8.sh" \
+    "$D/diag_jsh_f2_probe.py" \
+    "$D/diag_jsh_f2_resources.py" \
+    "$D/diag_jsh_f2_resources_v0.1.py" \
+    "$D/diag_jsh_g_cmd.sh" \
+    "$D/diag_jsh_g_run.py" \
+    "$D/diag_jsh_g_run_v0.1.py" \
+    "$D/diag_jsh_g_run_v0.2.py" \
+    "$D/diag_jsh_g_run_v0.3.py" \
+    "$D/diag_jsh_g_run_v0.4.py" \
+    "$D/evidence/f2/f2_probe_v0.1_output.json" \
+    "$D/evidence/f2/g_commit_v1.txt" \
+    "$D/evidence/f2/g_commit_v2.txt" \
+    "$D/evidence/f2/g_commit_v3.txt" \
+    "$D/evidence/f2/g_commit_v4.txt" \
+    "$D/evidence/f2/g_export.txt" \
+    "$D/evidence/f2/g_launch.txt" \
+    "$D/evidence/f2/g_launch_v1.txt" \
+    "$D/evidence/f2/g_launch_v2.txt" \
+    "$D/evidence/f2/g_launch_v3.txt" \
+    "$D/evidence/f2/g_launch_v4.txt" \
+    "$D/evidence/f2/g_moveaside.txt" \
+    "$D/evidence/f2/g_precheck.txt" \
+    "$D/evidence/f2/g_precheck_v1.txt" \
+    "$D/evidence/f2/g_precheck_v2.txt" \
+    "$D/evidence/f2/g_precheck_v3.txt" \
+    "$D/evidence/f2/g_precheck_v4.txt" \
+    "$D/evidence/f2/test_export_v0.5.log" \
+    "$D/evidence/f2/test_export_v0.6.log" \
+    "$D/evidence/f2/test_export_v0.7.log" \
+    "$D/evidence/f2/test_export_v0.8.log" \
+    "$D/evidence/f2/test_export_v0.9.log" \
+    "$D/evidence/f2/test_g_blocks_v0.1.log" \
+    "$D/evidence/f2/test_g_blocks_v0.2.log" \
+    "$D/evidence/f2/test_g_blocks_v0.3.log" \
+    "$D/evidence/f2/test_g_blocks_v0.4.log" \
+    "$D/evidence/f2/test_g_blocks_v0.5.log" \
+    "$D/evidence/f2/test_g_e2e_v0.1.log" \
+    "$D/evidence/f2/test_g_e2e_v0.2.log" \
+    "$D/evidence/f2/test_g_e2e_v0.3.log" \
+    "$D/evidence/f2/test_g_e2e_v0.4.log" \
+    "$D/evidence/f2/test_g_e2e_v0.5.log" \
+    "$D/test_diag_jsh_export.sh" \
+    "$D/test_diag_jsh_export_v0.6.sh" \
+    "$D/test_diag_jsh_export_v0.7.sh" \
+    "$D/test_diag_jsh_export_v0.8.sh" \
+    "$D/test_diag_jsh_g_e2e.py" \
+    "$D/test_diag_jsh_g_e2e_v0.1.py" \
+    "$D/test_diag_jsh_g_e2e_v0.2.py" \
+    "$D/test_diag_jsh_g_e2e_v0.3.py" \
+    "$D/test_diag_jsh_g_e2e_v0.4.py" \
+    "$D/test_g_blocks.sh" \
+    "$D/test_g_blocks_v0.1.sh" \
+    "$D/test_g_blocks_v0.2.sh" \
+    "$D/test_g_blocks_v0.3.sh" \
+    "$D/test_g_blocks_v0.4.sh" \
+    "$D/diag_jsh_g_run.py"
+  git diff --cached --check
+  git commit -m "DIAG-JSH F2 v0.5: G runner v0.5 (init-phase allowance per write-open), resource record v0.2, G command v0.1, probe, G e2e test v0.5, block tests v0.5; export helper v0.9; preserved reviewed earlier versions; F2 test evidence"
+  git push origin ch2-diag
+  ST=$(git status --porcelain)
+  [ -z "$ST" ] || { echo "STOP: not clean after commit"; printf '%s\n' "$ST"; exit 1; }
+  git rev-parse HEAD
+  git ls-remote --heads origin refs/heads/ch2-diag
+)
+echo "commit_exit=$?"

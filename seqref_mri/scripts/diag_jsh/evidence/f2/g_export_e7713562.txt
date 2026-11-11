@@ -1,0 +1,8 @@
+(
+  set -euo pipefail
+  cd /home/benjamin/CSMFII
+  C=e7713562cecbbb8a55eb5f65e035f04da9615436
+  HELPER=$(git show "$C:seqref_mri/scripts/diag_jsh/diag_jsh_export.sh")
+  bash -s -- "$C" <<< "$HELPER"
+)
+echo "export_exit=$?"

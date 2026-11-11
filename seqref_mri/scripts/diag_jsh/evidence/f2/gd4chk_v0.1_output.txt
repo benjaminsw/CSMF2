@@ -1,0 +1,25 @@
+BRANCH seqref-v05lt HEAD 7455da8027f33a6cca4dbf72f04e72420e938f45
+== B: pinned writer (commit blob vs working copy; sandbox copy for reference)
+v05lt_analysis.py commit=c3c4230c61cb7296fff96acc9358b1f6bd555e5edc8cdd2340f631668cfefe42 working=c3c4230c61cb7296fff96acc9358b1f6bd555e5edc8cdd2340f631668cfefe42 git_diff=same
+v05lt_stats.py commit=78c4d967555f06a541cafc50c55c4ee47f63aad3de8e9989a624ef6691806178 working=78c4d967555f06a541cafc50c55c4ee47f63aad3de8e9989a624ef6691806178 git_diff=same
+sandbox: v05lt_analysis.py=c3c4230c61cb7296fff96acc9358b1f6bd555e5edc8cdd2340f631668cfefe42 v05lt_stats.py=78c4d967555f06a541cafc50c55c4ee47f63aad3de8e9989a624ef6691806178
+== A: G-D4 document structure (no values)
+sha256_ok True
+nonfinite_constants 0
+outer.schema seqref-v05lt-analysis-stage/1
+outer.keys {'abbr': 'str', 'analysis': 'dict', 'code': 'dict', 'config_sha256': 'str', 'descriptive': 'dict', 'inputs': 'dict', 'schema': 'str', 'statements': 'list', 'version': 'str'}
+analysis.type dict
+analysis.schema seqref-v05lt-analysis/1
+analysis.keys {'abbr': 'str', 'cap_statement': 'str', 'caps': 'dict', 'comparisons': 'list', 'config_sha256': 'str', 'dc_identity': 'dict', 'dc_identity_per_source': 'dict', 'notes': 'list', 'outcomes': 'list', 'schema': 'str', 'stats_version': 'str', 'stream': 'list'}
+analysis.comparisons list 296
+gd4_entries 1
+gd4.keys {'ci': 'list', 'estimate': 'float', 'family': 'str', 'id': 'str', 'metric': 'str', 'milestone': 'NoneType', 'n_volumes': 'int', 'per_seed': 'list', 'population': 'str', 'practical': 'str', 'scope': 'str', 'stat': 'str', 'status': 'str', 'support': 'str'}
+gd4.status_is_ok True
+gd4.estimate float True
+gd4.ci list 2 ['float', 'float'] True
+gd4.per_seed list 3
+gd4.support str -
+gd4.practical str -
+top_level_comparisons_key False
+GD4CHK DONE
+gd4chk_exit=0

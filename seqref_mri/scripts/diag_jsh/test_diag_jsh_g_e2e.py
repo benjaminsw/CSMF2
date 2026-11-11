@@ -1,4 +1,4 @@
-# SEQREF-MRI-DIAGJSHGE2E v0.5 -- synthetic end-to-end test of the complete DIAG-JSH G pipeline (F1 manifest -> G outputs)
+# SEQREF-MRI-DIAGJSHGE2E v0.6 -- synthetic end-to-end test of the complete DIAG-JSH G pipeline (F1 manifest -> G outputs)
 # LIFETIME: KEEP
 # =============================================================================
 # Plan SEQREF-MRI-DIAGJSHF2 v0.1, addition A (reviewer edit 3, 217 J17).
@@ -24,6 +24,13 @@
 # Fixture models: untrained architecture with seeded weight perturbation
 #   (1e-2 x N(0,1)), so that R0 decodes differ between arms (an untrained R0
 #   decode is arm-identical and the Spearman point estimate is undefined).
+# Changelog (v0.6, 2026-11-11; G attempt 1 STOP DIAG_GD4, 217 J19): the
+#   G-D4 fixture is WRITTEN BY THE PINNED WRITER (v05lt_fixtures._b2_analysis
+#   -> v05lt_analysis.run_analysis on a synthetic campaign; stage document
+#   with sidecar) instead of a hand-built flat document; E50 checks its
+#   structure against the host's key/type listing (GD4CHK v0.1); E51-E55
+#   refuse the flat v0.5 layout, a wrong inner schema, a configuration-hash
+#   mismatch, a wrong per-seed count and a wrong family (derived copies).
 # Changelog (v0.5, 2026-11-11; review of v0.4): allowance per write-open --
 #   rename / replace / delete of still-open files through the production
 #   phase (E48: 4 descriptors, 16 MiB, 5th open halts; E48b: the reviewer's
@@ -134,28 +141,81 @@ def fixture_resources(R: dict, fx: Path, mf_sha: str) -> dict:
     import diag_jsh_adapter as A
     R = dict(R)
     R.update(manifest_sha256=mf_sha, T_s=3000.0, max_wall_s=3200.0)
-    R["gd4"] = {**R["gd4"], "path": str(fx / "gd4.json"),
-                "sha256": A.sha256_file(fx / "gd4.json")}
+    gp = Path((fx / "gd4_path.txt").read_text())
+    R["gd4"] = {**R["gd4"], "path": str(gp), "sha256": A.sha256_file(gp)}
     return R
 
 
+GD4_VARIANTS = ("noentry", "flat", "inner", "cfg", "perseed", "family")
+# Key/type structure printed on the host by GD4CHK v0.1 (2026-11-11) for the
+# registered G-D4 document: structure only, no values.
+HOST_GD4_OUTER = {"abbr": "str", "analysis": "dict", "code": "dict",
+                  "config_sha256": "str", "descriptive": "dict",
+                  "inputs": "dict", "schema": "str", "statements": "list",
+                  "version": "str"}
+HOST_GD4_ANALYSIS = {"abbr": "str", "cap_statement": "str", "caps": "dict",
+                     "comparisons": "list", "config_sha256": "str",
+                     "dc_identity": "dict", "dc_identity_per_source": "dict",
+                     "notes": "list", "outcomes": "list", "schema": "str",
+                     "stats_version": "str", "stream": "list"}
+HOST_GD4_ENTRY = {"ci": "list", "estimate": "float", "family": "str",
+                  "id": "str", "metric": "str", "milestone": "NoneType",
+                  "n_volumes": "int", "per_seed": "list", "population": "str",
+                  "practical": "str", "scope": "str", "stat": "str",
+                  "status": "str", "support": "str"}
+
+
+GD4_REASON = {
+    "gd4_noentry": "0 entries between|selected|r0|psnr",
+    "gd4_flat": "schema 'seqref-v05lt-analysis/1' (expected "
+                "seqref-v05lt-analysis-stage/1)",
+    "gd4_inner": "analysis schema 'seqref-v05lt-analysis/0'",
+    "gd4_cfg": "configuration hash missing or differs",
+    "gd4_perseed": "between|selected|r0|psnr: per_seed",
+    "gd4_family": "between|selected|r0|psnr: family/metric/population"}
+
+
 def write_gd4(fx: Path) -> None:
-    """SYNTHETIC G-D4 documents (labelled values) + sidecars."""
+    """G-D4 fixture WRITTEN BY THE PINNED WRITER: the pinned fixture helper
+    v05lt_fixtures._b2_analysis builds a synthetic campaign and calls the
+    pinned v05lt_analysis.run_analysis, which writes the stage document and
+    its sidecar (SYNTHETIC values). Derived copies for the refusal tests
+    (labelled DERIVED, each with its own sidecar)."""
+    import copy
     import hashlib
-    ok_doc = {"schema": "seqref-v05lt-analysis/1", "note": "SYNTHETIC",
-              "comparisons": [
-                  {"id": "between|selected|r0|psnr", "status": "ok",
-                   "estimate": 0.125, "ci": [-0.25, 0.5],
-                   "per_seed": [], "support": "SYNTHETIC",
-                   "practical": "SYNTHETIC"},
-                  {"id": "between|selected|r0|ssim", "status": "ok",
-                   "estimate": 0.01, "ci": [0.0, 0.02]}]}
-    no_doc = {**ok_doc, "comparisons": ok_doc["comparisons"][1:]}
-    for name, d in (("gd4.json", ok_doc), ("gd4_noentry.json", no_doc)):
-        b = json.dumps(d).encode()
-        (fx / name).write_bytes(b)
-        (fx / (name + ".sha256")).write_text(
-            f"{hashlib.sha256(b).hexdigest()}  {name}\n")
+    from seqref_mri.scripts import v05lt_fixtures as VF
+    r = VF._b2_analysis(fx / "gd4src")
+    (fx / "gd4_path.txt").write_text(str(r["path"]))
+    base = json.loads(Path(r["path"]).read_bytes())
+
+    def entry(d):
+        return [c for c in d["analysis"]["comparisons"]
+                if c["id"] == "between|selected|r0|psnr"][0]
+
+    def derive(name):
+        d = copy.deepcopy(base)
+        if name == "noentry":
+            d["analysis"]["comparisons"] = [
+                c for c in d["analysis"]["comparisons"]
+                if c["id"] != "between|selected|r0|psnr"]
+        elif name == "flat":                 # the layout G v0.5 expected
+            d = d["analysis"]
+        elif name == "inner":
+            d["analysis"]["schema"] = "seqref-v05lt-analysis/0"
+        elif name == "cfg":
+            d["analysis"]["config_sha256"] = "0" * 64
+        elif name == "perseed":
+            entry(d)["per_seed"] = entry(d)["per_seed"][:2]
+        elif name == "family":
+            entry(d)["family"] = "within"
+        d["note"] = f"DERIVED from the pinned-writer fixture ({name})"
+        return d
+    for name in GD4_VARIANTS:
+        b = json.dumps(derive(name)).encode()
+        f = fx / f"gd4_{name}.json"
+        f.write_bytes(b)
+        Path(str(f) + ".sha256").write_text(
+            f"{hashlib.sha256(b).hexdigest()}  {f.name}\n")
 
 
 def entrychild(fx: Path, root: Path, mf: Path, mode: str) -> int:
@@ -390,9 +450,9 @@ def gchild(fx: Path, out: Path, mf: Path, mode: str) -> int:
     R = fixture_resources(R, fx, mf_sha)                            # double 2
     if mode == "gd4_sha":
         R["gd4"] = {**R["gd4"], "sha256": "e" * 64}
-    if mode == "gd4_missing":
-        R["gd4"] = {**R["gd4"], "path": str(fx / "gd4_noentry.json"),
-                    "sha256": A.sha256_file(fx / "gd4_noentry.json")}
+    if mode.startswith("gd4_") and mode[4:] in GD4_VARIANTS:
+        gp = fx / f"{mode}.json"
+        R["gd4"] = {**R["gd4"], "path": str(gp), "sha256": A.sha256_file(gp)}
     if mode == "res_other":
         R["manifest_sha256"] = "f" * 64
     if mode == "budget":
@@ -545,6 +605,19 @@ def parent() -> int:
     build_fixture(fx)
     write_gd4(fx)
     ok(True, "E0 synthetic fixture built (6 checkpoints, 8 slices, 4 volumes)")
+    gdoc = json.loads(Path((fx / "gd4_path.txt").read_text()).read_bytes())
+    tn = (lambda d: {k: type(v).__name__ for k, v in d.items()})
+    gent = [c for c in gdoc["analysis"]["comparisons"]
+            if c["id"] == "between|selected|r0|psnr"]
+    ok(gdoc["schema"] == "seqref-v05lt-analysis-stage/1" and
+       gdoc["analysis"]["schema"] == "seqref-v05lt-analysis/1" and
+       tn(gdoc) == HOST_GD4_OUTER and tn(gdoc["analysis"]) == HOST_GD4_ANALYSIS
+       and len(gent) == 1 and tn(gent[0]) == HOST_GD4_ENTRY and
+       len(gent[0]["per_seed"]) == 3,
+       "E50 pinned-writer G-D4 fixture: nested stage document; outer, "
+       "analysis and selected-entry keys/types equal the host listing "
+       "(GD4CHK v0.1)", str([k for k in tn(gdoc["analysis"])
+                             if k not in HOST_GD4_ANALYSIS])[:120])
     f1out = tmp / "f1out"
     f1out.mkdir()
     p = subprocess.run([sys.executable, "-B", __file__, str(PIN), "f1child",
@@ -608,8 +681,11 @@ def parent() -> int:
        "E5 results and run record are strict JSON (no NaN/Infinity), bound "
        "to the manifest", str(rec)[:120])
     g4 = res.get("reconstruction", {}).get("registered_G-D4", {})
-    ok(okj and g4.get("estimate") == 0.125 and g4.get("ci95") == [-0.25, 0.5]
-       and "crossed bootstrap" in g4.get("resampling", "") and
+    ok(okj and g4.get("estimate") == gent[0]["estimate"] and
+       g4.get("ci95") == gent[0]["ci"] and
+       g4.get("config_sha256") == gdoc["config_sha256"] and
+       g4.get("document_schema") == ["seqref-v05lt-analysis-stage/1",
+                                     "seqref-v05lt-analysis/1"] and "crossed bootstrap" in g4.get("resampling", "") and
        "never pooled" in g4.get("note", "") and
        "estimate" in res["reconstruction"] and
        res["reconstruction"]["estimate"] != g4["estimate"] and
@@ -669,8 +745,16 @@ def parent() -> int:
             ("module", "DIAG_PIN_MISMATCH", "E28 changed imported pinned "
              "module refused before outputs"),
             ("gd4_sha", "DIAG_GD4", "E29 G-D4 document hash != registered"),
-            ("gd4_missing", "DIAG_GD4", "E30 registered G-D4 comparison "
-             "missing")):
+            ("gd4_noentry", "DIAG_GD4", "E30 registered G-D4 comparison "
+             "missing"),
+            ("gd4_flat", "DIAG_GD4", "E51 flat layout (analysis result at "
+             "the top level, as G v0.5 expected) refused"),
+            ("gd4_inner", "DIAG_GD4", "E52 wrong inner analysis schema"),
+            ("gd4_cfg", "DIAG_GD4", "E53 configuration hash differs between "
+             "stage document and analysis"),
+            ("gd4_perseed", "DIAG_GD4", "E54 per-seed entries != 3"),
+            ("gd4_family", "DIAG_GD4", "E55 selected comparison family "
+             "!= between")):
         q, out = run_g(mode)
         ok(q.returncode == 1 and f"STOP {code}" in q.stdout and
            not (out / "g_run.json").exists() or
@@ -678,6 +762,10 @@ def parent() -> int:
             f"STOP {code}" in q.stdout),
            label + " (no run record)" if mode != "native" else label,
            q.stdout.strip()[-70:] + q.stderr.strip()[-200:])
+        if mode in GD4_REASON:
+            gl = (out / "g.log").read_text() if (out / "g.log").exists() else ""
+            ok(GD4_REASON[mode] in gl, label.split()[0] + "b STOP reason "
+               "logged: " + GD4_REASON[mode])
         if mode == "budget":
             gl = (out / "g.log").read_text() if (out / "g.log").exists() else ""
             part = [x.name for x in out.iterdir() if x.suffix == ".png"]

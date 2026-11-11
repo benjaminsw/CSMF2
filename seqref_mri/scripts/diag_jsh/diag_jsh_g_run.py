@@ -1,4 +1,4 @@
-# SEQREF-MRI-DIAGJSHG v0.5 -- DIAG-JSH stage G: single real-data main run (frozen mini-spec v1.0 §1-§8)
+# SEQREF-MRI-DIAGJSHG v0.6 -- DIAG-JSH stage G: single real-data main run (frozen mini-spec v1.0 §1-§8)
 # LIFETIME: KEEP
 # =============================================================================
 # Plan SEQREF-MRI-DIAGJSHF2 v0.1 (F2b), reviewer edits 1-5 (217 J17).
@@ -18,8 +18,12 @@
 #      boundaries and hashes; retained slices equal the manifest (the
 #      recorded membership and slices are used, never re-chosen);
 #   5. the registered G-D4 V05LT analysis (v05lt_analysis.json, bound by
-#      sha256 and sidecar in the F2 resource record) supplies the registered
-#      crossed-bootstrap result between|selected|r0|psnr, reported alongside
+#      sha256 and sidecar in the F2 resource record) is the stage document
+#      written by the pinned v05lt_analysis.run_analysis (schema
+#      seqref-v05lt-analysis-stage/1); its "analysis" member is the pinned
+#      v05lt_stats.analyse result (seqref-v05lt-analysis/1), whose
+#      comparisons supply the registered crossed-bootstrap result
+#      between|selected|r0|psnr, reported alongside
 #      the JSH estimate with its own estimand and resampling label (§1.4,
 #      §2); never pooled;
 #   6. DIAG-I3 v0.3 (unchanged): volume matrices, analysis (§2-§5), table,
@@ -51,13 +55,15 @@
 #   * BOUNDED EXCEPTION to the per-write budget check (no write size is known
 #     at open): before the phase, free >= reserve + budget is required; during
 #     it each file is kernel-capped at INIT_FILE_CAP (RLIMIT_FSIZE, installed
-#     by init_plotting; EFBIG, not a kill), so the bytes this process can
-#     write in the phase through descriptors opened in the phase are
+#     by init_plotting; EFBIG, not a kill), so the SIMULTANEOUS FILE
+#     CONTENTS covered by audited opens in the phase are
 #     <= INIT_MAX_OPENS x INIT_FILE_CAP (16 MiB), whatever number of
-#     descriptors is open at once and whatever happens to their names (no
-#     file descriptor to a regular file is open when the phase starts: the
-#     run log is attached later and the standard streams are the command's
-#     pipes); the bytes under
+#     descriptors is open at once and whatever happens to their names. This
+#     does NOT bound cumulative bytes written (rewriting a file writes more
+#     bytes without growing it) nor native writes (C-level writes, the
+#     fc-list child, descriptors opened before the phase -- none to a regular
+#     file in production: the run log is attached later and the standard
+#     streams are the command's pipes); the bytes under
 #     OUT/mplconfig are also checked against INIT_TOTAL_CAP (8 MiB) at every
 #     audited event (halt 77); after the phase the cache must be
 #     <= INIT_TOTAL_CAP and its bytes are charged to the budget (32 MiB).
@@ -76,6 +82,13 @@
 # Exits: 0 PASS; 1 typed STOP; 2 usage / unexpected (logged with traceback);
 #   77 write guard; 78 log allowance. Partial outputs are kept (write-once).
 # No fallback, placeholder, mock or dummy value in this file.
+# Changelog (v0.6, 2026-11-11; G attempt 1 STOP DIAG_GD4, 217 J19): the
+#   G-D4 loader reads the registered stage document (outer schema
+#   seqref-v05lt-analysis-stage/1, then "analysis" with schema
+#   seqref-v05lt-analysis/1 and the same config_sha256) -- v0.5 expected
+#   the inner schema at the top level; the selected comparison's family,
+#   metric, population and per-seed entries are checked; the configuration
+#   hash is reported; header wording of the 16 MiB bound corrected (J18).
 # Changelog (v0.5, 2026-11-11; review of v0.4): the allowance counts every
 #   write-open in the phase (was: distinct path names, which renaming a
 #   still-open file evaded).
@@ -114,7 +127,7 @@ import traceback
 from pathlib import Path
 
 __abbr__ = "SEQREF-MRI-DIAGJSHG"
-__version__ = "0.5"
+__version__ = "0.6"
 DIAG_ROOT = Path("/home/benjamin/CSMFII/v06lt_evidence/DIAG_JSH")
 V05LT = Path("/home/benjamin/CSMFII")
 CODE_FILES = ("diag_jsh_core.py", "diag_jsh_adapter.py",
@@ -124,6 +137,9 @@ WALL_MARGIN_S = 120             # Python deadline before MAX_WALL_S (as F1)
 MIN_WALL_S = 300
 MPL_DIR = "mplconfig"
 GD4_ID = "between|selected|r0|psnr"         # registered V05LT comparison
+GD4_STAGE_SCHEMA = "seqref-v05lt-analysis-stage/1"  # v05lt_analysis.RESULT_SCHEMA
+GD4_ANALYSIS_SCHEMA = "seqref-v05lt-analysis/1"     # v05lt_stats.RESULT_SCHEMA
+GD4_SEEDS = 3                                       # 2026, 2027, 2028
 INIT_EXIT = 77                               # same code as the write guard
 _INIT = {"dir": None, "fc": None, "opens": []}    # phase active if dir set
 _POST = {"root": None, "exe": {}}            # complement active if root set
@@ -398,9 +414,16 @@ def load_manifest(path: str, want: str, A, K) -> dict:
     return man
 
 
+def _schema_of(x):
+    """Schema of a JSON object, else its type name (for STOP messages)."""
+    return x.get("schema") if isinstance(x, dict) else type(x).__name__
+
+
 def load_gd4(R: dict, A, K) -> dict:
     """Registered V05LT analysis (G-D4): bytes = registered sha256 = its
-    sidecar; the registered comparison GD4_ID only, labelled."""
+    sidecar; the pinned stage document (outer GD4_STAGE_SCHEMA) carrying the
+    pinned analyse() result under "analysis" (GD4_ANALYSIS_SCHEMA, same
+    configuration hash); the registered comparison GD4_ID only, labelled."""
     g = R["gd4"]
     p = Path(g["path"])
     K.require(p.is_file() and not p.is_symlink(), "DIAG_GD4",
@@ -413,11 +436,32 @@ def load_gd4(R: dict, A, K) -> dict:
               "DIAG_GD4", "sidecar missing or different")
     doc = json.loads(body, parse_constant=lambda c: K.fail(
         "DIAG_GD4", f"non-finite constant {c}"))
-    K.require(doc.get("schema") == "seqref-v05lt-analysis/1", "DIAG_GD4",
-              f"schema {doc.get('schema')!r}")
-    hits = [c for c in doc.get("comparisons", []) if c.get("id") == GD4_ID]
+    K.require(isinstance(doc, dict) and doc.get("schema") == GD4_STAGE_SCHEMA,
+              "DIAG_GD4", f"schema {_schema_of(doc)!r} (expected "
+              f"{GD4_STAGE_SCHEMA})")
+    an = doc.get("analysis")
+    K.require(isinstance(an, dict) and an.get("schema") == GD4_ANALYSIS_SCHEMA,
+              "DIAG_GD4", f"analysis schema {_schema_of(an)!r} (expected "
+              f"{GD4_ANALYSIS_SCHEMA})")
+    cfg = doc.get("config_sha256")
+    K.require(isinstance(cfg, str) and len(cfg) == 64 and
+              all(ch in "0123456789abcdef" for ch in cfg) and
+              an.get("config_sha256") == cfg, "DIAG_GD4",
+              "configuration hash missing or differs between the stage "
+              "document and its analysis")
+    comps = an.get("comparisons")
+    K.require(isinstance(comps, list), "DIAG_GD4", "analysis.comparisons "
+              "is not a list")
+    hits = [c for c in comps if isinstance(c, dict) and c.get("id") == GD4_ID]
     K.require(len(hits) == 1, "DIAG_GD4", f"{len(hits)} entries {GD4_ID}")
     c = hits[0]
+    K.require(c.get("family") == "between" and c.get("metric") == "psnr" and
+              c.get("population") == "val", "DIAG_GD4",
+              f"{GD4_ID}: family/metric/population")
+    ps = c.get("per_seed")
+    K.require(isinstance(ps, list) and len(ps) == GD4_SEEDS and
+              all(isinstance(x, dict) for x in ps), "DIAG_GD4",
+              f"{GD4_ID}: per_seed")
     ci = c.get("ci")
     K.require(c.get("status") == "ok" and isinstance(c.get("estimate"), float)
               and math.isfinite(c["estimate"]) and isinstance(ci, list) and
@@ -426,6 +470,8 @@ def load_gd4(R: dict, A, K) -> dict:
               f"{GD4_ID}: status/estimate/ci")
     return {"source": "registered V05LT validation analysis (G-D4)",
             "sha256": sha, "comparison_id": GD4_ID,
+            "document_schema": [GD4_STAGE_SCHEMA, GD4_ANALYSIS_SCHEMA],
+            "config_sha256": cfg,
             "estimate": c["estimate"], "ci95": ci,
             "per_seed": c.get("per_seed"), "support": c.get("support"),
             "practical": c.get("practical"),
