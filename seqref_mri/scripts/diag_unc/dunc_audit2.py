@@ -1,4 +1,4 @@
-# SEQREF-DUNC-AUD2 v0.1.1 -- dunc_audit2.py: read-only ledger binding (B5) and R1-readout reconciliation (step P) for DIAG-UNC
+# SEQREF-DUNC-AUD2 v0.1.2 -- dunc_audit2.py: read-only ledger binding (B5) and R1-readout reconciliation (step P) for DIAG-UNC
 # LIFETIME: DIAGNOSTIC
 """Supplementary read-only audit after SEQREF-DUNC-AUD v0.4.2 (log dunc_audit_20261115T115114Z.log).
 It does not replace or alter that log.
@@ -31,6 +31,12 @@ Usage (host):
   python3 -I -B dunc_audit2.py --repo /home/benjamin/CSMFII
 
 Changelog
+- v0.1.2: ledger chain verified with the convention established by DISC v0.7 (321/321 links,
+  328/328 records): self == sha256(compact canonical JSON of the record without `self`) and
+  prev == sha256(previous raw line); v0.1.1 wrongly required prev == previous self and failed
+  on all six ledgers (log dunc_audit2_20261115T173749Z.log, exit 1, kept unchanged). Each
+  structural condition is now reported on its own line; final_weights.json line-hash
+  references are checked; posteval row identities are matched on (file, slice_index).
 - v0.1.1: binding rule rejects a milestone key present in the previous commit whatever its hash;
   new check P1b for a per-entry analysis-to-readout source identity (absent -> UNRESOLVED,
   pointing at another record -> FAIL); extra posteval directories not registered as analysis
@@ -47,7 +53,7 @@ import subprocess
 import sys
 import traceback
 
-VERSION = "SEQREF-DUNC-AUD2 v0.1.1"
+VERSION = "SEQREF-DUNC-AUD2 v0.1.2"
 PIN = "7455da8027f33a6cca4dbf72f04e72420e938f45"
 Z_DIAG = "f8a6a34b6b474286359e4c99341de256b62bc0dff1e6bc8cf52e72f0461dc8d6"
 ANALYSIS_SHA = "5b267d3aa7ccb48bf3d7ccbfa2e2497d7f02df845aff8786c0fbe9b9dff2afa2"   # 196, G-D4
@@ -186,14 +192,39 @@ def load_ledger(R, arm, seed, state):
     tri("L1", "B5L", snap(p), reg, "%s ledger.jsonl sha256 == analysis.identities registration" % tag)
     if reg is None or reg != SNAP[p][0]:
         return None
-    with open(p, "r", encoding="utf-8") as f:
-        lines = [json.loads(x) for x in f.read().splitlines() if x.strip()]
-    ok = (len(lines) >= 3 and all(l.get("schema") == LEDGER_SCHEMA for l in lines)
-          and [l.get("seq") for l in lines] == list(range(len(lines)))
-          and all(lines[i].get("prev") == lines[i - 1].get("self") for i in range(1, len(lines)))
-          and lines[0].get("kind") == "run_start" and lines[-1].get("kind") == "run_end")
-    rec("L1", "B5L", "PASS" if ok else "FAIL",
-        "%s %d lines: schema, seq contiguous, prev == previous self, run_start first, run_end last" % (tag, len(lines)))
+    with open(p, "rb") as f:
+        raw = [x for x in f.read().split(b"\n") if x.strip()]
+    lines = [json.loads(x.decode("utf-8")) for x in raw]
+    n = len(lines)
+    def canon(o):
+        return json.dumps({k: v for k, v in o.items() if k != "self"}, sort_keys=True, separators=(",", ":")).encode()
+    n_self = sum(1 for o in lines if o.get("self") == hashlib.sha256(canon(o)).hexdigest())
+    n_prev = sum(1 for i in range(1, n) if lines[i].get("prev") == hashlib.sha256(raw[i - 1]).hexdigest())
+    checks = [
+        ("every record has schema %s" % LEDGER_SCHEMA, n >= 3 and all(o.get("schema") == LEDGER_SCHEMA for o in lines)),
+        ("seq contiguous from 0", [o.get("seq") for o in lines] == list(range(n))),
+        ("run_start first and run_end last", n >= 3 and lines[0].get("kind") == "run_start" and lines[-1].get("kind") == "run_end"),
+        ("self == sha256(compact canonical JSON without self): %d/%d records" % (n_self, n), n_self == n),
+        ("prev == sha256(previous raw line): %d/%d links" % (n_prev, n - 1), n >= 2 and n_prev == n - 1),
+    ]
+    ok = True
+    for label, good in checks:
+        ok = ok and good
+        rec("L1", "B5L", "PASS" if good else "FAIL", "%s %d lines: %s" % (tag, n, label))
+    fwp = os.path.join(R, "%d_%s" % (seed, arm), "final", "final_weights.json")
+    if os.path.isfile(fwp):
+        src = load_json(fwp).get("source", {})
+        for key, seqk, kind in (("commit_line_sha256", "commit_seq", "commit"), ("run_end_line_sha256", "run_end_seq", "run_end")):
+            i = src.get(seqk)
+            if not isinstance(i, int) or isinstance(i, bool) or not 0 <= i < n or src.get(key) is None:
+                rec("L1", "B5L", "UNRESOLVED", "%s final_weights.json source.%s / %s not usable" % (tag, key, seqk))
+            else:
+                good = src[key] == hashlib.sha256(raw[i]).hexdigest() and lines[i].get("kind") == kind
+                ok = ok and good
+                rec("L1", "B5L", "PASS" if good else "FAIL",
+                    "%s final_weights.json source.%s == sha256(raw ledger line seq %d) and that line is a %s record" % (tag, key, i, kind))
+    else:
+        rec("L1", "B5L", "UNRESOLVED", "%s final_weights.json not found; line-hash references not checked" % tag)
     commits = [l for l in lines if l.get("kind") == "commit"]
     epochs = [c.get("body", {}).get("epoch") for c in commits]
     n_val = sum(1 for (a, s, _e) in state["val_state"] if (a, s) == (arm, seed))
@@ -299,7 +330,7 @@ def s_p(repo, R, state):
         rec("P2", "P", "UNRESOLVED", "eligibility manifest path does not resolve to one file")
     else:
         tri("P2", "P", snap(ep), ent.get("sha256"), "eligibility manifest sha256 == launch_inputs registration")
-        mid = set((s["volume_id"], s["slice_index"]) for s in load_json(ep).get("slices", []) if s.get("midpoint") is True)
+        mid = set((s["file"], s["slice_index"]) for s in load_json(ep).get("slices", []) if s.get("midpoint") is True)
         rec("P2", "P", "PASS" if len(mid) == N_VOLUMES else "FAIL", "registered midpoint slices: %d" % len(mid))
     by_use, cnt = {}, {}
     def c(name, ok):
@@ -329,8 +360,8 @@ def s_p(repo, R, state):
         c("128 in prefixes", N_SAMPLES in (j.get("prefixes") or []))
         ids = [r.get("identity") for r in rows]
         idkeys |= set(k for i in ids if isinstance(i, dict) for k in i)
-        if mid is not None and all(isinstance(i, dict) and "volume_id" in i and "slice_index" in i for i in ids) and ids:
-            c("row identities == registered midpoint slices", set((i["volume_id"], i["slice_index"]) for i in ids) == mid and len(ids) == len(mid))
+        if mid is not None and all(isinstance(i, dict) and "file" in i and "slice_index" in i for i in ids) and ids:
+            c("row identities (file, slice_index) == registered midpoint slices", set((i["file"], i["slice_index"]) for i in ids) == mid and len(ids) == len(mid))
         pop_sha.add(str(pop.get("identities_sha256")))
         masks.add(str(j.get("masks", {}).get("sha256")))
     n = len(recs)
@@ -339,8 +370,8 @@ def s_p(repo, R, state):
     for name, (good, bad) in cnt.items():
         full = n - len(unreg) if name.startswith("file sha256") else n
         rec("P2", "P", "PASS" if bad == 0 and good == full else "FAIL", "%s: %d/%d posteval records" % (name, good, full))
-    if "row identities == registered midpoint slices" not in cnt:
-        rec("P2", "P", "UNRESOLVED", "row identity fields are %s, not volume_id/slice_index; midpoint identity match not tested" % sorted(idkeys))
+    if "row identities (file, slice_index) == registered midpoint slices" not in cnt:
+        rec("P2", "P", "UNRESOLVED", "row identity fields are %s, not file/slice_index; midpoint identity match not tested" % sorted(idkeys))
     rec("P2", "P", "PASS" if len(pop_sha) == 1 else "FAIL", "population.identities_sha256 identical across the %d records" % n)
     tri("P3", "P", next(iter(masks)) if len(masks) == 1 else "not-unique", ana.get("inputs", {}).get("masks_sha256"),
         "posteval masks.sha256 (single value across records) == analysis inputs.masks_sha256")
