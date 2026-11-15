@@ -1,0 +1,198 @@
+=== git ===
+/home/benjamin/CSMFII
+7455da8027f33a6cca4dbf72f04e72420e938f45
+=== inputs dir ===
+852 results/v05lt/inputs/v05lt_bank_20261023_manifest.json
+7078016 results/v05lt/inputs/v05lt_bank_20261023.npy
+853 results/v05lt/inputs/v05lt_bank_20261024_manifest.json
+7078016 results/v05lt/inputs/v05lt_bank_20261024.npy
+1536 results/v05lt/inputs/v05lt_case_manifest.json
+91 results/v05lt/inputs/v05lt_case_manifest.json.sha256
+197613 results/v05lt/inputs/v05lt_data_content.json
+90 results/v05lt/inputs/v05lt_data_content.json.sha256
+447 results/v05lt/inputs/v05lt_manifests_run.json
+802057 results/v05lt/inputs/v05lt_nmse_eligibility.json
+94 results/v05lt/inputs/v05lt_nmse_eligibility.json.sha256
+106241 results/v05lt/inputs/v05lt_split_manifest.json
+92 results/v05lt/inputs/v05lt_split_manifest.json.sha256
+=== input bank_B path='seqref_mri/results/v05lt/inputs/v05lt_bank_20261023.npy'
+=== input bank_C path='seqref_mri/results/v05lt/inputs/v05lt_bank_20261024.npy'
+=== input case_manifest path='seqref_mri/results/v05lt/inputs/v05lt_case_manifest.json'
+  resolved=../seqref_mri/results/v05lt/inputs/v05lt_case_manifest.json
+  cases: list
+    [list len=6, item=dict]
+      case: int
+      file: str e.g. 'knee_singlecoil_train/singlecoil_train/file1000449.h5'
+      n_slices: int
+      slice_index: int
+      v02_dataset_index: int
+      validation_sorted_index: int
+      volume_id: str e.g. 'file1000449.h5'
+  recipe: str
+  schema: str
+  spec: str
+  split_manifest_sha256: str
+  study: str
+=== input data_content path='seqref_mri/results/v05lt/inputs/v05lt_data_content.json'
+=== input dc_tolerances path='seqref_mri/results/v05lt/preflight/v05lt_p5_dc_tolerances.json'
+=== input eligibility path='seqref_mri/results/v05lt/inputs/v05lt_nmse_eligibility.json'
+  resolved=../seqref_mri/results/v05lt/inputs/v05lt_nmse_eligibility.json
+  provenance: dict
+    case_manifest_sha256: str e.g. 'b10954f86cd45db607c956c45664abb7fe373254ca6a15f5cf518ae6668082ec'
+    implementation: dict
+      abbr: str e.g. 'SEQREF-MRI-V05LTELIG'
+      common_sha256: str e.g. 'f35664fcb92607d0b0919ea80e55a90c99bbea9d6584b329c0d7688d9e3712a1'
+      repo_head: str e.g. '7455da8027f33a6cca4dbf72f04e72420e938f45'
+      script_sha256: str e.g. '1449d74e48b56af4b4687413849cb57b6f4f6d21917da1b91c0e03568249d6d1'
+      version: str e.g. '0.2'
+    p0s_path: str e.g. 'seqref_mri/results/_diag/residual_preflight/normalisation_scale_facts.json'
+    p0s_sha256: str e.g. '2070cc72c977096f731811513d81b2abdb5dababb69edb4e997a5f8283b7c693'
+    s_ref: float
+    s_ref_squared: float
+    split_manifest_sha256: str e.g. 'f7d21fb97e030a2e8227233cd5d1f171a120b765060ae83cafc728721428cf5d'
+    validation_order_sha256: str e.g. '4d1ff52e562d7e7124a54c64cf1b5464431455e13723f01d9c24f14662fca66c'
+  rule: dict
+    eligible_iff: str e.g. 'ratio > threshold (equality ineligible)'
+    mask_convention: str e.g. 'evaluation: canonical_mask_seed(EVAL_BASE_SEED=20261001, relpath, slice_index), '
+    scope: str e.g. 'NMSE_u on validation only; PSNR, SSIM and NLL keep every slice; holdout keeps V0'
+    threshold: float
+    u_true: str e.g. "train_base._prepare(batch, 'cpu', test0=False); dx = complex(x_norm) - complex(c"
+  schema: str
+  slices: list
+    [list len=3461, item=dict]
+      case: NoneType
+      eligible: bool
+      energy: float
+      file: str e.g. 'knee_singlecoil_train/singlecoil_train/file1000002.h5'
+      midpoint: bool
+      ratio: float
+      slice_index: int
+      volume_id: str e.g. 'file1000002.h5'
+      zero_energy: bool
+  summary: dict
+    all_slices: dict
+      eligible: int
+      excluded: int
+      excluded_identities: list
+      nmse_population_volumes: int
+      slices: int
+      volumes: int
+      volumes_without_eligible_slice: list
+      zero_energy: int
+      zero_energy_identities: list
+    cases: dict
+      eligible: int
+      excluded: int
+      excluded_identities: list
+      nmse_population_volumes: int
+      slices: int
+      volumes: int
+      volumes_without_eligible_slice: list
+      zero_energy: int
+      zero_energy_identities: list
+    midpoint: dict
+      eligible: int
+      excluded: int
+      excluded_identities: list
+      nmse_population_volumes: int
+      slices: int
+      volumes: int
+      volumes_without_eligible_slice: list
+      zero_energy: int
+      zero_energy_identities: list
+=== input split_manifest path='seqref_mri/results/v05lt/inputs/v05lt_split_manifest.json'
+  resolved=../seqref_mri/results/v05lt/inputs/v05lt_split_manifest.json
+  counts: dict
+    holdout_volumes: int
+    train_slices: int
+    train_volumes: int
+    validation_slices: int
+    validation_volumes: int
+  holdout_overlap: int
+  id_rule: str
+  recipe: str
+  schema: str
+  sources: dict
+    holdout: dict
+      content_sha256: str e.g. 'ce27550cdcdfa627372a53d51df6c7a97e4c6cff0f5a80622e0fa110b0eea165'
+      file_sha256: str e.g. '0f2f96073fad6bdaad1314ae1319b643a1b67c06424e757f1fea3cfc1e002019'
+      path: str e.g. 'seqref_mri/results/v02/manifests/v02_holdout_manifest.json'
+    train: dict
+      content_sha256: str e.g. '390220ab031455584bbf5df4d9485550dea5c9109894e6b335c9444d973a8e9e'
+      file_sha256: str e.g. 'b0637f787ce198e4424f6b506fed264300ac585921ffaf17995004bb317efb56'
+      path: str e.g. 'seqref_mri/results/v02/manifests/v02_epoch0_manifest.json'
+  spec: str
+  study: str
+  train: list
+    [list len=876, item=dict]
+      file: str e.g. 'knee_singlecoil_train/singlecoil_train/file1000001.h5'
+      n_slices: int
+      volume_id: str e.g. 'file1000001.h5'
+  train_ids_sha256: str
+  validation: list
+    [list len=97, item=dict]
+      file: str e.g. 'knee_singlecoil_train/singlecoil_train/file1000002.h5'
+      n_slices: int
+      volume_id: str e.g. 'file1000002.h5'
+  validation_ids_sha256: str
+=== input zf path='seqref_mri/results/v05lt/zf/zf_reference.json'
+=== records containing the primary-bank hash (key paths only) ===
+results/v05lt/epoch0/seed_2027/eval/epoch0_eval.json ['/context/bank_primary_sha256']
+results/v05lt/inputs/v05lt_bank_20261023_manifest.json ['/recipe_check/z_diag_sha256']
+results/v05lt/inputs/v05lt_bank_20261024_manifest.json ['/recipe_check/z_diag_sha256']
+results/v05lt/posteval/21199dbca17c8d2db20c209f85e1598a91b68cc8750cf9eb97839e172c7a72b1/posteval.json ['/banks/primary']
+results/v05lt/preflight/v05lt_p1_inputs.json ['/evidence_inputs[]/sha256']
+=== posteval roles ===
+lam0 2027 10 weights_e010.pt ['milestone_010', 'best_psnr', 'best_nll'] [('lam0', 2027, 'selected')] dir==state
+lam0 2026 3 weights_e003.pt ['milestone_003', 'best_psnr', 'best_nll'] [('lam0', 2026, 'epoch3')] dir==state
+lam2 2027 3 weights_e003.pt ['milestone_003', 'best_psnr', 'best_nll'] [('lam2', 2027, 'epoch3')] dir==state
+lam0 2028 50 weights_e050.pt ['milestone_050'] [('lam0', 2028, 'final')] dir==state
+lam0 2027 3 weights_e003.pt ['milestone_003', 'best_psnr', 'best_nll'] [('lam0', 2027, 'epoch3')] dir==state
+lam0 2028 13 weights_e013.pt ['best_psnr', 'best_nll'] [('lam0', 2028, 'selected')] dir==state
+lam2 2026 58 weights_e058.pt ['best_nll'] [('lam2', 2026, 'final')] dir==state
+lam0 2028 3 weights_e003.pt ['milestone_003'] [('lam0', 2028, 'epoch3')] dir==state
+lam2 2026 55 weights_e055.pt ['best_psnr', 'best_nll'] [('lam2', 2026, 'selected')] dir==state
+lam2 2027 49 weights_final.pt ['final'] [('lam2', 2027, 'final')] dir==state
+lam0 2026 49 weights_final.pt ['final'] [('lam0', 2026, 'final')] dir==state
+lam2 2028 3 weights_e003.pt ['milestone_003', 'best_psnr', 'best_nll'] [('lam2', 2028, 'epoch3')] dir==state
+lam2 2028 55 weights_e055.pt ['best_psnr'] [('lam2', 2028, 'final'), ('lam2', 2028, 'selected')] dir==state
+lam0 2026 9 weights_e009.pt ['best_psnr'] [('lam0', 2026, 'selected')] dir==state
+lam2 2027 48 weights_e048.pt ['best_psnr'] [('lam2', 2027, 'selected')] dir==state
+lam2 2026 3 weights_e003.pt ['milestone_003', 'best_psnr', 'best_nll'] [('lam2', 2026, 'epoch3')] dir==state
+lam0 2027 49 weights_e049.pt ['best_nll'] [('lam0', 2027, 'final')] dir==state
+=== formats ===
+sidecar: 'b928dd618ae7d229339373ba96ac41213466804847aa07d2630449c1b0baba10  weights_e003.pt\n'
+final_weights: weights_final.pt 49 stopped_plateau seqref-v05lt-final-weights/1
+val row ids: 'file1000002.h5' 'knee_singlecoil_train/singlecoil_train/file1000002.h5' 0 schema='seqref-v05lt-val-rows/1' arm='lam0'
+identity value length: 64
+run_info keys:
+  lam0|2026: dict
+    last_epoch: int
+    milestones: list
+    status: str e.g. 'stopped_plateau'
+  lam0|2027: dict
+    last_epoch: int
+    milestones: list
+    status: str e.g. 'stopped_plateau'
+  lam0|2028: dict
+    last_epoch: int
+    milestones: list
+    status: str e.g. 'stopped_plateau'
+  lam2|2026: dict
+    last_epoch: int
+    milestones: list
+    status: str e.g. 'stopped_plateau'
+  lam2|2027: dict
+    last_epoch: int
+    milestones: list
+    status: str e.g. 'stopped_plateau'
+  lam2|2028: dict
+    last_epoch: int
+    milestones: list
+    status: str e.g. 'stopped_plateau'
+pin: identity_method="v05lt_prodstages.source_identity at the pinned commit; every file equal to the commit's blob (v05lt_prodstages.head_blobs / git_blob_sha1)" n=160
+  in pin record: seqref_mri/tdiag/d3.py True
+  in pin record: seqref_mri/src/free_flow_runtime.py True
+  in pin record: seqref_mri/scripts/v05lt_eval.py True
+  in pin record: seqref_mri/scripts/v05lt_metrics.py True
+=== Discovery finished ===

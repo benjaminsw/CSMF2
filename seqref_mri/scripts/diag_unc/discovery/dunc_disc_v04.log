@@ -1,0 +1,851 @@
+=== Directory layout ===
+results/v05lt
+results/v05lt/2026_lam0
+results/v05lt/2026_lam0/ckpt
+results/v05lt/2026_lam0/ckpt/resume_e049.pt
+results/v05lt/2026_lam0/ckpt/resume_e049.pt.sha256
+results/v05lt/2026_lam0/ckpt/val_e001.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e002.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e003.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e004.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e005.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e006.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e007.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e008.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e009.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e010.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e011.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e012.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e013.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e014.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e015.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e016.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e017.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e018.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e019.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e020.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e021.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e022.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e023.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e024.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e025.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e026.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e027.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e028.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e029.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e030.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e031.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e032.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e033.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e034.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e035.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e036.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e037.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e038.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e039.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e040.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e041.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e042.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e043.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e044.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e045.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e046.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e047.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e048.json.sha256
+results/v05lt/2026_lam0/ckpt/val_e049.json.sha256
+results/v05lt/2026_lam0/ckpt/weights_e003.pt
+results/v05lt/2026_lam0/ckpt/weights_e003.pt.sha256
+results/v05lt/2026_lam0/ckpt/weights_e009.pt
+results/v05lt/2026_lam0/ckpt/weights_e009.pt.sha256
+results/v05lt/2026_lam0/ckpt/weights_e010.pt
+results/v05lt/2026_lam0/ckpt/weights_e010.pt.sha256
+results/v05lt/2026_lam0/ckpt/weights_e020.pt
+results/v05lt/2026_lam0/ckpt/weights_e020.pt.sha256
+results/v05lt/2026_lam0/ckpt/weights_e030.pt
+results/v05lt/2026_lam0/ckpt/weights_e030.pt.sha256
+results/v05lt/2026_lam0/ckpt/weights_e048.pt
+results/v05lt/2026_lam0/ckpt/weights_e048.pt.sha256
+results/v05lt/2026_lam0/final
+results/v05lt/2026_lam0/final/final_weights.json
+results/v05lt/2026_lam0/final/final_weights.json.sha256
+results/v05lt/2026_lam0/final/weights_final.pt
+results/v05lt/2026_lam0/final/weights_final.pt.sha256
+results/v05lt/2026_lam0/ledger.jsonl
+results/v05lt/.2026_lam0.lock
+results/v05lt/2026_lam2
+results/v05lt/2026_lam2/ckpt
+results/v05lt/2026_lam2/ckpt/resume_e058.pt
+results/v05lt/2026_lam2/ckpt/resume_e058.pt.sha256
+results/v05lt/2026_lam2/ckpt/val_e001.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e002.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e003.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e004.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e005.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e006.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e007.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e008.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e009.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e010.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e011.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e012.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e013.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e014.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e015.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e016.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e017.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e018.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e019.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e020.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e021.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e022.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e023.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e024.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e025.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e026.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e027.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e028.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e029.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e030.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e031.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e032.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e033.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e034.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e035.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e036.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e037.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e038.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e039.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e040.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e041.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e042.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e043.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e044.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e045.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e046.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e047.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e048.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e049.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e050.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e051.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e052.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e053.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e054.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e055.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e056.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e057.json.sha256
+results/v05lt/2026_lam2/ckpt/val_e058.json.sha256
+results/v05lt/2026_lam2/ckpt/weights_e003.pt
+results/v05lt/2026_lam2/ckpt/weights_e003.pt.sha256
+results/v05lt/2026_lam2/ckpt/weights_e010.pt
+results/v05lt/2026_lam2/ckpt/weights_e010.pt.sha256
+results/v05lt/2026_lam2/ckpt/weights_e020.pt
+results/v05lt/2026_lam2/ckpt/weights_e020.pt.sha256
+results/v05lt/2026_lam2/ckpt/weights_e030.pt
+results/v05lt/2026_lam2/ckpt/weights_e030.pt.sha256
+results/v05lt/2026_lam2/ckpt/weights_e050.pt
+results/v05lt/2026_lam2/ckpt/weights_e050.pt.sha256
+results/v05lt/2026_lam2/ckpt/weights_e055.pt
+results/v05lt/2026_lam2/ckpt/weights_e055.pt.sha256
+results/v05lt/2026_lam2/ckpt/weights_e058.pt
+results/v05lt/2026_lam2/ckpt/weights_e058.pt.sha256
+results/v05lt/2026_lam2/final
+=== Validation-row directories ===
+     49 results/v05lt/2026_lam0/ckpt
+     58 results/v05lt/2026_lam2/ckpt
+     49 results/v05lt/2027_lam0/ckpt
+     49 results/v05lt/2027_lam2/ckpt
+     50 results/v05lt/2028_lam0/ckpt
+     55 results/v05lt/2028_lam2/ckpt
+=== Checkpoint files ===
+3079777394 results/v05lt/2026_lam0/ckpt/resume_e049.pt
+1026581246 results/v05lt/2026_lam0/ckpt/weights_e003.pt
+1026581182 results/v05lt/2026_lam0/ckpt/weights_e009.pt
+1026581246 results/v05lt/2026_lam0/ckpt/weights_e010.pt
+1026581246 results/v05lt/2026_lam0/ckpt/weights_e020.pt
+1026581246 results/v05lt/2026_lam0/ckpt/weights_e030.pt
+1026581182 results/v05lt/2026_lam0/ckpt/weights_e048.pt
+1026581182 results/v05lt/2026_lam0/final/weights_final.pt
+3079777458 results/v05lt/2026_lam2/ckpt/resume_e058.pt
+1026581246 results/v05lt/2026_lam2/ckpt/weights_e003.pt
+1026581246 results/v05lt/2026_lam2/ckpt/weights_e010.pt
+1026581246 results/v05lt/2026_lam2/ckpt/weights_e020.pt
+1026581246 results/v05lt/2026_lam2/ckpt/weights_e030.pt
+1026581246 results/v05lt/2026_lam2/ckpt/weights_e050.pt
+1026581246 results/v05lt/2026_lam2/ckpt/weights_e055.pt
+1026581182 results/v05lt/2026_lam2/ckpt/weights_e058.pt
+1026581182 results/v05lt/2026_lam2/final/weights_final.pt
+3079777394 results/v05lt/2027_lam0/ckpt/resume_e049.pt
+1026581246 results/v05lt/2027_lam0/ckpt/weights_e003.pt
+1026581246 results/v05lt/2027_lam0/ckpt/weights_e010.pt
+1026581246 results/v05lt/2027_lam0/ckpt/weights_e020.pt
+1026581246 results/v05lt/2027_lam0/ckpt/weights_e030.pt
+1026581182 results/v05lt/2027_lam0/ckpt/weights_e049.pt
+1026581182 results/v05lt/2027_lam0/final/weights_final.pt
+3079777394 results/v05lt/2027_lam2/ckpt/resume_e049.pt
+1026581246 results/v05lt/2027_lam2/ckpt/weights_e003.pt
+1026581246 results/v05lt/2027_lam2/ckpt/weights_e010.pt
+1026581246 results/v05lt/2027_lam2/ckpt/weights_e020.pt
+1026581246 results/v05lt/2027_lam2/ckpt/weights_e030.pt
+1026581246 results/v05lt/2027_lam2/ckpt/weights_e047.pt
+1026581182 results/v05lt/2027_lam2/ckpt/weights_e048.pt
+1026581182 results/v05lt/2027_lam2/final/weights_final.pt
+3079777394 results/v05lt/2028_lam0/ckpt/resume_e050.pt
+1026581246 results/v05lt/2028_lam0/ckpt/weights_e003.pt
+1026581246 results/v05lt/2028_lam0/ckpt/weights_e010.pt
+1026581246 results/v05lt/2028_lam0/ckpt/weights_e013.pt
+1026581246 results/v05lt/2028_lam0/ckpt/weights_e020.pt
+1026581246 results/v05lt/2028_lam0/ckpt/weights_e030.pt
+1026581182 results/v05lt/2028_lam0/ckpt/weights_e047.pt
+1026581246 results/v05lt/2028_lam0/ckpt/weights_e050.pt
+1026581182 results/v05lt/2028_lam0/final/weights_final.pt
+3079777458 results/v05lt/2028_lam2/ckpt/resume_e055.pt
+1026581246 results/v05lt/2028_lam2/ckpt/weights_e003.pt
+1026581246 results/v05lt/2028_lam2/ckpt/weights_e010.pt
+1026581246 results/v05lt/2028_lam2/ckpt/weights_e020.pt
+1026581246 results/v05lt/2028_lam2/ckpt/weights_e030.pt
+1026581246 results/v05lt/2028_lam2/ckpt/weights_e050.pt
+1026581182 results/v05lt/2028_lam2/ckpt/weights_e054.pt
+1026581182 results/v05lt/2028_lam2/ckpt/weights_e055.pt
+1026581182 results/v05lt/2028_lam2/final/weights_final.pt
+3079776754 results/v05lt/diagnostics/pre_p4_20261029T070742Z/p4_lam0/ckpt/p4diag_resume_lam0.pt
+1026581310 results/v05lt/diagnostics/pre_p4_20261029T070742Z/p4_lam0/ckpt/p4diag_weights_lam0.pt
+1026581374 results/v05lt/diagnostics/pre_p4_20261029T070742Z/p4_lam0/final_probe/p4diag_final_probe_lam0.pt
+3079776754 results/v05lt/diagnostics/pre_p4_20261029T070742Z/p4_lam2/ckpt/p4diag_resume_lam2.pt
+1026581310 results/v05lt/diagnostics/pre_p4_20261029T070742Z/p4_lam2/ckpt/p4diag_weights_lam2.pt
+1026581374 results/v05lt/diagnostics/pre_p4_20261029T070742Z/p4_lam2/final_probe/p4diag_final_probe_lam2.pt
+1026584190 results/v05lt/epoch0/seed_2026/ckpt/epoch0_seed2026.pt
+1026584190 results/v05lt/epoch0/seed_2027/ckpt/epoch0_seed2027.pt
+1026584190 results/v05lt/epoch0/seed_2028/ckpt/epoch0_seed2028.pt
+=== Training and checkpoint records ===
+results/v05lt/2026_lam2/final/final_weights.json
+results/v05lt/2028_lam0/final/final_weights.json
+results/v05lt/2027_lam0/final/final_weights.json
+results/v05lt/epoch0/seed_2027/eval/epoch0_eval.json
+results/v05lt/epoch0/seed_2026/eval/epoch0_eval.json
+results/v05lt/epoch0/seed_2028/eval/epoch0_eval.json
+results/v05lt/2027_lam2/final/final_weights.json
+results/v05lt/preflight/v05lt_p4_timing.json
+results/v05lt/preflight/v05lt_p2_stability.json
+results/v05lt/posteval/21199dbca17c8d2db20c209f85e1598a91b68cc8750cf9eb97839e172c7a72b1/posteval.json
+results/v05lt/posteval/7b227e96e87f62f677aba00fdc345d852efa7090871a06bbca5a66ab21adae95/posteval.json
+results/v05lt/posteval/bd88d523566f653b28928fbb85e56a86fa633cd8491359907e3ec727a43f83bb/posteval.json
+results/v05lt/posteval/ada69a8fe7c1c290f650c3be75fd0a2947f184a5cd45d5d5eef1aa6e74af4b77/posteval.json
+results/v05lt/posteval/0861c5b1ddd1a52aea7cdc00c4f54f013cb792d31eaf88b4b597d1a6e7c75ff0/posteval.json
+results/v05lt/posteval/336a8193e22041526812db2959b1a25bb37ad4fe60deeb05eb27253f9c2e1320/posteval.json
+results/v05lt/posteval/a3b5f949b745f1b429a48a62089deb7808a393f141f1c691b7c927294da212f4/posteval.json
+results/v05lt/posteval/9fdcd1372de2d480ebbe342d2ae6b09f8be836e989f2338f68d1dadbded0b46f/posteval.json
+results/v05lt/posteval/977ceeef0a6b18467dd818a2743bec9a207b2cf43ea5c2f09d09db2d04f1d2f7/posteval.json
+results/v05lt/posteval/03d260630f2adbca3d2a169bf4fd15db43d4934ba3da679e05fd6ba03d28baad/posteval.json
+results/v05lt/posteval/063963734429b1d4c887def9ff6b3483c4158df5d68ad64ee681f99d51fa34bc/posteval.json
+results/v05lt/posteval/4103d7ff037a7034c66fe35190274ee79d6f474fc61d73f7fe35e74c4b40e96c/posteval.json
+results/v05lt/posteval/bc5ff01940ae9235edf31ac86a82c80e7a370d0c9c578b44160bc2b8a6bcc7bd/posteval.json
+results/v05lt/posteval/240b94103a9a34ed1f22dfe212e72627885cb16dc5979d4981c0068af7350763/posteval.json
+results/v05lt/posteval/95e5be41913fea6c7ff097b1058accd07c1ba66ccf1bb859dfe425c94e825ecb/posteval.json
+results/v05lt/posteval/6c2f1f854c404472e57bdc3d1e8da638434208b6806c2c72461f3e3df18377eb/posteval.json
+results/v05lt/posteval/e1ffd39f9f15d75d85e5dff9135a5b6a5866f850585ea36032ab9a68d52403b3/posteval.json
+results/v05lt/2026_lam0/final/final_weights.json
+results/v05lt/diagnostics/pre_p2_20261029T061847Z/p2_process_2.json
+results/v05lt/diagnostics/pre_p2_20261029T061847Z/p2_process_1.json
+results/v05lt/diagnostics/pre_p4_20261029T070742Z/p4_eval.json
+results/v05lt/diagnostics/pre_p4_20261029T070742Z/p4_lam0.json
+results/v05lt/diagnostics/pre_p4_20261029T070742Z/p4_lam2.json
+results/v05lt/diagnostics/pre_p4_20261029T070742Z/p4_posteval_primary/8e2a6b1911d21f37514c249e2ed8df86af18f9b6e63a1717502a8de9d1b377b5/posteval.json
+results/v05lt/diagnostics/pre_p4_20261029T070742Z/p4_posteval_selected/8e2a6b1911d21f37514c249e2ed8df86af18f9b6e63a1717502a8de9d1b377b5/posteval.json
+results/v05lt/analysis/v05lt_analysis.json
+results/v05lt/2028_lam2/final/final_weights.json
+=== Source-pin evidence candidates ===
+results/v05lt/launch/v05lt_gate2a_record.json
+results/v05lt/launch/v05lt_pin_record.json
+results/v05lt/launch/v05lt_launch_inputs.json
+results/v05lt/inputs/v05lt_nmse_eligibility.json
+results/v05lt/preflight/v05lt_p4_timing.json
+results/v05lt/preflight/v05lt_p5_dc_tolerances.json
+results/v05lt/preflight/v05lt_p6_v04dlt.json
+results/v05lt/preflight/v05lt_preflight_summary.json
+results/v05lt/preflight/v05lt_p2_stability.json
+results/v05lt/preflight/v05lt_p1_inputs.json
+results/v05lt/preflight/v05lt_p3_storage.json
+results/v05lt/diagnostics/pre_summary_20261029T075139Z/v05lt_pre_s2.log
+results/v05lt/diagnostics/anacfg_20261028T162157Z/v05lt_anacfg.log
+results/v05lt/diagnostics/gate2a_generate_20261028T140908Z/v05lt_gate2a.log
+results/v05lt/diagnostics/pre_p2_20261029T061847Z/v05lt_pre_s2.log
+results/v05lt/diagnostics/v05lt_pin_recommit.Vo9uyf.log
+results/v05lt/diagnostics/pre_p5_20261028T172942Z/v05lt_pre_s1.log
+results/v05lt/diagnostics/pincheck_20261028T131838Z/v05lt_pincheck.log
+results/v05lt/diagnostics/gate2a_difficult_20261028T155245Z/v05lt_gate2a.log
+results/v05lt/diagnostics/pre_p3_20261029T074622Z/v05lt_pre_s2.log
+results/v05lt/diagnostics/pre_space_20261029T061510Z/v05lt_pre_s2.log
+results/v05lt/diagnostics/pre_space_20261029T061510Z/space_check.json
+results/v05lt/diagnostics/lch_records_20261029T090103Z/v05lt_lch.log
+results/v05lt/diagnostics/pre_p1_20261028T172329Z/v05lt_pre_s1.log
+results/v05lt/diagnostics/lch_inputs_20261029T090719Z/v05lt_lch.log
+results/v05lt/diagnostics/lch_verify_20261029T092004Z/v05lt_lch.log
+results/v05lt/diagnostics/pre_p6_20261028T173915Z/v05lt_pre_s1.log
+results/v05lt/diagnostics/pre_p6_20261028T173501Z/v05lt_pre_s1.log
+results/v05lt/diagnostics/pre_p4_20261029T070742Z/v05lt_pre_s2.log
+results/v05lt/diagnostics/lch_chain_20261029T091701Z/v05lt_lch.log
+results/v05lt/zf/zf_reference.json
+../v06lt_evidence/V3_statshash_20261102/v3.log
+../v06lt_evidence/DIAG_JSH/out/F1_20261110T190054Z/diag_jsh_manifest.json
+../v06lt_evidence/prov_20261114T083034Z_9S6jg3.log
+=== Key names (no values) ===
+=== results/v05lt/launch/v05lt_pin_record.json
+  approval: str
+  branch: str
+  commit: str
+  execution_sources: int
+  identity_method: str
+  plan: str
+  schema: str
+  source_identity: dict
+    seqref_mri/__init__.py: str
+    seqref_mri/configs/normalisation_declaration.json: str
+    seqref_mri/diagnostics/__init__.py: str
+    seqref_mri/diagnostics/s3_inspect.py: str
+    seqref_mri/diagnostics/smoke_v09_gate.py: str
+    seqref_mri/host_v04dlt/payload/v04dlt_fixtures.py: str
+    seqref_mri/host_v04dlt/payload/v04dlt_stub_train.py: str
+    seqref_mri/host_v04dlt/payload/v04dlt_summary.py: str
+    seqref_mri/host_v04dlt/payload/v04dlt_train.py: str
+    seqref_mri/host_v04dlt/v04dlt_dataset_verify.py: str
+    seqref_mri/scripts/SEQREF-MRI-V04TRP-v0.2-plot-generator.py: str
+    seqref_mri/scripts/__init__.py: str
+    seqref_mri/scripts/_diag/alpha_sweep.py: str
+    seqref_mri/scripts/_diag/basediag.py: str
+    seqref_mri/scripts/_diag/cell_baselines.py: str
+    seqref_mri/scripts/_diag/check_conditioning.py: str
+    seqref_mri/scripts/_diag/dcprobe.py: str
+    seqref_mri/scripts/_diag/eval_noise.py: str
+    seqref_mri/scripts/_diag/fm_ungated_probe.py: str
+    seqref_mri/scripts/_diag/grad_diag.py: str
+    seqref_mri/scripts/_diag/i1_operator_report.py: str
+    seqref_mri/scripts/_diag/i2_baseline.py: str
+    seqref_mri/scripts/_diag/i3_pilot.py: str
+    seqref_mri/scripts/_diag/make_normalisation_declaration.py: str
+    seqref_mri/scripts/_diag/p0_normalisation_gate.py: str
+    seqref_mri/scripts/_diag/p0s_normalisation_scale.py: str
+    seqref_mri/scripts/_diag/seed_aggregate.py: str
+    seqref_mri/scripts/_diag/test_contract_hash.py: str
+    seqref_mri/scripts/_diag/visinspect.py: str
+    seqref_mri/scripts/_diag/ws_audit.py: str
+    seqref_mri/scripts/impl_selftest.py: str
+    seqref_mri/scripts/implb_calibration.py: str
+    seqref_mri/scripts/implb_selftest.py: str
+    seqref_mri/scripts/p12_concurrency_check.py: str
+    seqref_mri/scripts/p12_plots.py: str
+    seqref_mri/scripts/p12_selftest.py: str
+    seqref_mri/scripts/p1_representation.py: str
+    seqref_mri/scripts/p2_support.py: str
+    seqref_mri/scripts/p3_coordinate_map.py: str
+    seqref_mri/scripts/p3_plots.py: str
+    seqref_mri/scripts/p3_selftest.py: str
+    seqref_mri/scripts/p4_file_structure.py: str
+    seqref_mri/scripts/p4_frame_identity.py: str
+    seqref_mri/scripts/p4_scaling_stats.py: str
+    seqref_mri/scripts/p4_scaling_stats2.py: str
+    seqref_mri/scripts/p4_scaling_stats2_selftest.py: str
+    seqref_mri/scripts/p4_selftest.py: str
+    seqref_mri/scripts/p4_sigma_map.py: str
+    seqref_mri/scripts/p4fid_selftest.py: str
+    seqref_mri/scripts/tdiag.py: str
+    seqref_mri/scripts/tdiag_selftest.py: str
+    seqref_mri/scripts/tiny_gate.py: str
+    seqref_mri/scripts/tiny_selftest.py: str
+    seqref_mri/scripts/train_base.py: str
+    seqref_mri/scripts/train_fm_refiner.py: str
+    seqref_mri/scripts/train_free_flow.py: str
+    seqref_mri/scripts/train_refiner.py: str
+    seqref_mri/scripts/v02_eval.py: str
+    seqref_mri/scripts/v02_manifests.py: str
+    seqref_mri/scripts/v02_plots.py: str
+  source_identity_sha256: str
+  t25: dict
+    log: dict
+      path: str
+      sha256: str
+    note: str
+  wrapper_sha256: str
+=== results/v05lt/launch/v05lt_launch_inputs.json
+  abbr: str
+  bindings: dict
+    P5_sha256: str
+    gate2a_sha256: str
+    pin_sha256: str
+  campaign_config_sha256: str
+  fixture: bool
+  inputs: dict
+    bank_B: dict
+      path: str
+      sha256: str
+    bank_C: dict
+      path: str
+      sha256: str
+    case_manifest: dict
+      path: str
+      sha256: str
+    data_content: dict
+      path: str
+      sha256: str
+    dc_tolerances: dict
+      path: str
+      sha256: str
+    eligibility: dict
+      path: str
+      sha256: str
+    split_manifest: dict
+      path: str
+      sha256: str
+    zf: dict
+      path: str
+      sha256: str
+  pin: dict
+    code: dict
+      seqref_mri/__init__.py: str
+      seqref_mri/configs/normalisation_declaration.json: str
+      seqref_mri/diagnostics/__init__.py: str
+      seqref_mri/diagnostics/s3_inspect.py: str
+      seqref_mri/diagnostics/smoke_v09_gate.py: str
+      seqref_mri/host_v04dlt/payload/v04dlt_fixtures.py: str
+      seqref_mri/host_v04dlt/payload/v04dlt_stub_train.py: str
+      seqref_mri/host_v04dlt/payload/v04dlt_summary.py: str
+      seqref_mri/host_v04dlt/payload/v04dlt_train.py: str
+      seqref_mri/host_v04dlt/v04dlt_dataset_verify.py: str
+      seqref_mri/scripts/SEQREF-MRI-V04TRP-v0.2-plot-generator.py: str
+      seqref_mri/scripts/__init__.py: str
+      seqref_mri/scripts/_diag/alpha_sweep.py: str
+      seqref_mri/scripts/_diag/basediag.py: str
+      seqref_mri/scripts/_diag/cell_baselines.py: str
+      seqref_mri/scripts/_diag/check_conditioning.py: str
+      seqref_mri/scripts/_diag/dcprobe.py: str
+      seqref_mri/scripts/_diag/eval_noise.py: str
+      seqref_mri/scripts/_diag/fm_ungated_probe.py: str
+      seqref_mri/scripts/_diag/grad_diag.py: str
+      seqref_mri/scripts/_diag/i1_operator_report.py: str
+      seqref_mri/scripts/_diag/i2_baseline.py: str
+      seqref_mri/scripts/_diag/i3_pilot.py: str
+      seqref_mri/scripts/_diag/make_normalisation_declaration.py: str
+      seqref_mri/scripts/_diag/p0_normalisation_gate.py: str
+      seqref_mri/scripts/_diag/p0s_normalisation_scale.py: str
+      seqref_mri/scripts/_diag/seed_aggregate.py: str
+      seqref_mri/scripts/_diag/test_contract_hash.py: str
+      seqref_mri/scripts/_diag/visinspect.py: str
+      seqref_mri/scripts/_diag/ws_audit.py: str
+      seqref_mri/scripts/impl_selftest.py: str
+      seqref_mri/scripts/implb_calibration.py: str
+      seqref_mri/scripts/implb_selftest.py: str
+      seqref_mri/scripts/p12_concurrency_check.py: str
+      seqref_mri/scripts/p12_plots.py: str
+      seqref_mri/scripts/p12_selftest.py: str
+      seqref_mri/scripts/p1_representation.py: str
+      seqref_mri/scripts/p2_support.py: str
+      seqref_mri/scripts/p3_coordinate_map.py: str
+      seqref_mri/scripts/p3_plots.py: str
+      seqref_mri/scripts/p3_selftest.py: str
+      seqref_mri/scripts/p4_file_structure.py: str
+      seqref_mri/scripts/p4_frame_identity.py: str
+      seqref_mri/scripts/p4_scaling_stats.py: str
+      seqref_mri/scripts/p4_scaling_stats2.py: str
+      seqref_mri/scripts/p4_scaling_stats2_selftest.py: str
+      seqref_mri/scripts/p4_selftest.py: str
+      seqref_mri/scripts/p4_sigma_map.py: str
+      seqref_mri/scripts/p4fid_selftest.py: str
+      seqref_mri/scripts/tdiag.py: str
+      seqref_mri/scripts/tdiag_selftest.py: str
+      seqref_mri/scripts/tiny_gate.py: str
+      seqref_mri/scripts/tiny_selftest.py: str
+      seqref_mri/scripts/train_base.py: str
+      seqref_mri/scripts/train_fm_refiner.py: str
+      seqref_mri/scripts/train_free_flow.py: str
+      seqref_mri/scripts/train_refiner.py: str
+      seqref_mri/scripts/v02_eval.py: str
+      seqref_mri/scripts/v02_manifests.py: str
+      seqref_mri/scripts/v02_plots.py: str
+    commit: str
+  schema: str
+  version: str
+=== results/v05lt/2026_lam0/final/final_weights.json
+  abbr: str
+  epoch: int
+  model_state_sha256: str
+  run: dict
+    arm: str
+    config_sha256: str
+    seed: int
+  schema: str
+  source: dict
+    commit_line_sha256: str
+    commit_seq: int
+    resume_file: str
+    resume_sha256: str
+    resume_state_sha256: str
+    run_end_line_sha256: str
+    run_end_seq: int
+  status: str
+  step: int
+  version: str
+  weights_file: str
+  weights_sha256: str
+=== results/v05lt/analysis/v05lt_analysis.json
+  abbr: str
+  analysis: dict
+    abbr: str
+    cap_statement: str
+    caps: dict
+      lam0|2026|best_nll|r0|all: dict
+      lam0|2026|epoch10|r0|all: dict
+      lam0|2026|epoch20|r0|all: dict
+      lam0|2026|epoch30|r0|all: dict
+      lam0|2026|epoch3|r0_dc|mid: dict
+      lam0|2026|epoch3|r0|all: dict
+      lam0|2026|epoch3|r0|mid: dict
+      lam0|2026|epoch3|r1_dc|mid: dict
+      lam0|2026|epoch3|r1|mid: dict
+      lam0|2026|final|r0_dc|mid: dict
+      lam0|2026|final|r0|all: dict
+      lam0|2026|final|r0|mid: dict
+      lam0|2026|final|r1_dc|mid: dict
+      lam0|2026|final|r1|mid: dict
+      lam0|2026|selected|r0_dc|mid: dict
+      lam0|2026|selected|r0|all: dict
+      lam0|2026|selected|r0|mid: dict
+      lam0|2026|selected|r1_dc|mid: dict
+      lam0|2026|selected|r1|mid: dict
+      lam0|2027|best_nll|r0|all: dict
+      lam0|2027|epoch10|r0|all: dict
+      lam0|2027|epoch20|r0|all: dict
+      lam0|2027|epoch30|r0|all: dict
+      lam0|2027|epoch3|r0_dc|mid: dict
+      lam0|2027|epoch3|r0|all: dict
+      lam0|2027|epoch3|r0|mid: dict
+      lam0|2027|epoch3|r1_dc|mid: dict
+      lam0|2027|epoch3|r1|mid: dict
+      lam0|2027|final|r0_dc|mid: dict
+      lam0|2027|final|r0|all: dict
+      lam0|2027|final|r0|mid: dict
+      lam0|2027|final|r1_dc|mid: dict
+      lam0|2027|final|r1|mid: dict
+      lam0|2027|selected|r0_dc|mid: dict
+      lam0|2027|selected|r0|all: dict
+      lam0|2027|selected|r0|mid: dict
+      lam0|2027|selected|r1_dc|mid: dict
+      lam0|2027|selected|r1|mid: dict
+      lam0|2028|best_nll|r0|all: dict
+      lam0|2028|epoch10|r0|all: dict
+      lam0|2028|epoch20|r0|all: dict
+      lam0|2028|epoch30|r0|all: dict
+      lam0|2028|epoch3|r0_dc|mid: dict
+      lam0|2028|epoch3|r0|all: dict
+      lam0|2028|epoch3|r0|mid: dict
+      lam0|2028|epoch3|r1_dc|mid: dict
+      lam0|2028|epoch3|r1|mid: dict
+      lam0|2028|epoch50|r0|all: dict
+      lam0|2028|final|r0_dc|mid: dict
+      lam0|2028|final|r0|all: dict
+      lam0|2028|final|r0|mid: dict
+      lam0|2028|final|r1_dc|mid: dict
+      lam0|2028|final|r1|mid: dict
+      lam0|2028|selected|r0_dc|mid: dict
+      lam0|2028|selected|r0|all: dict
+      lam0|2028|selected|r0|mid: dict
+      lam0|2028|selected|r1_dc|mid: dict
+      lam0|2028|selected|r1|mid: dict
+      lam2|2026|best_nll|r0|all: dict
+      lam2|2026|epoch10|r0|all: dict
+    comparisons: list
+      [list len=296, item=dict]
+    config_sha256: str
+    dc_identity: dict
+      r0_dc: dict
+      r1_dc: dict
+    dc_identity_per_source: dict
+      lam0|2026|epoch3|r0_dc|mid: dict
+      lam0|2026|epoch3|r1_dc|mid: dict
+      lam0|2026|final|r0_dc|mid: dict
+      lam0|2026|final|r1_dc|mid: dict
+      lam0|2026|selected|r0_dc|mid: dict
+      lam0|2026|selected|r1_dc|mid: dict
+      lam0|2027|epoch3|r0_dc|mid: dict
+      lam0|2027|epoch3|r1_dc|mid: dict
+      lam0|2027|final|r0_dc|mid: dict
+      lam0|2027|final|r1_dc|mid: dict
+      lam0|2027|selected|r0_dc|mid: dict
+      lam0|2027|selected|r1_dc|mid: dict
+      lam0|2028|epoch3|r0_dc|mid: dict
+      lam0|2028|epoch3|r1_dc|mid: dict
+      lam0|2028|final|r0_dc|mid: dict
+      lam0|2028|final|r1_dc|mid: dict
+      lam0|2028|selected|r0_dc|mid: dict
+      lam0|2028|selected|r1_dc|mid: dict
+      lam2|2026|epoch3|r0_dc|mid: dict
+      lam2|2026|epoch3|r1_dc|mid: dict
+      lam2|2026|final|r0_dc|mid: dict
+      lam2|2026|final|r1_dc|mid: dict
+      lam2|2026|selected|r0_dc|mid: dict
+      lam2|2026|selected|r1_dc|mid: dict
+      lam2|2027|epoch3|r0_dc|mid: dict
+      lam2|2027|epoch3|r1_dc|mid: dict
+      lam2|2027|final|r0_dc|mid: dict
+      lam2|2027|final|r1_dc|mid: dict
+      lam2|2027|selected|r0_dc|mid: dict
+      lam2|2027|selected|r1_dc|mid: dict
+      lam2|2028|epoch3|r0_dc|mid: dict
+      lam2|2028|epoch3|r1_dc|mid: dict
+      lam2|2028|final|r0_dc|mid: dict
+      lam2|2028|final|r1_dc|mid: dict
+      lam2|2028|selected|r0_dc|mid: dict
+      lam2|2028|selected|r1_dc|mid: dict
+      shared|2026|epoch0|r0_dc|mid: dict
+      shared|2026|epoch0|r1_dc|mid: dict
+      shared|2027|epoch0|r0_dc|mid: dict
+      shared|2027|epoch0|r1_dc|mid: dict
+      shared|2028|epoch0|r0_dc|mid: dict
+      shared|2028|epoch0|r1_dc|mid: dict
+    notes: list
+      [list len=3, item=str]
+    outcomes: list
+      [list len=19, item=dict]
+    schema: str
+    stats_version: str
+    stream: list
+      [list len=3, item=dict]
+  code: dict
+    v05lt_analysis.py: str
+    v05lt_common.py: str
+    v05lt_eval.py: str
+    v05lt_metrics.py: str
+    v05lt_results.py: str
+    v05lt_rules.py: str
+    v05lt_stats.py: str
+    v05lt_train.py: str
+  config_sha256: str
+  descriptive: dict
+    bank_sensitivity: dict
+      definition: str
+      runs: dict
+    dc_measures: dict
+      definition: str
+      sources: dict
+      tolerances: dict
+    learning_curves: dict
+      definition: str
+      references: dict
+      runs: dict
+    nll_decomposition: dict
+      definition: str
+      runs: dict
+      sign_convention: str
+    nmse_exclusion: dict
+      all: dict
+      cases_excluded: list
+      definition: str
+      eligibility_sha256: str
+      mid: dict
+    per_case: dict
+      all: dict
+      definition: str
+      delta_db: list
+      difficult: dict
+      difficult_rule: str
+      difficult_volumes: list
+      sources: list
+    prefix_stability: dict
+      definition: str
+      runs: dict
+  inputs: dict
+    d6: dict
+      checks: dict
+      rule: dict
+    difficult_sha256: str
+    identities: dict
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/resume_e049.pt: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e001.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e002.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e003.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e004.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e005.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e006.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e007.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e008.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e009.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e010.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e011.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e012.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e013.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e014.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e015.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e016.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e017.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e018.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e019.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e020.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e021.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e022.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e023.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e024.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e025.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e026.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e027.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e028.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e029.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e030.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e031.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e032.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e033.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e034.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e035.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e036.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e037.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e038.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e039.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e040.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e041.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e042.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e043.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e044.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e045.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e046.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e047.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e048.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/val_e049.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/weights_e003.pt: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/weights_e009.pt: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/weights_e010.pt: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/weights_e020.pt: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/weights_e030.pt: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ckpt/weights_e048.pt: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam0/ledger.jsonl: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam2/ckpt/resume_e058.pt: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam2/ckpt/val_e001.json: str
+      /home/benjamin/CSMFII/seqref_mri/results/v05lt/2026_lam2/ckpt/val_e002.json: str
+    masks_sha256: str
+    run_info: dict
+      lam0|2026: dict
+      lam0|2027: dict
+      lam0|2028: dict
+      lam2|2026: dict
+      lam2|2027: dict
+      lam2|2028: dict
+  schema: str
+  statements: list
+    [list len=2, item=str]
+  version: str
+=== results/v05lt/posteval/03d260630f2adbca3d2a169bf4fd15db43d4934ba3da679e05fd6ba03d28baad/posteval.json
+  backend: dict
+    deterministic: bool
+    interop_threads: int
+    numpy: str
+    python: str
+    threads: int
+    torch: str
+  banks: dict
+    B: str
+    C: str
+    primary: str
+  cases: list
+    [list len=6, item=int]
+  checkpoint: dict
+    arm: str
+    epoch: int
+    file_name: str
+    file_sha256: str
+    model_state_sha256: str
+    roles: list
+      [list len=3, item=str]
+    seed: int
+  code: dict
+    eval_version: str
+    files: dict
+      v05lt_common.py: str
+      v05lt_eval.py: str
+      v05lt_metrics.py: str
+    metrics_version: str
+  context: dict
+    fixture: bool
+    launch_inputs_sha256: str
+    run: str
+  dc_tolerances: dict
+    a: float
+    b: float
+    c_max: float
+    c_rms: float
+  eval_version: str
+  masks: dict
+    convention: str
+    sha256: str
+  midpoint: dict
+    dc_identity: dict
+      r0_dc: dict
+      r1_dc: dict
+    decodes: dict
+      B: int
+      C: int
+      primary: int
+    rows: list
+      [list len=97, item=dict]
+  panel_sha256: dict
+    panel_case0.npz: str
+    panel_case0.png: str
+    panel_case1.npz: str
+    panel_case1.png: str
+    panel_case2.npz: str
+    panel_case2.png: str
+    panel_case3.npz: str
+    panel_case3.png: str
+    panel_case4.npz: str
+    panel_case4.png: str
+    panel_case5.npz: str
+    panel_case5.png: str
+  panels: list
+    [list len=6, item=dict]
+      case: dict
+      layout_left_to_right: list
+      notes: list
+      scales: dict
+  population: dict
+    eligibility_manifest_sha256: str
+    identities_sha256: str
+    n: int
+    scope: str
+  prefix_bank: str
+  prefixes: list
+    [list len=4, item=int]
+  rng: dict
+    consumed_during_eval: bool
+    restored: bool
+  schema: str
+  timing: dict
+    midpoint_readouts_s: float
+    panels_s: float
+  uses: list
+    [list len=1, item=dict]
+      arm: str
+      role: str
+      seed: int
+=== results/v05lt/2026_lam0/ckpt/val_e001.json
+  arm: str
+  epoch: int
+  metrics_version: str
+  model_state_sha256: str
+  n_rows: int
+  nll_decomp_tol_rel: float
+  rows: list
+    [list len=3461, item=dict]
+      eligible: bool
+      file: str
+      midpoint: bool
+      mse: float
+      nll_decomp_abs_dev: float
+      nll_logdet_per_dim: float
+      nll_per_dim: float
+      nll_prior_per_dim: float
+      nmse_u: float
+      psnr: float
+      psnr_capped: bool
+      slice_index: int
+      ssim: float
+      volume_id: str
+      zero_error: bool
+  schema: str
+  seed: int
+  slice_ids_sha256: str
+=== Discovery finished ===

@@ -1,0 +1,73 @@
+=== results/v05lt/2026_lam0/ledger.jsonl lines=52
+  schema all ledger/1: True | seq contiguous: True | first: run_start | last: run_end
+  line0 prev: type=str len=7 | self len=64
+  self == sha256(canonical compact json without self)        52/52
+  self == sha256(canonical default json without self)        0/52
+  prev == previous self                                      0/51
+  prev == sha256(previous raw line)                          51/51
+  prev == sha256(previous raw line + newline)                0/51
+  prev == sha256(canonical compact previous object)          51/51
+  prev == sha256(canonical default previous object)          0/51
+  final_weights commit_line_sha256 (seq 50): == self False | == sha256(raw line) True | == sha256(raw+newline) False
+  final_weights run_end_line_sha256 (seq 51): == self False | == sha256(raw line) True | == sha256(raw+newline) False
+=== results/v05lt/2026_lam2/ledger.jsonl lines=61
+  schema all ledger/1: True | seq contiguous: True | first: run_start | last: run_end
+  line0 prev: type=str len=7 | self len=64
+  self == sha256(canonical compact json without self)        61/61
+  self == sha256(canonical default json without self)        0/61
+  prev == previous self                                      0/60
+  prev == sha256(previous raw line)                          60/60
+  prev == sha256(previous raw line + newline)                0/60
+  prev == sha256(canonical compact previous object)          60/60
+  prev == sha256(canonical default previous object)          0/60
+  final_weights commit_line_sha256 (seq 59): == self False | == sha256(raw line) True | == sha256(raw+newline) False
+  final_weights run_end_line_sha256 (seq 60): == self False | == sha256(raw line) True | == sha256(raw+newline) False
+=== results/v05lt/2027_lam0/ledger.jsonl lines=52
+  schema all ledger/1: True | seq contiguous: True | first: run_start | last: run_end
+  line0 prev: type=str len=7 | self len=64
+  self == sha256(canonical compact json without self)        52/52
+  self == sha256(canonical default json without self)        0/52
+  prev == previous self                                      0/51
+  prev == sha256(previous raw line)                          51/51
+  prev == sha256(previous raw line + newline)                0/51
+  prev == sha256(canonical compact previous object)          51/51
+  prev == sha256(canonical default previous object)          0/51
+  final_weights commit_line_sha256 (seq 50): == self False | == sha256(raw line) True | == sha256(raw+newline) False
+  final_weights run_end_line_sha256 (seq 51): == self False | == sha256(raw line) True | == sha256(raw+newline) False
+=== results/v05lt/2027_lam2/ledger.jsonl lines=52
+  schema all ledger/1: True | seq contiguous: True | first: run_start | last: run_end
+  line0 prev: type=str len=7 | self len=64
+  self == sha256(canonical compact json without self)        52/52
+  self == sha256(canonical default json without self)        0/52
+  prev == previous self                                      0/51
+  prev == sha256(previous raw line)                          51/51
+  prev == sha256(previous raw line + newline)                0/51
+  prev == sha256(canonical compact previous object)          51/51
+  prev == sha256(canonical default previous object)          0/51
+  final_weights commit_line_sha256 (seq 50): == self False | == sha256(raw line) True | == sha256(raw+newline) False
+  final_weights run_end_line_sha256 (seq 51): == self False | == sha256(raw line) True | == sha256(raw+newline) False
+=== results/v05lt/2028_lam0/ledger.jsonl lines=53
+  schema all ledger/1: True | seq contiguous: True | first: run_start | last: run_end
+  line0 prev: type=str len=7 | self len=64
+  self == sha256(canonical compact json without self)        53/53
+  self == sha256(canonical default json without self)        0/53
+  prev == previous self                                      0/52
+  prev == sha256(previous raw line)                          52/52
+  prev == sha256(previous raw line + newline)                0/52
+  prev == sha256(canonical compact previous object)          52/52
+  prev == sha256(canonical default previous object)          0/52
+  final_weights commit_line_sha256 (seq 51): == self False | == sha256(raw line) True | == sha256(raw+newline) False
+  final_weights run_end_line_sha256 (seq 52): == self False | == sha256(raw line) True | == sha256(raw+newline) False
+=== results/v05lt/2028_lam2/ledger.jsonl lines=58
+  schema all ledger/1: True | seq contiguous: True | first: run_start | last: run_end
+  line0 prev: type=str len=7 | self len=64
+  self == sha256(canonical compact json without self)        58/58
+  self == sha256(canonical default json without self)        0/58
+  prev == previous self                                      0/57
+  prev == sha256(previous raw line)                          57/57
+  prev == sha256(previous raw line + newline)                0/57
+  prev == sha256(canonical compact previous object)          57/57
+  prev == sha256(canonical default previous object)          0/57
+  final_weights commit_line_sha256 (seq 56): == self False | == sha256(raw line) True | == sha256(raw+newline) False
+  final_weights run_end_line_sha256 (seq 57): == self False | == sha256(raw line) True | == sha256(raw+newline) False
+=== Discovery finished rc=0 ===

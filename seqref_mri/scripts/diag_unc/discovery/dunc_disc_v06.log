@@ -1,0 +1,280 @@
+=== results/v05lt/2026_lam0/ledger.jsonl lines=52
+1 {'seq': 0, 'kind': 'run_start', 'schema': 'seqref-v05lt-ledger/1', 'body.schema': 'seqref-v05lt-run/2'}
+  --- structure of line 1
+    body: dict
+      base_order_sha256: str
+      batch: int
+      config: dict
+        arm: str
+        epoch0_model_state: str
+        extra: dict
+        fixture: bool
+        max_epochs: int
+        note: str
+        seed: int
+        train_indices: NoneType
+        val_indices: NoneType
+      data: dict
+        eligibility_sha256: str
+        n_train: int
+        n_val: int
+        p4: dict
+          file_sha256: str
+          semantic_sha256: str
+        s_ref: str
+        train_base_order_sha256: str
+        val_indices: NoneType
+        val_order_sha256: str
+      env: dict
+        cpu_model: str
+        deterministic_algorithms: bool
+        deterministic_warn_only: bool
+        env: dict
+          CUBLAS_WORKSPACE_CONFIG: NoneType
+          MKL_NUM_THREADS: NoneType
+          OMP_NUM_THREADS: NoneType
+          OPENBLAS_NUM_THREADS: NoneType
+          PYTHONHASHSEED: NoneType
+        mkldnn_enabled: bool
+        numpy: str
+        os_cpu_count: int
+        platform: str
+        python: str
+        torch: str
+        torch_num_interop_threads: int
+        torch_num_threads: int
+      implementation: dict
+        abbr: str
+        branch: str
+        files: dict
+          v05lt_common.py: str
+          v05lt_epoch0.py: str
+          v05lt_metrics.py: str
+          v05lt_rules.py: str
+          v05lt_train.py: str
+        model_factory: str
+        repo_head: str
+        version: str
+      lambda: float
+      lr: float
+      n_train: int
+      schema: str
+    kind: str
+    prev: str
+    schema: str
+    self: str
+    seq: int
+    time_utc: str
+2 {'seq': 1, 'kind': 'session_start', 'schema': 'seqref-v05lt-ledger/1'}
+  --- structure of line 2
+    body: dict
+      initial_rng_sha256: str
+      mode: str
+      session: int
+    kind: str
+    prev: str
+    schema: str
+    self: str
+    seq: int
+    time_utc: str
+3 {'seq': 2, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 1, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'resume', 'val_rows_e001']}
+  --- structure of line 3
+    body: dict
+      adam_state_sha256: str
+      batches: int
+      epoch: int
+      losses: dict
+        L_density: float
+        L_rec: float
+        L_total: float
+        grad_norm_max: float
+      model_state_sha256: str
+      order_sha256: str
+      plateau: dict
+        count: dict
+          nll: int
+          psnr: int
+        last_epoch: int
+        ref: dict
+          nll: float
+          psnr: float
+        resets: list
+      resume_scientific_sha256: str
+      resume_state_sha256: str
+      retained: dict
+        best_nll: dict
+          name: str
+          sha256: str
+        best_psnr: dict
+          name: str
+          sha256: str
+        resume: dict
+          name: str
+          sha256: str
+        val_rows_e001: dict
+          name: str
+          sha256: str
+      roles_this_epoch: list
+        [list len=2, item=str]
+      seconds: float
+      selection: dict
+        best_nll: dict
+          epoch: int
+          value: float
+        best_psnr: dict
+          epoch: int
+          value: float
+      session: int
+      status: str
+      step: int
+      store: str
+      superseded: list
+      validation: dict
+        all_slices: dict
+          nll_per_dim: float
+          nmse_null_volumes: list
+          nmse_population_volumes: int
+          nmse_u: float
+          psnr: float
+          psnr_capped: dict
+          slices: int
+          ssim: float
+          volumes: int
+          zero_error: dict
+        midpoint: dict
+          nll_per_dim: float
+          nmse_null_volumes: list
+          nmse_population_volumes: int
+          nmse_u: float
+          psnr: float
+          psnr_capped: dict
+          slices: int
+          ssim: float
+          volumes: int
+          zero_error: dict
+      validation_rows: dict
+        epoch: int
+        n_rows: int
+        name: str
+        sha256: str
+        slice_ids_sha256: str
+    kind: str
+    prev: str
+    schema: str
+    self: str
+    seq: int
+    time_utc: str
+4 {'seq': 3, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 2, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'resume', 'val_rows_e001', 'val_rows_e002']}
+5 {'seq': 4, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 3, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003']}
+6 {'seq': 5, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 4, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004']}
+7 {'seq': 6, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 5, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005']}
+8 {'seq': 7, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 6, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006']}
+9 {'seq': 8, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 7, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007']}
+10 {'seq': 9, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 8, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008']}
+11 {'seq': 10, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 9, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009']}
+12 {'seq': 11, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 10, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010']}
+13 {'seq': 12, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 11, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011']}
+14 {'seq': 13, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 12, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012']}
+15 {'seq': 14, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 13, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013']}
+16 {'seq': 15, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 14, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014']}
+17 {'seq': 16, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 15, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015']}
+18 {'seq': 17, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 16, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016']}
+19 {'seq': 18, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 17, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017']}
+20 {'seq': 19, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 18, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018']}
+21 {'seq': 20, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 19, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019']}
+22 {'seq': 21, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 20, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020']}
+23 {'seq': 22, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 21, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021']}
+24 {'seq': 23, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 22, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022']}
+25 {'seq': 24, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 23, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023']}
+26 {'seq': 25, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 24, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024']}
+27 {'seq': 26, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 25, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025']}
+28 {'seq': 27, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 26, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026']}
+29 {'seq': 28, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 27, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027']}
+30 {'seq': 29, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 28, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028']}
+31 {'seq': 30, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 29, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029']}
+32 {'seq': 31, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 30, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030']}
+33 {'seq': 32, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 31, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031']}
+34 {'seq': 33, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 32, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032']}
+35 {'seq': 34, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 33, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033']}
+36 {'seq': 35, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 34, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033', 'val_rows_e034']}
+37 {'seq': 36, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 35, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033', 'val_rows_e034', 'val_rows_e035']}
+38 {'seq': 37, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 36, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033', 'val_rows_e034', 'val_rows_e035', 'val_rows_e036']}
+39 {'seq': 38, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 37, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033', 'val_rows_e034', 'val_rows_e035', 'val_rows_e036', 'val_rows_e037']}
+40 {'seq': 39, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 38, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033', 'val_rows_e034', 'val_rows_e035', 'val_rows_e036', 'val_rows_e037', 'val_rows_e038']}
+41 {'seq': 40, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 39, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033', 'val_rows_e034', 'val_rows_e035', 'val_rows_e036', 'val_rows_e037', 'val_rows_e038', 'val_rows_e039']}
+42 {'seq': 41, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 40, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033', 'val_rows_e034', 'val_rows_e035', 'val_rows_e036', 'val_rows_e037', 'val_rows_e038', 'val_rows_e039', 'val_rows_e040']}
+43 {'seq': 42, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 41, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033', 'val_rows_e034', 'val_rows_e035', 'val_rows_e036', 'val_rows_e037', 'val_rows_e038', 'val_rows_e039', 'val_rows_e040', 'val_rows_e041']}
+44 {'seq': 43, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 42, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033', 'val_rows_e034', 'val_rows_e035', 'val_rows_e036', 'val_rows_e037', 'val_rows_e038', 'val_rows_e039', 'val_rows_e040', 'val_rows_e041', 'val_rows_e042']}
+45 {'seq': 44, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 43, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033', 'val_rows_e034', 'val_rows_e035', 'val_rows_e036', 'val_rows_e037', 'val_rows_e038', 'val_rows_e039', 'val_rows_e040', 'val_rows_e041', 'val_rows_e042', 'val_rows_e043']}
+46 {'seq': 45, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 44, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033', 'val_rows_e034', 'val_rows_e035', 'val_rows_e036', 'val_rows_e037', 'val_rows_e038', 'val_rows_e039', 'val_rows_e040', 'val_rows_e041', 'val_rows_e042', 'val_rows_e043', 'val_rows_e044']}
+47 {'seq': 46, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 45, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033', 'val_rows_e034', 'val_rows_e035', 'val_rows_e036', 'val_rows_e037', 'val_rows_e038', 'val_rows_e039', 'val_rows_e040', 'val_rows_e041', 'val_rows_e042', 'val_rows_e043', 'val_rows_e044', 'val_rows_e045']}
+48 {'seq': 47, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 46, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033', 'val_rows_e034', 'val_rows_e035', 'val_rows_e036', 'val_rows_e037', 'val_rows_e038', 'val_rows_e039', 'val_rows_e040', 'val_rows_e041', 'val_rows_e042', 'val_rows_e043', 'val_rows_e044', 'val_rows_e045', 'val_rows_e046']}
+49 {'seq': 48, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 47, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033', 'val_rows_e034', 'val_rows_e035', 'val_rows_e036', 'val_rows_e037', 'val_rows_e038', 'val_rows_e039', 'val_rows_e040', 'val_rows_e041', 'val_rows_e042', 'val_rows_e043', 'val_rows_e044', 'val_rows_e045', 'val_rows_e046', 'val_rows_e047']}
+50 {'seq': 49, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 48, 'body.status': 'continue', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033', 'val_rows_e034', 'val_rows_e035', 'val_rows_e036', 'val_rows_e037', 'val_rows_e038', 'val_rows_e039', 'val_rows_e040', 'val_rows_e041', 'val_rows_e042', 'val_rows_e043', 'val_rows_e044', 'val_rows_e045', 'val_rows_e046', 'val_rows_e047', 'val_rows_e048']}
+51 {'seq': 50, 'kind': 'commit', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 49, 'body.status': 'stopped_plateau', 'retained': ['best_nll', 'best_psnr', 'milestone_003', 'milestone_010', 'milestone_020', 'milestone_030', 'resume', 'val_rows_e001', 'val_rows_e002', 'val_rows_e003', 'val_rows_e004', 'val_rows_e005', 'val_rows_e006', 'val_rows_e007', 'val_rows_e008', 'val_rows_e009', 'val_rows_e010', 'val_rows_e011', 'val_rows_e012', 'val_rows_e013', 'val_rows_e014', 'val_rows_e015', 'val_rows_e016', 'val_rows_e017', 'val_rows_e018', 'val_rows_e019', 'val_rows_e020', 'val_rows_e021', 'val_rows_e022', 'val_rows_e023', 'val_rows_e024', 'val_rows_e025', 'val_rows_e026', 'val_rows_e027', 'val_rows_e028', 'val_rows_e029', 'val_rows_e030', 'val_rows_e031', 'val_rows_e032', 'val_rows_e033', 'val_rows_e034', 'val_rows_e035', 'val_rows_e036', 'val_rows_e037', 'val_rows_e038', 'val_rows_e039', 'val_rows_e040', 'val_rows_e041', 'val_rows_e042', 'val_rows_e043', 'val_rows_e044', 'val_rows_e045', 'val_rows_e046', 'val_rows_e047', 'val_rows_e048', 'val_rows_e049']}
+52 {'seq': 51, 'kind': 'run_end', 'schema': 'seqref-v05lt-ledger/1', 'body.epoch': 49, 'body.status': 'stopped_plateau'}
+  --- structure of line 52
+    body: dict
+      code: NoneType
+      epoch: int
+      stage: str
+      status: str
+    kind: str
+    prev: str
+    schema: str
+    self: str
+    seq: int
+    time_utc: str
+ledger results/v05lt/2026_lam0/ledger.jsonl lines=52 sidecar=False
+ledger results/v05lt/2026_lam2/ledger.jsonl lines=61 sidecar=False
+ledger results/v05lt/2027_lam0/ledger.jsonl lines=52 sidecar=False
+ledger results/v05lt/2027_lam2/ledger.jsonl lines=52 sidecar=False
+ledger results/v05lt/2028_lam0/ledger.jsonl lines=53 sidecar=False
+ledger results/v05lt/2028_lam2/ledger.jsonl lines=58 sidecar=False
+=== posteval midpoint structure
+  dc_identity: dict
+    r0_dc: dict
+      identity_all: bool
+      n: int
+      n_identity: int
+    r1_dc: dict
+      identity_all: bool
+      n: int
+      n_identity: int
+  decodes: dict
+    B: int
+    C: int
+    primary: int
+  rows: list
+    [list len=97, item=dict]
+      eligible: bool
+      identity: dict
+      r0: dict
+      r0_dc: dict
+      r1: dict
+      r1_dc: dict
+decodes: {'B': 12416, 'C': 12416, 'primary': 12416} population.n: 97 scope: midpoint prefixes: [16, 32, 64, 128] schema: seqref-v05lt-posteval/1
+sidecar beside posteval.json: False | dir files: ['SHA256SUMS', 'panel_case0.npz', 'panel_case0.png', 'panel_case1.npz', 'panel_case1.png', 'panel_case2.npz', 'panel_case2.png', 'panel_case3.npz', 'panel_case3.png', 'panel_case4.npz', 'panel_case4.png', 'panel_case5.npz', 'panel_case5.png', 'posteval.json']
+=== analysis caps keys: 134
+r1|mid keys: ['lam0|2026|epoch3|r1|mid', 'lam0|2026|final|r1|mid', 'lam0|2026|selected|r1|mid', 'lam0|2027|epoch3|r1|mid', 'lam0|2027|final|r1|mid', 'lam0|2027|selected|r1|mid', 'lam0|2028|epoch3|r1|mid', 'lam0|2028|final|r1|mid', 'lam0|2028|selected|r1|mid', 'lam2|2026|epoch3|r1|mid', 'lam2|2026|final|r1|mid', 'lam2|2026|selected|r1|mid', 'lam2|2027|epoch3|r1|mid', 'lam2|2027|final|r1|mid', 'lam2|2027|selected|r1|mid', 'lam2|2028|epoch3|r1|mid', 'lam2|2028|final|r1|mid', 'lam2|2028|selected|r1|mid', 'shared|2026|epoch0|r1|mid', 'shared|2027|epoch0|r1|mid', 'shared|2028|epoch0|r1|mid']
+=== one caps entry
+  psnr_capped: dict
+    count: int
+    identities: list
+  zero_error: dict
+    count: int
+    identities: list
+=== stream
+  [list len=3, item=dict]
+    B: int
+    crossed_seed_sha256: str
+    crossed_volume_sha256: str
+    population: str
+    volume_only_sha256: dict
+      2026: str
+      2027: str
+      2028: str
+    volumes: int
+identities: posteval=238 ledger=6 final=0
+inputs keys: ['d6', 'difficult_sha256', 'identities', 'masks_sha256', 'run_info']
+=== Discovery finished ===
