@@ -1,4 +1,4 @@
-# SEQREF-DUNC-F11B v0.1 -- test_diag_unc_fixture11b.py: DIAG-UNC fixture 11b (production-tensor and adapter binding; plan SEQREF-DUNC-IMPL v0.10.1)
+# SEQREF-DUNC-F11B v0.2 -- test_diag_unc_fixture11b.py: DIAG-UNC fixture 11b (production-tensor and adapter binding; plan SEQREF-DUNC-IMPL v0.10.1)
 # LIFETIME: KEEP
 """Fixture 11b of DIAG-UNC (223 §10 item 11): binds diag_unc_adapter.py to the pinned V05LT
 production tensors on exactly two registered validation midpoint slices and one checkpoint.
@@ -39,6 +39,13 @@ bound() and load_ledger() are taken from test_diag_unc_fixture11a.py v0.1.1 (bou
 dunc_audit2.py v0.1.2; load_ledger() with the gate label changed only).
 
 Changelog:
+  v0.2 (2026-11-18) bug fix of the import-closure check only (host run of v0.1: FAIL on C1a, 225 U47).
+    torch.classes and torch.ops are module objects whose __file__ is the bare relative name
+    '_classes.py' / '_ops.py'; v0.1 resolved it against the working directory (the repository)
+    and counted them as project files outside the closure. A module is now classified by path
+    only if its __file__ is absolute; a non-absolute __file__ is reported and is a FAIL only if
+    the module has a project name or the name points at an existing file. No criterion, tolerance,
+    access rule or any other check changed.
   v0.1 (2026-11-18) first version, from plan IMPL v0.10.1 and the import closure of 225 U44.
 """
 import argparse
@@ -54,7 +61,7 @@ import time
 import traceback
 from datetime import datetime, timezone
 
-VERSION = "SEQREF-DUNC-F11B v0.1"
+VERSION = "SEQREF-DUNC-F11B v0.2"
 PIN = "7455da8027f33a6cca4dbf72f04e72420e938f45"
 CORE_COMMIT = "d69b946f59abb014bf7b6cd21c842e54aa278a1f"
 REPO = "/home/benjamin/CSMFII"
@@ -398,10 +405,14 @@ def load_ledger(R, arm, seed, identities):
 def closure_gate(cfg, pre, stage):
     repo, prefixes = cfg["repo"] + os.sep, tuple(os.path.realpath(p) + os.sep for p in {sys.prefix, sys.base_prefix})
     exported = {os.path.join(pre["code_dir"], n): n for n in pre["ident"]}
-    names, extra, bad_hash, bare, cache, run_mods = [], [], [], [], {}, set()
+    names, extra, bad_hash, bare, cache, run_mods, rel_ok, rel_bad = [], [], [], [], {}, set(), [], []
     for name, mod in sorted(sys.modules.items()):
         f = getattr(mod, "__file__", None)
         if not isinstance(f, str):
+            continue
+        if not os.path.isabs(f):                             # not a path the import system loaded (e.g. torch.ops: '_ops.py')
+            project = name.split(".")[0] in ("seqref_mri",) + BARE_ALIASES or name.startswith("diag_")
+            (rel_bad if project or os.path.lexists(f) else rel_ok).append("%s (%s)" % (name, f))
             continue
         f = os.path.realpath(f)
         if not f.startswith(repo) or f.startswith(prefixes):
@@ -426,6 +437,8 @@ def closure_gate(cfg, pre, stage):
     info("C1", "%s: %d project module names over %d pinned files: %s" % (stage, len(names), len(cache), names))
     gate("C1a", not extra and not bad_hash, "%s: every loaded project file is in the registered closure (225 §7) with its registered sha256; "
          "outside: %s; hash differs: %s" % (stage, extra or "none", bad_hash or "none"))
+    gate("C1a", not rel_bad, "%s: modules with a non-absolute __file__ %s are not project modules and name no existing file; "
+         "not accepted: %s" % (stage, rel_ok, rel_bad or "none"))
     gate("C1a", not bad_bare, "%s: bare-name modules %s are permitted aliases of seqref_mri/src files; not permitted: %s"
          % (stage, [n for n, _ in bare], bad_bare or "none"))
     gate("C1a", all(n in sys.modules for n in REQUIRED_SEAMS), "%s: the production seam modules are loaded" % stage)
