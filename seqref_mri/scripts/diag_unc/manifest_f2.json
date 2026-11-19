@@ -1,0 +1,1202 @@
+{
+ "approvals": {
+  "c1_archive": "LudWiki 230 U61 (to be registered; commit a1a09f68486fd0afe95818aa641eb3491d6b0dfb)",
+  "code_review": "LudWiki 230 U60 (GR v0.2.1, F2M v0.1 accepted)",
+  "f1": "LudWiki 229 U57 (F1 PASS)",
+  "f2": "to be registered in LudWiki 230 with this manifest's sha256 and commit C2",
+  "g": "none yet",
+  "g_bind": "none yet",
+  "plan": "LudWiki 229 U58 (SEQREF-DUNC-F2G v0.2.2 approved)"
+ },
+ "bootstrap": {
+  "deviation": "D1 (LudWiki 228 U52): the same matrix was generated in the sandbox before F1; the F1 value is the registered one",
+  "dtype": "<i8",
+  "generator": "numpy.random.Generator(PCG64(seed)).integers(0, n_volumes, size=(n_boot, n_volumes), dtype=int64)",
+  "numpy": "1.26.4",
+  "seed": 20261114,
+  "sha256": "9517d035ee691d17b2ae4fbc31958222d85ad803431546f5a0455fe40cda6443",
+  "shape": [
+   10000,
+   97
+  ]
+ },
+ "builder": "SEQREF-DUNC-F2M v0.1",
+ "code": {
+  "diag_unc_adapter.py": "c1715841bf6805568b88f9195acbe27933a7e1fec9acc8bb22a33ff555a8505e",
+  "diag_unc_core.py": "a0d3b4a4079ff290a93098eb7a1c53173df596080a6b2b51469dc0f757c18b06",
+  "diag_unc_f1.py": "cfc225a36b15a8b6eb6b734b45b02b75f456e525a3bca8ec82e1fa51a451c091",
+  "diag_unc_g.py": "9ad5f6d6dd1aa4b22f7626779997fa960b69ccb57ccb2f9b7b87b47fda790ff2",
+  "diag_unc_guard.py": "b3dc9f69226f97275712b1bef5cfe9e0fdf1716f944c9ee137ca7223fe2e5bc5",
+  "diag_unc_stats.py": "b8706513a7da0517f477a81a49b4b7d2055e1451b47bec7dcc2c9b63a5de8f55"
+ },
+ "code_commit": "a1a09f68486fd0afe95818aa641eb3491d6b0dfb",
+ "commands": {
+  "g": {
+   "command": "env -i HOME=\"$HOME\" PATH=/usr/bin:/bin /home/benjamin/CSMFII/seqref_mri/.venv_mri/bin/python -B -E -s \"<RUN>/code/diag_unc_g.py\" --code-commit a1a09f68486fd0afe95818aa641eb3491d6b0dfb --manifest-commit <C2> --f2-sha <M>",
+   "run_dir": "/home/benjamin/CSMFII/v06lt_evidence/DIAG_UNC/g_<UTC stamp>",
+   "status": "the one G run; needs F2 registration and a separately recorded owner approval"
+  },
+  "g_bind": {
+   "command": "env -i HOME=\"$HOME\" PATH=/usr/bin:/bin /home/benjamin/CSMFII/seqref_mri/.venv_mri/bin/python -B -E -s \"<RUN>/code/diag_unc_g.py\" --code-commit a1a09f68486fd0afe95818aa641eb3491d6b0dfb --manifest-commit <C2> --f2-sha <M> --bind-only",
+   "run_dir": "/home/benjamin/CSMFII/v06lt_evidence/DIAG_UNC/gbind_<UTC stamp>",
+   "status": "NON-SCIENTIFIC dry bind (G0-G2): no checkpoint load, no slice read, no decode; not a G run; registers nothing; own approval"
+  },
+  "g_fig": {
+   "command": null,
+   "status": "NOT DEFINED AT F2: diag_unc_fig.py (Package 2) does not exist yet. Its script, hash, commit and command are reviewed and registered at their own gate after G. Required for D-UNC completion (223 §9); it must re-verify the map and reference file hashes before rendering."
+  },
+  "g_recovery": {
+   "command": "env -i HOME=\"$HOME\" PATH=/usr/bin:/bin /home/benjamin/CSMFII/seqref_mri/.venv_mri/bin/python -B -E -s \"<RUN>/code/diag_unc_g.py\" --code-commit a1a09f68486fd0afe95818aa641eb3491d6b0dfb --manifest-commit <C2> --f2-sha <M> --recovery-of \"<original g_ run directory>\" --recovery-approval \"<LudWiki entry of the approval>\"",
+   "run_dir": "/home/benjamin/CSMFII/v06lt_evidence/DIAG_UNC/grec_<UTC stamp>",
+   "status": "recovery only, never a second independent G run: stage 2 and outputs from the verified stage-1 records of a G run that stopped in G4 or G5 with no typed code; one recovery per run; reviewed fix and new recorded approval required (plan F2G v0.2.2 §8)"
+  },
+  "note": "Templates. <RUN> is a new run directory holding only code/ with the six modules exported from commit C1 and manifest_f2.json exported from commit C2. <C2> is the commit that adds this manifest to ch2-diag and <M> is the sha256 of this manifest: neither can be written inside the manifest; both are registered in LudWiki 230 with F2 and filled in by the reviewed run card. Each mode needs its own run card and its own recorded approval; started in tmux; terminal output captured with tee."
+ },
+ "contrasts": {
+  "tier1": [
+   "S-GAP0",
+   "S-CTL0",
+   "C-TIME0",
+   "S-CTL2",
+   "C-TIME2",
+   "S-GAP2",
+   "C-OBJ",
+   "C-OBJ@3",
+   "X-TIME",
+   "X-CTL"
+  ],
+  "tier2": [
+   "C-OBJ@10",
+   "C-OBJ@30",
+   "F-TRAJ0(3→10)",
+   "F-TRAJ2(3→10)",
+   "X-FIX(3→10)",
+   "F-TRAJ0(10→30)",
+   "F-TRAJ2(10→30)",
+   "X-FIX(10→30)",
+   "F-TRAJ0(3→30)",
+   "F-TRAJ2(3→30)",
+   "X-FIX(3→30)"
+  ]
+ },
+ "decode_counts": {
+  "bank_decodes": 347648,
+  "r0_decodes": 2716,
+  "states": 28
+ },
+ "exposure": "log and terminal: identities, counts, deviations, pass flags, times and bytes only; scientific values only under out/; first viewing of results is a separate reviewed step after the integrity checks",
+ "f1": {
+  "manifest_sha256": "444d4bfc1068925916b8ede67a6ad24ac965f161ed5c954b66e17d390f90c545",
+  "record": "LudWiki 229 U57",
+  "reproduction_sha256": "8418a0d49bdd2dfb8f8408e5ca56a107c52356d21289bdd1c38fe4aef80913ef",
+  "result_line": "F1_RESULT: PASS",
+  "run_dir": "v06lt_evidence/DIAG_UNC/f1_20261118T172400Z"
+ },
+ "fixed_slices": {
+  "n": 4,
+  "rule": "216 §6: sorted validation volume IDs; numpy.random.default_rng(seed).choice(V, n, replace=False); the midpoint slice of each drawn volume; derived in G",
+  "seed": 20261115
+ },
+ "history_rows": {
+  "rule": "every ckpt/val_e<NNN>.json of the six runs, epochs 1..final of the verified ledgers; hashed, recorded and checked in G1 before any decode; a missing or changed file is HOLD_PROVENANCE"
+ },
+ "inputs": {
+  "analysis_sha256": "5b267d3aa7ccb48bf3d7ccbfa2e2497d7f02df845aff8786c0fbe9b9dff2afa2",
+  "eligibility_sha256": "8046156ce858f102410a1186802b00c0c260c8ec93b4da47f9d69e2fef53a4e0",
+  "final_weights": {
+   "lam0|2026": "d6138db3ba4816c566225f322a9b0b31e6b68c08042612cd7b3f39e457977773",
+   "lam0|2027": "f87fb53ca953fb4615f75d9e2c811cb48ef566fe4c9bb5b8eb0c1dcbecff781a",
+   "lam0|2028": "9ded2580843fdf02a6c14fc083360a52a5aa60546bac64920563daed33e9fb78",
+   "lam2|2026": "9857a940ed8cd28fcbd6f73a1fbace34b91f68815e375fe41dc35f7b35b2fc55",
+   "lam2|2027": "312dddb17594b169b9e5bfbea3204321e42c5d10b280694995889500b1f9372b",
+   "lam2|2028": "d27ffb6591bb4e4b4251126c9110200592129852b201fcd5c9f62afd1baca9cf"
+  },
+  "launch_inputs_sha256": "82c84d1866b5e578bc39af292ed049e3d7b722c54d69efc4319bf6604053e780",
+  "ledgers": {
+   "lam0|2026": "de8dfcd7df55ae586ed7f422d5b6adbe5e76ebdeb38f140c82a58385c2e71123",
+   "lam0|2027": "6227e7d562d67683052073e321c7afc21253407c224952e704f1d08d3312dc94",
+   "lam0|2028": "eef08f94a19ff7be0da90db7527f6cce7a07b359bb333b8285db4594c550532b",
+   "lam2|2026": "7494bcc7f6dfcd78ae780042b67e6ffce6d6e18a23d6c07487097d7cd8288099",
+   "lam2|2027": "05a00ad12ef43a94a8a4414ff2b06293790e89aca8e00ca1064c5676ab780761",
+   "lam2|2028": "ba309a30aec0a4f661bc691264906c33a5ca949092173d9a739c911b15ac4518"
+  },
+  "p0s_sha256": "2070cc72c977096f731811513d81b2abdb5dababb69edb4e997a5f8283b7c693",
+  "p4_sha256": "db0bf2c2e0cd3bd5e1ed86bf208198199f16df5b2fbbe0cc72903c8791f85684",
+  "posteval": {
+   "03d260630f2adbca3d2a169bf4fd15db43d4934ba3da679e05fd6ba03d28baad": "5eb79b3c9d3dbb3c3644736287016c209caa6a16b53a8877349ad7a5e7cc228a",
+   "063963734429b1d4c887def9ff6b3483c4158df5d68ad64ee681f99d51fa34bc": "9f27697a68aa011002325ad46208628c64af00e606ebf03f0978cc0b2ea4662a",
+   "0861c5b1ddd1a52aea7cdc00c4f54f013cb792d31eaf88b4b597d1a6e7c75ff0": "802fd8ecdd20fc7a68ebdbbaa01b19520daf5acc0875c696c6f41ec2b158a752",
+   "21199dbca17c8d2db20c209f85e1598a91b68cc8750cf9eb97839e172c7a72b1": "07e2d12e53c737ffd00b0ef20629aecc2ca8d4aed682a224455c300ccb13aab9",
+   "240b94103a9a34ed1f22dfe212e72627885cb16dc5979d4981c0068af7350763": "435e6a33edbfdc19dfcaa76f769cbbfd81a8caf85ce35fa9eeb6aed3d6622bee",
+   "336a8193e22041526812db2959b1a25bb37ad4fe60deeb05eb27253f9c2e1320": "b186d1078d42d0d4311b9d42df5e300d175f7a9222a814147c08980da7ea2606",
+   "4103d7ff037a7034c66fe35190274ee79d6f474fc61d73f7fe35e74c4b40e96c": "1cfe544c98405f664d0ec6e0df461036f394d9692863d81e31cc93cbb7201e80",
+   "6c2f1f854c404472e57bdc3d1e8da638434208b6806c2c72461f3e3df18377eb": "c0eb2d11808ee8a63ca409f17faa161a021037e21300e3fd5f624c08e2466ad3",
+   "7b227e96e87f62f677aba00fdc345d852efa7090871a06bbca5a66ab21adae95": "9af013b9c1fad4085188d3967cd0e777bebabb71c24d39fbcf34813f6d57d5fa",
+   "95e5be41913fea6c7ff097b1058accd07c1ba66ccf1bb859dfe425c94e825ecb": "e27e82c7f20ec148fd76c68eec9dbb0e86aae8df8b8c4a206b3d567fa9e78c99",
+   "977ceeef0a6b18467dd818a2743bec9a207b2cf43ea5c2f09d09db2d04f1d2f7": "a4594b3f695d9c53b20589edee467f1e1671069ae4b20b69227d564c7bfb7cd3",
+   "9fdcd1372de2d480ebbe342d2ae6b09f8be836e989f2338f68d1dadbded0b46f": "0892867fffc69313d0f7438f8b3b542d33c2c0c2faa7cdb44d6bd1a3e430a110",
+   "a3b5f949b745f1b429a48a62089deb7808a393f141f1c691b7c927294da212f4": "cf37f51b679b1a7e59e9e556d61eeaf7b9a141e2cddc455be5f79e4eef893a58",
+   "ada69a8fe7c1c290f650c3be75fd0a2947f184a5cd45d5d5eef1aa6e74af4b77": "dec99d6f1c68a2f563319ec98adce622fa4e99ea5250ca139538c722d94234ca",
+   "bc5ff01940ae9235edf31ac86a82c80e7a370d0c9c578b44160bc2b8a6bcc7bd": "db0adf74cd3cdae67f1338ff0a12bdccef083b0044e439a09cb64e18024422ac",
+   "bd88d523566f653b28928fbb85e56a86fa633cd8491359907e3ec727a43f83bb": "55feb6c577887e0af572955523130aa628598f4420b4eb388986c7ed581f7e7b",
+   "e1ffd39f9f15d75d85e5dff9135a5b6a5866f850585ea36032ab9a68d52403b3": "1099fe7caaa7858cf3249a68553d5faf72ed29ef87b1a1a4e294863ef204fd0f"
+  },
+  "split_sha256": "f7d21fb97e030a2e8227233cd5d1f171a120b765060ae83cafc728721428cf5d",
+  "stored_rows": {
+   "lam0|2026|e003": "b6729f92df3760390df3a6ead64964f118b0d662d64ed74022ec6f3d2f36029c",
+   "lam0|2026|e009": "145c2341d2dbfdf9522c78d7b266391d7e7c50ab13bf5e19c4c8ff3b929f28b2",
+   "lam0|2026|e010": "30c8d9477bc22938ff48c052a51d17ac1688f4676ef84ef3e7a5fed1d7cc20b7",
+   "lam0|2026|e030": "bb5602eefd70c4a2dd77006e185c92c2ac6ac88c20ca12a56e3165060e2c776d",
+   "lam0|2026|e049": "8345fb373e514027c5b04e35a48deaf06328a0932aedcedacc9e7d83066b3243",
+   "lam0|2027|e003": "f74174a7782c45b5ef14c26d38e425e42aebfd5828a43614ec4d4b8530ce8070",
+   "lam0|2027|e010": "52d974a8563019cf138c99d0ffe9106cf8a59f84b11a9e079bdb262b5027bf31",
+   "lam0|2027|e030": "7cdd14f5998f325bd36a8c99d3d2aeed2c98676309ad061a4a69265162247080",
+   "lam0|2027|e049": "01c54d8a0bb8f291ec0eff40b41ca0123ea66b7475a1069f9dfd39159159c472",
+   "lam0|2028|e003": "c66271b3ebb1c38baaf77d39df8feef1e87a0d97790767b9ebdfc86919e12a75",
+   "lam0|2028|e010": "1b0cf3d18665e233d38adc5eb97ff0dd80b1fa1a049ac560895251eb418f15dc",
+   "lam0|2028|e013": "860b12a4d937f03b5f4a4e507d2f7e10dbc14c7ec8667daa875688cdcc623eda",
+   "lam0|2028|e030": "c538304b3c7a56958d4b916bcbb4880fe43b6611bd3eda0e8c0bf74230671129",
+   "lam0|2028|e050": "f59b43f9e561792c38f31c9b62b89b5c2bbc7faab00e46442448307feaa90628",
+   "lam2|2026|e003": "2741d39740726a9623166bac26176a47dbc183fc6affeeceabf44b9714e6e79c",
+   "lam2|2026|e010": "253523ce62533940b16fba21897d044876def8719f6114baadfc8cff84a6ba0f",
+   "lam2|2026|e030": "5a34d5088d6778d1c4f93e7755e2cca2b8447733632ca19ff1672df50d4ae591",
+   "lam2|2026|e055": "886294d3b83c9514c174949a23e20018dc3e3c97d2689e495693edc5973a5f79",
+   "lam2|2026|e058": "75884aebf08e53c90f2c91d6ce738e556d4eb9e1491085f34aeb06d65f1d8ef3",
+   "lam2|2027|e003": "275b96b9327e4ce049e2ea7722af875217ba3f543e6e45cfebd3157ff0b5c591",
+   "lam2|2027|e010": "578b6709675947bd19d51eb786820b2d5b0f000a4f703388ec9d33d2dbe9398f",
+   "lam2|2027|e030": "2140f35e44d655a007f348c68efb1949ccaaea309ad8014e50c4724cc94adb53",
+   "lam2|2027|e048": "0eb1487b21ddfbe894375dd7c8e094995e173278ca4c93e05c93fccc17a51a15",
+   "lam2|2027|e049": "aba4fcaa744f629de6c58b25c40524213f64cb390f54c800a98941d3a1975c74",
+   "lam2|2028|e003": "c2880d41e757b49ddfd754b607a1d37cdc95e94385654fb127fae8d092b6104e",
+   "lam2|2028|e010": "be7ecc5445e621a2e37b5e894ad4eb8539f3045698db5ee854e7f2b6d228d6dd",
+   "lam2|2028|e030": "28ba2e58908a26487bdbdb24584d7d11f383318ac0085280d2e2f77673cc8104",
+   "lam2|2028|e055": "fc7c241ccb0abf6172a6d60acfdf8e8536e62bf896ff01bd141a7d4f7ac20015"
+  },
+  "z_diag_sha256": "f8a6a34b6b474286359e4c99341de256b62bc0dff1e6bc8cf52e72f0461dc8d6",
+  "z_manifest_sha256": "c4d2c0ec7c908f7c20a4f287eeffbdf966924a5118b6ba734b0a329942ab7e5f"
+ },
+ "interpreter": {
+  "environment": "env -i HOME=\"$HOME\" PATH=/usr/bin:/bin",
+  "flags": "-B -E -s",
+  "h5py": "3.11.0",
+  "numpy": "1.26.4",
+  "path": "/home/benjamin/CSMFII/seqref_mri/.venv_mri/bin/python",
+  "python": "3.12.3",
+  "source": "F1 host log (LudWiki 229 U57); re-logged by every run of diag_unc_g.py",
+  "torch": "2.5.1+cu121",
+  "torch_threads_at_f1": 12
+ },
+ "output_inventory": {
+  "figdata": [
+   "fd_histories",
+   "fd_dgap",
+   "fd_rankhist",
+   "fd_coverage",
+   "fd_crps",
+   "fd_band",
+   "fd_maps",
+   "fd_convergence",
+   "fd_deciles"
+  ],
+  "other": [
+   "results.json",
+   "records/",
+   "maps/",
+   "manifest_g.json"
+  ],
+  "pending_after_g": [
+   "G-FIG: every mechanical figure of 223 §9",
+   "result report with the D-JAC / D-SPEC / D-UNC synthesis diagram"
+  ],
+  "tables": [
+   "t01_dgap",
+   "t02_spread_width",
+   "t03a_coverage_checkpoint",
+   "t03b_coverage_contrast",
+   "t04_scores",
+   "t05_band",
+   "t06_ssr",
+   "t07_unc_error",
+   "t08a_mc_subsets",
+   "t08b_mc_batch_means",
+   "t09_matrix",
+   "t10_cross"
+  ]
+ },
+ "pin": "7455da8027f33a6cca4dbf72f04e72420e938f45",
+ "plan": "SEQREF-DUNC-F2G v0.2.2 (8ab33005e2dac06ac6282a7d9e7c7921e63274afa9a70ad83f22618215337bdb)",
+ "population": {
+  "identities": [
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000002.h5",
+    18
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000040.h5",
+    18
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000064.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000116.h5",
+    18
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000123.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000138.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000154.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000161.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000193.h5",
+    18
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000207.h5",
+    21
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000221.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000233.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000265.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000271.h5",
+    23
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000336.h5",
+    19
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000340.h5",
+    18
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000342.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000363.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000384.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000424.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000449.h5",
+    19
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000501.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000521.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000529.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000586.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000587.h5",
+    14
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000611.h5",
+    20
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000689.h5",
+    14
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000708.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000734.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000742.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000753.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000755.h5",
+    15
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000785.h5",
+    18
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000806.h5",
+    19
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000821.h5",
+    18
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000827.h5",
+    15
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000836.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000873.h5",
+    14
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000880.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000968.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000971.h5",
+    15
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000983.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1000985.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001053.h5",
+    19
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001067.h5",
+    18
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001079.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001131.h5",
+    14
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001134.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001189.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001190.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001194.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001198.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001209.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001246.h5",
+    18
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001259.h5",
+    20
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001334.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001474.h5",
+    19
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001564.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001595.h5",
+    20
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001638.h5",
+    21
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001799.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001814.h5",
+    19
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001849.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001854.h5",
+    14
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001866.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001875.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001888.h5",
+    18
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001941.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001948.h5",
+    15
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001982.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001986.h5",
+    19
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1001998.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002038.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002054.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002064.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002069.h5",
+    20
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002098.h5",
+    19
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002112.h5",
+    14
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002115.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002132.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002171.h5",
+    15
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002175.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002195.h5",
+    20
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002235.h5",
+    14
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002263.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002273.h5",
+    18
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002338.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002352.h5",
+    18
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002356.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002383.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002432.h5",
+    16
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002444.h5",
+    17
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002455.h5",
+    20
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002491.h5",
+    14
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002518.h5",
+    19
+   ],
+   [
+    "knee_singlecoil_train/singlecoil_train/file1002569.h5",
+    17
+   ]
+  ],
+  "n_midpoint": 97,
+  "regenerated_masks_sha256": "7a38df97337f30d51915bfd6fda63b99920727142af0f1336e89a989384c387e",
+  "validation_order_sha256": "4d1ff52e562d7e7124a54c64cf1b5464431455e13723f01d9c24f14662fca66c"
+ },
+ "roles": [
+  {
+   "arm": "lam0",
+   "epoch": 3,
+   "file_sha256": "b928dd618ae7d229339373ba96ac41213466804847aa07d2630449c1b0baba10",
+   "model_state_sha256": "063963734429b1d4c887def9ff6b3483c4158df5d68ad64ee681f99d51fa34bc",
+   "path": "2026_lam0/ckpt/weights_e003.pt",
+   "posteval": "063963734429b1d4c887def9ff6b3483c4158df5d68ad64ee681f99d51fa34bc",
+   "role": "epoch3",
+   "seed": 2026,
+   "tier": 1
+  },
+  {
+   "arm": "lam0",
+   "epoch": 9,
+   "file_sha256": "e8cac59a00e35d1db37668956306c1bc62cace4697b8d0285a404814330ba428",
+   "model_state_sha256": "ada69a8fe7c1c290f650c3be75fd0a2947f184a5cd45d5d5eef1aa6e74af4b77",
+   "path": "2026_lam0/ckpt/weights_e009.pt",
+   "posteval": "ada69a8fe7c1c290f650c3be75fd0a2947f184a5cd45d5d5eef1aa6e74af4b77",
+   "role": "selected",
+   "seed": 2026,
+   "tier": 1
+  },
+  {
+   "arm": "lam0",
+   "epoch": 49,
+   "file_sha256": "8d35aa75756e675ffad4739294370c6874f362def6874736bcdc6e0d7fc546c5",
+   "model_state_sha256": "977ceeef0a6b18467dd818a2743bec9a207b2cf43ea5c2f09d09db2d04f1d2f7",
+   "path": "2026_lam0/final/weights_final.pt",
+   "posteval": "977ceeef0a6b18467dd818a2743bec9a207b2cf43ea5c2f09d09db2d04f1d2f7",
+   "role": "final",
+   "seed": 2026,
+   "tier": 1
+  },
+  {
+   "arm": "lam0",
+   "epoch": 3,
+   "file_sha256": "139a13259700d086a9ed244bd3801a96449f9f9057b797f670fe83e5806d5a94",
+   "model_state_sha256": "240b94103a9a34ed1f22dfe212e72627885cb16dc5979d4981c0068af7350763",
+   "path": "2027_lam0/ckpt/weights_e003.pt",
+   "posteval": "240b94103a9a34ed1f22dfe212e72627885cb16dc5979d4981c0068af7350763",
+   "role": "epoch3",
+   "seed": 2027,
+   "tier": 1
+  },
+  {
+   "arm": "lam0",
+   "epoch": 10,
+   "file_sha256": "16d1e5d7eab5043150a51c154e625642528a19ada0b8f152c7141fded25096aa",
+   "model_state_sha256": "03d260630f2adbca3d2a169bf4fd15db43d4934ba3da679e05fd6ba03d28baad",
+   "path": "2027_lam0/ckpt/weights_e010.pt",
+   "posteval": "03d260630f2adbca3d2a169bf4fd15db43d4934ba3da679e05fd6ba03d28baad",
+   "role": "selected",
+   "seed": 2027,
+   "tier": 1
+  },
+  {
+   "arm": "lam0",
+   "epoch": 49,
+   "file_sha256": "17a9003cf739c58bfb7cfee0bbe178fdc37ca9ff7796cc07809b301eb2d7d38a",
+   "model_state_sha256": "e1ffd39f9f15d75d85e5dff9135a5b6a5866f850585ea36032ab9a68d52403b3",
+   "path": "2027_lam0/final/weights_final.pt",
+   "posteval": "e1ffd39f9f15d75d85e5dff9135a5b6a5866f850585ea36032ab9a68d52403b3",
+   "role": "final",
+   "seed": 2027,
+   "tier": 1
+  },
+  {
+   "arm": "lam0",
+   "epoch": 3,
+   "file_sha256": "e463f347b7aa6e60a27c90279b91dfb7e5d6eee7d1ae2e087320b594a64c4b2a",
+   "model_state_sha256": "6c2f1f854c404472e57bdc3d1e8da638434208b6806c2c72461f3e3df18377eb",
+   "path": "2028_lam0/ckpt/weights_e003.pt",
+   "posteval": "6c2f1f854c404472e57bdc3d1e8da638434208b6806c2c72461f3e3df18377eb",
+   "role": "epoch3",
+   "seed": 2028,
+   "tier": 1
+  },
+  {
+   "arm": "lam0",
+   "epoch": 13,
+   "file_sha256": "2e0e3ea1efb38c33407f2ac0813d6f7ca5f95dffbc2907d707acb51bc369296b",
+   "model_state_sha256": "336a8193e22041526812db2959b1a25bb37ad4fe60deeb05eb27253f9c2e1320",
+   "path": "2028_lam0/ckpt/weights_e013.pt",
+   "posteval": "336a8193e22041526812db2959b1a25bb37ad4fe60deeb05eb27253f9c2e1320",
+   "role": "selected",
+   "seed": 2028,
+   "tier": 1
+  },
+  {
+   "arm": "lam0",
+   "epoch": 50,
+   "file_sha256": "452eb1bf68db54524cfddf67774c682fc56fd6b1d29765e958401cf5a6f72afd",
+   "model_state_sha256": "21199dbca17c8d2db20c209f85e1598a91b68cc8750cf9eb97839e172c7a72b1",
+   "path": "2028_lam0/final/weights_final.pt",
+   "posteval": "21199dbca17c8d2db20c209f85e1598a91b68cc8750cf9eb97839e172c7a72b1",
+   "role": "final",
+   "seed": 2028,
+   "tier": 1
+  },
+  {
+   "arm": "lam2",
+   "epoch": 3,
+   "file_sha256": "af4ecdca80a66912a3614336416926af8c073bc9712d05cad88607a5becd7309",
+   "model_state_sha256": "bd88d523566f653b28928fbb85e56a86fa633cd8491359907e3ec727a43f83bb",
+   "path": "2026_lam2/ckpt/weights_e003.pt",
+   "posteval": "bd88d523566f653b28928fbb85e56a86fa633cd8491359907e3ec727a43f83bb",
+   "role": "epoch3",
+   "seed": 2026,
+   "tier": 1
+  },
+  {
+   "arm": "lam2",
+   "epoch": 55,
+   "file_sha256": "cfa21c8ec2ff1dfd11619efcb3e726562cc0fe34d9157dabe360e8df9f07f54a",
+   "model_state_sha256": "7b227e96e87f62f677aba00fdc345d852efa7090871a06bbca5a66ab21adae95",
+   "path": "2026_lam2/ckpt/weights_e055.pt",
+   "posteval": "7b227e96e87f62f677aba00fdc345d852efa7090871a06bbca5a66ab21adae95",
+   "role": "selected",
+   "seed": 2026,
+   "tier": 1
+  },
+  {
+   "arm": "lam2",
+   "epoch": 58,
+   "file_sha256": "33f81a647a807715f7d34741f8e482806ee642c12621acae5eb3da7a48f9afcd",
+   "model_state_sha256": "4103d7ff037a7034c66fe35190274ee79d6f474fc61d73f7fe35e74c4b40e96c",
+   "path": "2026_lam2/final/weights_final.pt",
+   "posteval": "4103d7ff037a7034c66fe35190274ee79d6f474fc61d73f7fe35e74c4b40e96c",
+   "role": "final",
+   "seed": 2026,
+   "tier": 1
+  },
+  {
+   "arm": "lam2",
+   "epoch": 3,
+   "file_sha256": "070c35f14b53fa562a057f75796c52cfeb44fb8f043b8e3c4538e4240293f8e0",
+   "model_state_sha256": "0861c5b1ddd1a52aea7cdc00c4f54f013cb792d31eaf88b4b597d1a6e7c75ff0",
+   "path": "2027_lam2/ckpt/weights_e003.pt",
+   "posteval": "0861c5b1ddd1a52aea7cdc00c4f54f013cb792d31eaf88b4b597d1a6e7c75ff0",
+   "role": "epoch3",
+   "seed": 2027,
+   "tier": 1
+  },
+  {
+   "arm": "lam2",
+   "epoch": 48,
+   "file_sha256": "33449da339ef1443b120ad171e8b11aafc6c03bb09bef088180fa073fc088df3",
+   "model_state_sha256": "bc5ff01940ae9235edf31ac86a82c80e7a370d0c9c578b44160bc2b8a6bcc7bd",
+   "path": "2027_lam2/ckpt/weights_e048.pt",
+   "posteval": "bc5ff01940ae9235edf31ac86a82c80e7a370d0c9c578b44160bc2b8a6bcc7bd",
+   "role": "selected",
+   "seed": 2027,
+   "tier": 1
+  },
+  {
+   "arm": "lam2",
+   "epoch": 49,
+   "file_sha256": "db4cb05993f8c386a8b7f3d5d059fd7c5a86027d197f7b6d50d609fb42682286",
+   "model_state_sha256": "95e5be41913fea6c7ff097b1058accd07c1ba66ccf1bb859dfe425c94e825ecb",
+   "path": "2027_lam2/final/weights_final.pt",
+   "posteval": "95e5be41913fea6c7ff097b1058accd07c1ba66ccf1bb859dfe425c94e825ecb",
+   "role": "final",
+   "seed": 2027,
+   "tier": 1
+  },
+  {
+   "arm": "lam2",
+   "epoch": 3,
+   "file_sha256": "f0cfabc3fdd934f6d769cbc39d244c74354f2960d65c3fa82066c5821391e7c3",
+   "model_state_sha256": "9fdcd1372de2d480ebbe342d2ae6b09f8be836e989f2338f68d1dadbded0b46f",
+   "path": "2028_lam2/ckpt/weights_e003.pt",
+   "posteval": "9fdcd1372de2d480ebbe342d2ae6b09f8be836e989f2338f68d1dadbded0b46f",
+   "role": "epoch3",
+   "seed": 2028,
+   "tier": 1
+  },
+  {
+   "arm": "lam2",
+   "epoch": 55,
+   "file_sha256": "6710f99ae7ab629ae6fa2195e221444b1464efb73d26a3365766032d19b58842",
+   "model_state_sha256": "a3b5f949b745f1b429a48a62089deb7808a393f141f1c691b7c927294da212f4",
+   "path": "2028_lam2/ckpt/weights_e055.pt",
+   "posteval": "a3b5f949b745f1b429a48a62089deb7808a393f141f1c691b7c927294da212f4",
+   "role": "selected",
+   "seed": 2028,
+   "tier": 1
+  },
+  {
+   "arm": "lam2",
+   "epoch": 55,
+   "file_sha256": "23fdda1108f8c6490b9668f08b193e9292fcafad0281a75cb9168cfe5170f8df",
+   "model_state_sha256": "a3b5f949b745f1b429a48a62089deb7808a393f141f1c691b7c927294da212f4",
+   "path": "2028_lam2/final/weights_final.pt",
+   "posteval": "a3b5f949b745f1b429a48a62089deb7808a393f141f1c691b7c927294da212f4",
+   "role": "final",
+   "seed": 2028,
+   "tier": 1
+  },
+  {
+   "arm": "lam0",
+   "epoch": 10,
+   "file_sha256": "44d30f51f268afe617ea439bcc51f9ccfb8b650994245aca2b2896ffd69e37db",
+   "model_state_sha256": "ff3ee27a2bc44e06b81f77d7a5ac25b48b3c75d2ac7c93b8a3cc8c644ea9a189",
+   "path": "2026_lam0/ckpt/weights_e010.pt",
+   "posteval": null,
+   "role": "epoch10",
+   "seed": 2026,
+   "tier": 2
+  },
+  {
+   "arm": "lam0",
+   "epoch": 30,
+   "file_sha256": "0cfb4c17e559d977bd2449af34a2c650b0ea215d5e3fba9e2a8d5ddddea2480d",
+   "model_state_sha256": "21a62eacf6cb4a50e1ae033e3d64ff1e6baccedbcc17acac6d7a5afffb555452",
+   "path": "2026_lam0/ckpt/weights_e030.pt",
+   "posteval": null,
+   "role": "epoch30",
+   "seed": 2026,
+   "tier": 2
+  },
+  {
+   "arm": "lam0",
+   "epoch": 10,
+   "file_sha256": "16d1e5d7eab5043150a51c154e625642528a19ada0b8f152c7141fded25096aa",
+   "model_state_sha256": "03d260630f2adbca3d2a169bf4fd15db43d4934ba3da679e05fd6ba03d28baad",
+   "path": "2027_lam0/ckpt/weights_e010.pt",
+   "posteval": null,
+   "role": "epoch10",
+   "seed": 2027,
+   "tier": 2
+  },
+  {
+   "arm": "lam0",
+   "epoch": 30,
+   "file_sha256": "3ff51caffa62b11e0410b98bd9197c9805b3104bb4ed8ab351e04e052bf74ef3",
+   "model_state_sha256": "aa4b7d9c0c8abac843badbfdabd942320d15a9b7a840698f0ab8cc3600f4c57c",
+   "path": "2027_lam0/ckpt/weights_e030.pt",
+   "posteval": null,
+   "role": "epoch30",
+   "seed": 2027,
+   "tier": 2
+  },
+  {
+   "arm": "lam0",
+   "epoch": 10,
+   "file_sha256": "4f543741382fea26a6afb490334d48ea947d9bc70e31b83ecfabf875d9a05b64",
+   "model_state_sha256": "79cf505e09ca0c222a0a1618fa513f234d20b794acf84bd4cdcaaad44c34bdbb",
+   "path": "2028_lam0/ckpt/weights_e010.pt",
+   "posteval": null,
+   "role": "epoch10",
+   "seed": 2028,
+   "tier": 2
+  },
+  {
+   "arm": "lam0",
+   "epoch": 30,
+   "file_sha256": "2988c92339213a4d13db20180f758452f7258281f38619a3eea0c6bbcb1c50e4",
+   "model_state_sha256": "df63ce1a25bceaee47dcf08264bb9046a67d001441f85773700042d9f3e0927e",
+   "path": "2028_lam0/ckpt/weights_e030.pt",
+   "posteval": null,
+   "role": "epoch30",
+   "seed": 2028,
+   "tier": 2
+  },
+  {
+   "arm": "lam2",
+   "epoch": 10,
+   "file_sha256": "868c5ffc646d94fec47e717693d5b9a4de5b4652bbe930e31ac5d7da38ff36a2",
+   "model_state_sha256": "6d3c6a4d1c7525046ac54c6f29c0de89ed250de0fa7e08fe7a64fc917c63bf74",
+   "path": "2026_lam2/ckpt/weights_e010.pt",
+   "posteval": null,
+   "role": "epoch10",
+   "seed": 2026,
+   "tier": 2
+  },
+  {
+   "arm": "lam2",
+   "epoch": 30,
+   "file_sha256": "9d32ca965877cfea859559dc8f8b7d5558dc50adc75b7e06754618252ce885a1",
+   "model_state_sha256": "2d1fb9579c4eacbe0500d819c788e9904227ec75f18aabdce6012bad10246646",
+   "path": "2026_lam2/ckpt/weights_e030.pt",
+   "posteval": null,
+   "role": "epoch30",
+   "seed": 2026,
+   "tier": 2
+  },
+  {
+   "arm": "lam2",
+   "epoch": 10,
+   "file_sha256": "346f3c6e5ac104df046c527511f02f7ebe1381a523af3dc0c7d9cafab9b4f772",
+   "model_state_sha256": "126ccd14d6aef8bf6557693da02ad950d7a229e2ddfa77ae6867a58d5d8f5ff9",
+   "path": "2027_lam2/ckpt/weights_e010.pt",
+   "posteval": null,
+   "role": "epoch10",
+   "seed": 2027,
+   "tier": 2
+  },
+  {
+   "arm": "lam2",
+   "epoch": 30,
+   "file_sha256": "200d21441936c0dba5163e3d15170ea3cc431f715ccbe9a33072c63d362b2185",
+   "model_state_sha256": "053ae747b808bc5f757afdc9b394420957c4ae55f01a7be158e79b7b6d755f6c",
+   "path": "2027_lam2/ckpt/weights_e030.pt",
+   "posteval": null,
+   "role": "epoch30",
+   "seed": 2027,
+   "tier": 2
+  },
+  {
+   "arm": "lam2",
+   "epoch": 10,
+   "file_sha256": "451232dd119920acef97901e842a42c55c38ccb0a66f2e8fa46d23ecefca1e0d",
+   "model_state_sha256": "71d38e697b13a3245ee368e9905a84f83c2a3116706afb907165e67d2ea9aa67",
+   "path": "2028_lam2/ckpt/weights_e010.pt",
+   "posteval": null,
+   "role": "epoch10",
+   "seed": 2028,
+   "tier": 2
+  },
+  {
+   "arm": "lam2",
+   "epoch": 30,
+   "file_sha256": "73708eebf95513b094b91b48e709f8ea11b5c26e26135b4d755b8e48c7ca3b67",
+   "model_state_sha256": "ebfcd72cb20c4eb614ba30cdd2d29ea3c15f96d8fe8dfef0a319194039dd8325",
+   "path": "2028_lam2/ckpt/weights_e030.pt",
+   "posteval": null,
+   "role": "epoch30",
+   "seed": 2028,
+   "tier": 2
+  }
+ ],
+ "schema": "seqref-dunc-f2-manifest/1",
+ "selftest": false,
+ "spec": "LudWiki 223 SEQREF-MRI-DIAG-UNC v1.0 (FROZEN) + AM1; LudWiki 216 SEQREF-MRI-DIAG-JSH v1.0 (FROZEN) §3 and §6 as restated in plan §6",
+ "states": [
+  {
+   "index": 0,
+   "model_state_sha256": "ff3ee27a2bc44e06b81f77d7a5ac25b48b3c75d2ac7c93b8a3cc8c644ea9a189",
+   "roles": [
+    "lam0|2026|epoch10"
+   ]
+  },
+  {
+   "index": 1,
+   "model_state_sha256": "21a62eacf6cb4a50e1ae033e3d64ff1e6baccedbcc17acac6d7a5afffb555452",
+   "roles": [
+    "lam0|2026|epoch30"
+   ]
+  },
+  {
+   "index": 2,
+   "model_state_sha256": "aa4b7d9c0c8abac843badbfdabd942320d15a9b7a840698f0ab8cc3600f4c57c",
+   "roles": [
+    "lam0|2027|epoch30"
+   ]
+  },
+  {
+   "index": 3,
+   "model_state_sha256": "79cf505e09ca0c222a0a1618fa513f234d20b794acf84bd4cdcaaad44c34bdbb",
+   "roles": [
+    "lam0|2028|epoch10"
+   ]
+  },
+  {
+   "index": 4,
+   "model_state_sha256": "df63ce1a25bceaee47dcf08264bb9046a67d001441f85773700042d9f3e0927e",
+   "roles": [
+    "lam0|2028|epoch30"
+   ]
+  },
+  {
+   "index": 5,
+   "model_state_sha256": "6d3c6a4d1c7525046ac54c6f29c0de89ed250de0fa7e08fe7a64fc917c63bf74",
+   "roles": [
+    "lam2|2026|epoch10"
+   ]
+  },
+  {
+   "index": 6,
+   "model_state_sha256": "2d1fb9579c4eacbe0500d819c788e9904227ec75f18aabdce6012bad10246646",
+   "roles": [
+    "lam2|2026|epoch30"
+   ]
+  },
+  {
+   "index": 7,
+   "model_state_sha256": "126ccd14d6aef8bf6557693da02ad950d7a229e2ddfa77ae6867a58d5d8f5ff9",
+   "roles": [
+    "lam2|2027|epoch10"
+   ]
+  },
+  {
+   "index": 8,
+   "model_state_sha256": "053ae747b808bc5f757afdc9b394420957c4ae55f01a7be158e79b7b6d755f6c",
+   "roles": [
+    "lam2|2027|epoch30"
+   ]
+  },
+  {
+   "index": 9,
+   "model_state_sha256": "71d38e697b13a3245ee368e9905a84f83c2a3116706afb907165e67d2ea9aa67",
+   "roles": [
+    "lam2|2028|epoch10"
+   ]
+  },
+  {
+   "index": 10,
+   "model_state_sha256": "ebfcd72cb20c4eb614ba30cdd2d29ea3c15f96d8fe8dfef0a319194039dd8325",
+   "roles": [
+    "lam2|2028|epoch30"
+   ]
+  },
+  {
+   "index": 11,
+   "model_state_sha256": "063963734429b1d4c887def9ff6b3483c4158df5d68ad64ee681f99d51fa34bc",
+   "roles": [
+    "lam0|2026|epoch3"
+   ]
+  },
+  {
+   "index": 12,
+   "model_state_sha256": "ada69a8fe7c1c290f650c3be75fd0a2947f184a5cd45d5d5eef1aa6e74af4b77",
+   "roles": [
+    "lam0|2026|selected"
+   ]
+  },
+  {
+   "index": 13,
+   "model_state_sha256": "977ceeef0a6b18467dd818a2743bec9a207b2cf43ea5c2f09d09db2d04f1d2f7",
+   "roles": [
+    "lam0|2026|final"
+   ]
+  },
+  {
+   "index": 14,
+   "model_state_sha256": "240b94103a9a34ed1f22dfe212e72627885cb16dc5979d4981c0068af7350763",
+   "roles": [
+    "lam0|2027|epoch3"
+   ]
+  },
+  {
+   "index": 15,
+   "model_state_sha256": "03d260630f2adbca3d2a169bf4fd15db43d4934ba3da679e05fd6ba03d28baad",
+   "roles": [
+    "lam0|2027|epoch10",
+    "lam0|2027|selected"
+   ]
+  },
+  {
+   "index": 16,
+   "model_state_sha256": "e1ffd39f9f15d75d85e5dff9135a5b6a5866f850585ea36032ab9a68d52403b3",
+   "roles": [
+    "lam0|2027|final"
+   ]
+  },
+  {
+   "index": 17,
+   "model_state_sha256": "6c2f1f854c404472e57bdc3d1e8da638434208b6806c2c72461f3e3df18377eb",
+   "roles": [
+    "lam0|2028|epoch3"
+   ]
+  },
+  {
+   "index": 18,
+   "model_state_sha256": "336a8193e22041526812db2959b1a25bb37ad4fe60deeb05eb27253f9c2e1320",
+   "roles": [
+    "lam0|2028|selected"
+   ]
+  },
+  {
+   "index": 19,
+   "model_state_sha256": "21199dbca17c8d2db20c209f85e1598a91b68cc8750cf9eb97839e172c7a72b1",
+   "roles": [
+    "lam0|2028|final"
+   ]
+  },
+  {
+   "index": 20,
+   "model_state_sha256": "bd88d523566f653b28928fbb85e56a86fa633cd8491359907e3ec727a43f83bb",
+   "roles": [
+    "lam2|2026|epoch3"
+   ]
+  },
+  {
+   "index": 21,
+   "model_state_sha256": "7b227e96e87f62f677aba00fdc345d852efa7090871a06bbca5a66ab21adae95",
+   "roles": [
+    "lam2|2026|selected"
+   ]
+  },
+  {
+   "index": 22,
+   "model_state_sha256": "4103d7ff037a7034c66fe35190274ee79d6f474fc61d73f7fe35e74c4b40e96c",
+   "roles": [
+    "lam2|2026|final"
+   ]
+  },
+  {
+   "index": 23,
+   "model_state_sha256": "0861c5b1ddd1a52aea7cdc00c4f54f013cb792d31eaf88b4b597d1a6e7c75ff0",
+   "roles": [
+    "lam2|2027|epoch3"
+   ]
+  },
+  {
+   "index": 24,
+   "model_state_sha256": "bc5ff01940ae9235edf31ac86a82c80e7a370d0c9c578b44160bc2b8a6bcc7bd",
+   "roles": [
+    "lam2|2027|selected"
+   ]
+  },
+  {
+   "index": 25,
+   "model_state_sha256": "95e5be41913fea6c7ff097b1058accd07c1ba66ccf1bb859dfe425c94e825ecb",
+   "roles": [
+    "lam2|2027|final"
+   ]
+  },
+  {
+   "index": 26,
+   "model_state_sha256": "9fdcd1372de2d480ebbe342d2ae6b09f8be836e989f2338f68d1dadbded0b46f",
+   "roles": [
+    "lam2|2028|epoch3"
+   ]
+  },
+  {
+   "index": 27,
+   "model_state_sha256": "a3b5f949b745f1b429a48a62089deb7808a393f141f1c691b7c927294da212f4",
+   "roles": [
+    "lam2|2028|final",
+    "lam2|2028|selected"
+   ]
+  }
+ ],
+ "stop_limit": {
+  "disk_bytes": 879070503,
+  "reserve_bytes": 68719476736,
+  "wall_s": 8099.667422753759
+ },
+ "tier": {
+  "decision": "both",
+  "free_bytes_at_f1": 199590109184,
+  "note": "resource evidence only; never revisited after G starts",
+  "owner_limits": {
+   "f1_cap_s": 43200.0,
+   "g_disk_bytes": 21474836480,
+   "g_wall_s": 43200.0,
+   "reserve_bytes": 68719476736
+  },
+  "projections": {
+   "tier1": {
+    "D_bytes": 849564849,
+    "T_s": 5251.388907060027,
+    "ratio_s3_to_probe_T": 1.0074037647713439,
+    "source": "s3_informed",
+    "within_registered_limits": true
+   },
+   "tier1_tier2": {
+    "D_bytes": 879070503,
+    "T_s": 8099.667422753759,
+    "ratio_s3_to_probe_T": 1.0079101912642192,
+    "source": "s3_informed",
+    "within_registered_limits": true
+   }
+  },
+  "rule": "223 §1 activation rule, case (i): the Tier 1 + Tier 2 projection is within the registered limits"
+ },
+ "tolerances": {
+  "dc_a": 5.226121017646648e-15,
+  "nll_abs": 0.0001,
+  "nll_identity_abs": 1e-12,
+  "nll_identity_rel": 1e-06,
+  "r0_psnr_db": 0.001,
+  "r1_nmse_rel": 0.0001,
+  "r1_psnr_db": 0.001,
+  "share_min_abs_dnll": 0.001,
+  "source": "223 §3.3 / 216 §1.3 (reproduction); the registered dc_tolerances.a of the G-U1 records; 216 §3 (identity, share rule)"
+ }
+}
