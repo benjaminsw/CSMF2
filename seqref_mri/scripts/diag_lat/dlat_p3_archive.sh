@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SEQREF-DLATP3-ARCH v0.3 -- dlat_p3_archive.sh: Git archival of the reviewed D-LAT P1/P2/P3 files on ch2-diag
+# SEQREF-DLATP3-ARCH v0.4 -- dlat_p3_archive.sh: Git archival of the reviewed D-LAT P1/P2/P3 files on ch2-diag
 # LIFETIME: KEEP
 #
 # Archives exactly six reviewed files (238 LE20, LE22, LE26) under seqref_mri/scripts/diag_lat/ on
@@ -20,6 +20,10 @@
 # Any failed check stops with an ERROR line and a non-zero exit. No fallback.
 #
 # Changelog:
+#   v0.4 (2026-11-21) carries the reviewed sha256 of dlat_p3_run.sh v0.4 and a new commit message.
+#        No logic changed. The six files are already archived (commit 4ab895b9...); with v0.4 only
+#        'scripts <sha256>' and 'push <sha256>' are run, giving a second launcher-scripts commit.
+#        v0.3 preserved (archived in commit d7c364e3...).
 #   v0.3 (2026-11-21) review of v0.2: 'push' now fails unless the separate scripts commit exists,
 #        changes exactly the two launcher scripts, and both committed files have their reviewed
 #        sha256 (the hash of this script is given on the command line). v0.2 preserved.
@@ -52,8 +56,8 @@ declare -A SHA=(
 )
 
 RUN_SH="dlat_p3_run.sh"
-RUN_SH_SHA="28aabdcd486e808c9980d2fcc6e69f9847ab00c5292d42e8378dccd9f3c363cf"                              # reviewed dlat_p3_run.sh v0.3
-MSG_SH="D-LAT P3: reviewed launcher scripts (archival v0.3, synthetic host run v0.3; run card SEQREF-DLATP3-RUN v0.3)
+RUN_SH_SHA="5d52a25f3a46d18e7308099ab95c4aa9883fbe0bb5740aa8b52ace3d182cee4e"                              # reviewed dlat_p3_run.sh v0.4
+MSG_SH="D-LAT P3: reviewed launcher scripts (archival v0.4, synthetic host run v0.4; run card SEQREF-DLATP3-RUN v0.4)
 
 Git archival helper and synthetic host run script. No D-LAT evidence.
 

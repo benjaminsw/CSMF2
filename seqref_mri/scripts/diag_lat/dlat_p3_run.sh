@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SEQREF-DLATP3-RUN v0.3 -- dlat_p3_run.sh: synthetic host run of the D-LAT P3 fixtures (run card SEQREF-DLATP3-RUN v0.3)
+# SEQREF-DLATP3-RUN v0.4 -- dlat_p3_run.sh: synthetic host run of the D-LAT P3 fixtures (run card SEQREF-DLATP3-RUN v0.4)
 # LIFETIME: KEEP
 #
 # DRAFT FOR REVIEW. DO NOT RUN before the run card is reviewed and the owner has authorised V7
@@ -28,6 +28,9 @@
 #                      program; it is NOT a hard limit enforced by the operating system.
 #
 # Changelog:
+#   v0.4 (2026-11-21) host preflight of v0.3 refused two untracked, Git-ignored files at the
+#        repository root (v03_plot_results.py, v03_reconcile.py). They are added to the allowlist
+#        with the sha256 the owner reported from the host. Nothing else changed. v0.3 preserved.
 #   v0.3 (2026-11-21) review of v0.2 (R-U4): the folder exception is replaced by an allowlist of
 #        two named files with registered sha256 (found by the owner's read-only inspection); the
 #        tracked and untracked checks now also cover the top level of the repository and of
@@ -57,6 +60,10 @@ GIB=1073741824
 declare -A ALLOWED_UNTRACKED=(
   [seqref_mri/scripts/diag_lat/dlat_b1_v03.py]=34e92911047fee027921c6ab53964d37ce9ee7529f1110c4aea7a8bb9922d789
   [seqref_mri/scripts/diag_lat/dlat_b1_v03_selftest.py]=c868b09f44f3ad6b9ae89c607e4230cd7ba4f8193ca7a97417437562a4645f6c
+  # Git-ignored V03 helper scripts at the repository root (sha256 reported by the owner from the
+  # host, 2026-11-21). No pinned module and no D-LAT file imports a module of either name.
+  [v03_plot_results.py]=f05d67ef2cf771e75f6dc09576718830c601e215906abc9b6e0ab58c32db36a6
+  [v03_reconcile.py]=bdf1a3883fd509200837948e08bce2d53d0fc35b3449c0c06f109e508f0d26cb
 )
 # Checked locations: the three pinned source folders (recursive) and, because the repository root
 # and seqref_mri/src are put on the import path, the top level of the repository and of seqref_mri/.
@@ -188,7 +195,7 @@ case "${1:-}" in
     cp "$DUNC_PATH" "$RUN/code/diag_unc_adapter.py"
     [ "$(sha256sum "$RUN/code/diag_unc_adapter.py" | cut -d' ' -f1)" = "$DUNC_SHA" ] || die "snapshot of diag_unc_adapter.py does not have the registered sha256"
     (cd "$RUN/code" && sha256sum *.py) > "$RUN/logs/code_sha256.txt"
-    { echo "run card SEQREF-DLATP3-RUN v0.3"; echo "run script sha256 $(sha256sum "$SELF" | cut -d' ' -f1)"; echo "mode $MODE"; echo "pin $PIN"; echo "archive commit $ARCH_COMMIT";
+    { echo "run card SEQREF-DLATP3-RUN v0.4"; echo "run script sha256 $(sha256sum "$SELF" | cut -d' ' -f1)"; echo "mode $MODE"; echo "pin $PIN"; echo "archive commit $ARCH_COMMIT";
       echo "interpreter $PY"; echo "versions $vers"; echo "started $(date -u +%Y-%m-%dT%H:%M:%SZ)"; } > "$RUN/logs/run_context.txt"
     set +e
     "$PY" -I -B "$RUN/code/diag_lat_p3test.py" --pinned-root "$REPO" --out "$RUN/out" --mode "$MODE" \
