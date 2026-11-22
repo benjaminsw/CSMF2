@@ -1,4 +1,4 @@
-# SEQREF-DLAT-P3T v0.2 -- diag_lat_p3test.py: P3 fixtures T9-T11, T12b, R1a, R1b and refusal test R5 (plan SEQREF-DLAT-P3 v0.2)
+# SEQREF-DLAT-P3T v0.3 -- diag_lat_p3test.py: P3 fixtures T9-T11, T12b, R1a, R1b, refusal test R5 and report-provenance test R7 (plan SEQREF-DLAT-P3 v0.2; fix plan SEQREF-DLAT-P3FIX v0.1)
 # LIFETIME: KEEP
 """Synthetic tests of the D-LAT adapter against the pinned V05LT classes.
 
@@ -15,7 +15,8 @@ Fixtures and result states: each fixture is PASS, FAIL or NOT RUN. NOT RUN is us
 module cannot be imported (named in the report; never stubbed), when a registered pinned hash does
 not match, when R1a stops on the memory limit (C4), or when --only leaves a fixture out. The run
 is COMPLETE only if no fixture is NOT RUN. Exit status: 0 complete and all PASS; 1 any FAIL;
-2 no FAIL but INCOMPLETE; 3 refusal (R5).
+2 no FAIL but INCOMPLETE; 3 refusal (R5); 4 no FAIL, but the list of pinned modules for the
+report could not be collected (PROVENANCE ERROR -- never reported as a pass).
 
 SELF-TEST EXCEPTION (project rule): this file builds synthetic inputs and deliberately wrong
 inputs (shifted mask, doubled division, broken records). None of that exists in the adapter.
@@ -28,6 +29,15 @@ model state), "component" (one separately timed operation) and "nested_total" (a
 that CONTAINS the components). Adding a nested total to its components counts work twice.
 
 Changelog:
+  v0.3 (2026-11-21) fix plan SEQREF-DLAT-P3FIX v0.1 after the failed host run (239 LE29), where an
+        uncaught FileNotFoundError in the report step discarded every fixture result: (1) the
+        module listing takes only modules whose __file__ is an absolute path of an existing file
+        inside the pinned root -- torch registers a module with the relative name "_classes.py",
+        which was resolved against the working directory; skipped relative names are reported;
+        (2) if the listing fails all the same, the fixture results are still written, the failure
+        is logged and reported as PROVENANCE ERROR and the exit status is 4, never 0; (3) new
+        fixture R7 reproduces the original failure and tests both rules. No existing fixture,
+        tolerance, parameter or check was changed.
   v0.2 (2026-11-21) review of v0.1 (238 LE25): (1) p3_report.json and p3_resource.json are now
         written through the write guard; one guard for the whole output folder; (2) every stage
         timing carries its kind, and the resource JSON states which timings are nested and which
@@ -76,7 +86,7 @@ import diag_lat_core as C  # noqa: E402
 import diag_lat_guard as GD  # noqa: E402
 import diag_lat_stats as ST  # noqa: E402
 
-__version__ = "0.2"
+__version__ = "0.3"
 ABBR = "SEQREF-DLAT-P3T"
 LOG = logging.getLogger("diag_lat.p3test")
 SELFTEST_SEED = 987654321                       # fixtures only; not a registered seed
@@ -211,16 +221,52 @@ def pinned_preflight(root):
 
 
 def pinned_modules_loaded():
-    """Every module imported from the pinned root, with its sha256 and whether a registered hash exists."""
+    """Every module imported from the pinned root, with its sha256 and whether a registered hash
+    exists. Only a module whose __file__ is an ABSOLUTE path of an EXISTING file inside the
+    pinned root counts. A relative __file__ is never resolved against the working directory
+    (torch._classes carries the bare name "_classes.py"); such modules are returned separately.
+    Returns (modules, relative_file_modules)."""
     root = CTX["pinned"].get("root")
-    out = []
+    out, relative = [], []
     for name, mod in sorted(sys.modules.items()):
         f = getattr(mod, "__file__", None)
-        if root and f and os.path.realpath(f).startswith(root + os.sep):
-            rel = os.path.relpath(os.path.realpath(f), root)
-            out.append({"module": name, "file": rel, "sha256": sha_file(f),
-                        "registered_hash_checked": rel in REGISTERED_PINNED})
-    return out
+        if not root or not isinstance(f, str) or not f:
+            continue
+        if not os.path.isabs(f):
+            relative.append({"module": name, "file": f})
+            continue
+        real = os.path.realpath(f)
+        if not real.startswith(root.rstrip(os.sep) + os.sep) or not os.path.isfile(real):
+            continue
+        rel = os.path.relpath(real, root)
+        out.append({"module": name, "file": rel, "sha256": sha_file(real),
+                    "registered_hash_checked": rel in REGISTERED_PINNED})
+    return out, relative
+
+
+def collect_provenance():
+    """The module listing for the report. A failure here must not discard the fixture results:
+    it is logged, returned as an explicit error, and turned into exit status 4 by exit_status()."""
+    try:
+        modules, relative = pinned_modules_loaded()
+        return {"status": "ok", "error": None, "modules": modules, "relative_file_modules": relative}
+    except Exception as e:  # noqa: BLE001 -- logged and reported; never swallowed, never a pass
+        LOG.error("provenance listing failed: %s", traceback.format_exc())
+        return {"status": "ERROR", "error": "%s: %s" % (type(e).__name__, e), "modules": None,
+                "relative_file_modules": None}
+
+
+def exit_status(counts, complete, provenance_ok):
+    """1 any FAIL; else 4 provenance error; else 0 complete or 2 incomplete."""
+    if counts["FAIL"]:
+        return 1
+    if not provenance_ok:
+        return 4
+    return 0 if complete else 2
+
+
+def run_state(complete, provenance_ok):
+    return "PROVENANCE ERROR" if not provenance_ok else ("COMPLETE" if complete else "INCOMPLETE")
 
 
 def need_pinned():
@@ -723,6 +769,82 @@ def r1b(fx, out_dir):
             pop_nc.col("lam2/e3", 2027, "TC_G", "full") is C.NOT_COMPUTED and len(pop_nc.not_computed) == 1)
 
 
+# ---- R7 -------------------------------------------------------------------------------------
+def r7(fx):
+    """Report provenance (SEQREF-DLAT-P3FIX v0.1). Pure standard library; no PyTorch, no pinned module.
+    Reproduces the host failure of 239 LE29 with synthetic module objects, without changing the
+    working directory and without creating a file."""
+    import types
+    cwd = os.path.realpath(os.getcwd())
+    saved = dict(CTX["pinned"])
+    names = ("_dlat_r7_relative", "_dlat_r7_missing", "_dlat_r7_real")
+    global sha_file
+    real_sha = sha_file
+
+    def old_listing():                       # the v0.2 logic, kept here only as the control
+        root, out = CTX["pinned"].get("root"), []
+        for name, mod in sorted(sys.modules.items()):
+            f = getattr(mod, "__file__", None)
+            if root and f and os.path.realpath(f).startswith(root.rstrip(os.sep) + os.sep):
+                out.append((name, sha_file(f)))
+        return out
+    try:
+        # geometry of the host: a relative file name, resolved against the working directory, lands
+        # inside the root. Here the root is the working directory itself.
+        CTX["pinned"]["root"] = cwd
+        root = CTX["pinned"]["root"]
+        fx.true("fixture geometry: a relative name resolves to a path inside the root used for this test",
+                os.path.realpath("_classes.py").startswith(root.rstrip(os.sep) + os.sep))
+        rel = types.ModuleType(names[0]); rel.__file__ = "_classes.py"                 # as torch._classes
+        mis = types.ModuleType(names[1]); mis.__file__ = os.path.join(root, "_dlat_r7_no_such_file.py")
+        rea = types.ModuleType(names[2]); rea.__file__ = os.path.abspath(__file__)
+        fx.true("pre-condition: no file named _classes.py exists in the working directory", not os.path.exists("_classes.py"))
+        sys.modules[names[0]] = rel                     # only the relative one for the control
+        try:
+            old_listing()
+            fx.true("control: the v0.2 listing raises FileNotFoundError on the relative name (the host failure)", False, "no error raised")
+        except FileNotFoundError as e:
+            fx.true("control: the v0.2 listing raises FileNotFoundError on the relative name (the host failure)", "_classes.py" in str(e), str(e))
+        sys.modules[names[1]] = mis; sys.modules[names[2]] = rea
+        mods, relative = pinned_modules_loaded()
+        listed = {m["module"] for m in mods}
+        fx.true("the corrected listing does not raise", True)
+        fx.true("a module with a relative __file__ is not listed as pinned and is reported separately",
+                names[0] not in listed and {"module": names[0], "file": "_classes.py"} in relative)
+        fx.true("a module whose absolute file does not exist is not listed", names[1] not in listed)
+        prov = collect_provenance()
+        fx.true("collect_provenance reports status ok for the corrected listing", prov["status"] == "ok" and prov["error"] is None)
+        CTX["pinned"]["root"] = None
+        fx.true("without a pinned root nothing is listed", pinned_modules_loaded() == ([], []))
+        # second root: the folder of this file, so that the synthetic module with a real file is inside it
+        CTX["pinned"]["root"] = os.path.dirname(os.path.realpath(__file__))
+        mods2, _rel2 = pinned_modules_loaded()
+        fx.true("a module with an existing absolute file inside the root is listed with the sha256 of that file",
+                any(m["module"] == names[2] and m["sha256"] == real_sha(os.path.realpath(__file__)) for m in mods2))
+
+        def broken(_path):
+            raise OSError("synthetic failure of the hashing step")
+        sha_file = broken
+        prov_bad = collect_provenance()
+        sha_file = real_sha
+        fx.true("resilience: a failure inside the listing is returned as an explicit ERROR, not raised",
+                prov_bad["status"] == "ERROR" and "synthetic failure" in prov_bad["error"] and prov_bad["modules"] is None)
+        all_pass, some_fail = {"PASS": 8, "FAIL": 0, "NOT RUN": 0}, {"PASS": 7, "FAIL": 1, "NOT RUN": 0}
+        fx.true("exit status: provenance error with all fixtures passing is 4, never 0", exit_status(all_pass, True, False) == 4)
+        fx.true("exit status: provenance error with an incomplete run is 4, never 2 or 0", exit_status(all_pass, False, False) == 4)
+        fx.true("exit status: a fixture FAIL stays 1 with or without a provenance error",
+                exit_status(some_fail, True, False) == 1 and exit_status(some_fail, True, True) == 1)
+        fx.true("exit status: unchanged without a provenance error (0 complete, 2 incomplete)",
+                exit_status(all_pass, True, True) == 0 and exit_status(all_pass, False, True) == 2)
+        fx.true("run state: PROVENANCE ERROR is never reported as COMPLETE",
+                run_state(True, False) == "PROVENANCE ERROR" and run_state(True, True) == "COMPLETE" and run_state(False, True) == "INCOMPLETE")
+    finally:
+        sha_file = real_sha
+        for n in names:
+            sys.modules.pop(n, None)
+        CTX["pinned"].clear(); CTX["pinned"].update(saved)
+
+
 # ---- runner ---------------------------------------------------------------------------------
 PINNED_MODULE_ROOTS = ("torch", "seqref_mri", "preflight_io", "preflight_parents", "h5py")
 
@@ -801,6 +923,9 @@ def main():
     run_fixture("R1a", "real-model integration at production size (toy design; K = 8 and one K = 128 case)",
                 lambda fx: r1a(fx, args.out, ram), selected)
     run_fixture("R1b", "statistical-interface integration (synthetic population, pure NumPy)", lambda fx: r1b(fx, args.out), selected)
+    run_fixture("R7", "report provenance: relative module file names; results kept on a provenance failure (P3FIX v0.1)", r7, selected)
+    prov = collect_provenance()
+    prov_ok = prov["status"] == "ok"
     counts = {st: sum(1 for r in RESULTS if r["state"] == st) for st in ("PASS", "FAIL", "NOT RUN")}
     complete = counts["NOT RUN"] == 0
     here = os.path.dirname(os.path.abspath(__file__))
@@ -817,11 +942,14 @@ def main():
                 "timing_interpretation": TIMING_NOTE, "timings_are_additive": False,
                 "peak_rss_bytes": GD.peak_rss_bytes(), "ram_limit_bytes": ram, "r1a_resource_stop": CTX["r1a"] or None,
                 "note": "inputs to the C1 decision only; synthetic parameters; not a validation of the ceilings"}
-    rep = {"banner": CTX["banner"], "schema": "seqref-dlat-p3-report/2", "p3test_version": __version__, "adapter_version": A.__version__,
+    rep = {"banner": CTX["banner"], "schema": "seqref-dlat-p3-report/3", "p3test_version": __version__, "adapter_version": A.__version__,
            "core_version": C.__version__, "stats_version": ST.__version__, "guard_version": GD.__version__, "environment": env,
            "selftest_seed": SELFTEST_SEED, "only": sorted(selected) if selected else None, "pinned_preflight": CTX["pinned"],
-           "pinned_modules_loaded": pinned_modules_loaded(), "fixtures": RESULTS, "counts": counts,
-           "rehearsal": "COMPLETE" if complete else "INCOMPLETE", "error_log_records": errors["n"], "files_sha256": files,
+           "pinned_modules_loaded": prov["modules"], "provenance": {"status": prov["status"], "error": prov["error"],
+                                                                    "relative_file_modules": prov["relative_file_modules"],
+                                                                    "working_directory": os.getcwd()},
+           "fixtures": RESULTS, "counts": counts,
+           "rehearsal": run_state(complete, prov_ok), "error_log_records": errors["n"], "files_sha256": files,
            "elapsed_seconds": time.perf_counter() - t0}
     guard = CTX["guard"]
     out_sha = {}
@@ -843,9 +971,12 @@ def main():
     print("stage timings (NOT additive; see timing_interpretation in p3_resource.json):", json.dumps(timings))
     print("guarded outputs:", json.dumps(out_sha), "bytes charged:", guard.written)
     print("peak resident memory: %.2f GiB; error log records: %d" % (GD.peak_rss_bytes() / GD.GIB, errors["n"]))
+    print("provenance: %s%s; modules with a relative file name (not pinned files): %s"
+          % (prov["status"], "" if prov_ok else " -- %s" % prov["error"],
+             "n/a" if prov["relative_file_modules"] is None else ", ".join(m["module"] for m in prov["relative_file_modules"]) or "none"))
     print("fixtures: PASS %d, FAIL %d, NOT RUN %d; checks %d; run %s"
           % (counts["PASS"], counts["FAIL"], counts["NOT RUN"], sum(len(r["checks"]) for r in RESULTS), rep["rehearsal"]))
-    return 1 if counts["FAIL"] else (0 if complete else 2)
+    return exit_status(counts, complete, prov_ok)
 
 
 if __name__ == "__main__":
