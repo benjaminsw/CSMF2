@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SEQREF-DLATP3-RUN v0.4 -- dlat_p3_run.sh: synthetic host run of the D-LAT P3 fixtures (run card SEQREF-DLATP3-RUN v0.4)
+# SEQREF-DLATP3-RUN v0.5 -- dlat_p3_run.sh: synthetic host run of the D-LAT P3 fixtures (run card SEQREF-DLATP3-RUN v0.5)
 # LIFETIME: KEEP
 #
 # DRAFT FOR REVIEW. DO NOT RUN before the run card is reviewed and the owner has authorised V7
@@ -28,6 +28,10 @@
 #                      program; it is NOT a hard limit enforced by the operating system.
 #
 # Changelog:
+#   v0.5 (2026-11-21) after the failed host run of v0.4 (LudWiki 239 LE29; fix plan SEQREF-DLAT-P3FIX
+#        v0.1): carries the sha256 of diag_lat_p3test.py v0.3; the summary shows the new fixture R7
+#        and the provenance line; the result line explains exit status 4. No check of the
+#        preflight was changed. v0.4 preserved (archived in commit 2f1ec6a0...).
 #   v0.4 (2026-11-21) host preflight of v0.3 refused two untracked, Git-ignored files at the
 #        repository root (v03_plot_results.py, v03_reconcile.py). They are added to the allowlist
 #        with the sha256 the owner reported from the host. Nothing else changed. v0.3 preserved.
@@ -78,7 +82,7 @@ declare -A SHA=(
   [diag_lat_guard.py]=4c78796aa3185c54d53e73ac251fc0a8c7e59fd45509dfea490cf9221d3b76f3
   [diag_lat_selftest.py]=0aeaa9e081ccceaf9069585ddf39bd12ecaa211ea4c4253bff599b772f91b794
   [diag_lat_adapter.py]=300c30587f8c55f8901a3c36bbcd84d594a9fe6624d67e359c57cec48a0760e2
-  [diag_lat_p3test.py]=3e20063f18f94058e62053bac9753050b907dbbe2675cd9e69132833808de238
+  [diag_lat_p3test.py]=777685bea9b279af4382d83de917b4024d6cbf07f7702f602741fc01895a338f
 )
 
 # Rehearsal overrides (author's sandbox only). Ignored unless DLAT_REHEARSAL=1; announced loudly.
@@ -195,7 +199,7 @@ case "${1:-}" in
     cp "$DUNC_PATH" "$RUN/code/diag_unc_adapter.py"
     [ "$(sha256sum "$RUN/code/diag_unc_adapter.py" | cut -d' ' -f1)" = "$DUNC_SHA" ] || die "snapshot of diag_unc_adapter.py does not have the registered sha256"
     (cd "$RUN/code" && sha256sum *.py) > "$RUN/logs/code_sha256.txt"
-    { echo "run card SEQREF-DLATP3-RUN v0.4"; echo "run script sha256 $(sha256sum "$SELF" | cut -d' ' -f1)"; echo "mode $MODE"; echo "pin $PIN"; echo "archive commit $ARCH_COMMIT";
+    { echo "run card SEQREF-DLATP3-RUN v0.5"; echo "run script sha256 $(sha256sum "$SELF" | cut -d' ' -f1)"; echo "mode $MODE"; echo "pin $PIN"; echo "archive commit $ARCH_COMMIT";
       echo "interpreter $PY"; echo "versions $vers"; echo "started $(date -u +%Y-%m-%dT%H:%M:%SZ)"; } > "$RUN/logs/run_context.txt"
     set +e
     "$PY" -I -B "$RUN/code/diag_lat_p3test.py" --pinned-root "$REPO" --out "$RUN/out" --mode "$MODE" \
@@ -213,9 +217,9 @@ case "${1:-}" in
       rc=90
     fi
     (cd "$RUN" && find . -type f ! -name outputs_sha256.txt | sort | xargs sha256sum) > "$RUN/outputs_sha256.txt"
-    grep -E "^(R5|T9|T10|T11|T12b|R1a|R1b) |^pinned preflight|^fixtures:|^peak resident|\[FAIL\]" "$RUN/logs/p3_terminal.log" || true
+    grep -E "^(R5|R7|T9|T10|T11|T12b|R1a|R1b) |^pinned preflight|^provenance:|^fixtures:|^peak resident|\[FAIL\]|^Traceback|Error" "$RUN/logs/p3_terminal.log" || true
     echo "outputs and hashes: $RUN/outputs_sha256.txt"
-    echo "RESULT exit $rc  (0 = complete and all PASS; 1 = a fixture FAILED; 2 = INCOMPLETE; 90 = pinned checkout changed)"
+    echo "RESULT exit $rc  (0 = complete and all PASS; 1 = a fixture FAILED or the program stopped; 2 = INCOMPLETE; 4 = PROVENANCE ERROR, not a pass; 90 = pinned checkout changed)"
     echo "Paste back: this terminal output, $RUN/logs/p3_terminal.log, $RUN/out/p3_report.json, $RUN/out/p3_resource.json, $RUN/outputs_sha256.txt"
     exit "$rc" ;;
   *)
