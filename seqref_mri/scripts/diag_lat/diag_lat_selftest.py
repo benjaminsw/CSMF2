@@ -1,4 +1,4 @@
-# SEQREF-DLAT-TEST v0.4 -- diag_lat_selftest.py: synthetic fixtures for the D-LAT modules
+# SEQREF-DLAT-TEST v0.5 -- diag_lat_selftest.py: synthetic fixtures for the D-LAT modules
 # LIFETIME: KEEP
 """
 STATUS: PRE-FREEZE ENGINEERING; NOT ACTIVATED (236 LE19). Plan SEQREF-DLAT-IMPL v0.2.
@@ -17,6 +17,9 @@ reported NOT RUN and the run FAILS, unless --without-t19 is given explicitly.
 NOT implemented: T9-T11, T12b, R1 (P3, on hold).
 
 Changelog
+- v0.5 (2026-11-23): for diag_lat_stats.py v0.4 (248 LE76): the end-to-end check expects
+  RULES_VERSION to name the frozen specification v1.0 and its sha256, instead of "v0.6.2".
+  No other fixture, tolerance or check changed.
 - v0.4 (2026-11-22): revision SEQREF-DLAT-P23REV v0.1 (242 LE51) for diag_lat_stats.py v0.3
   and candidate v0.6.2. T15 only: outcome cases as a table (A14) plus an independent second
   implementation by enumeration of every completion of the missing labels; seed-tag cases
@@ -52,7 +55,7 @@ import diag_lat_core as C
 import diag_lat_guard as GD
 import diag_lat_stats as ST
 
-__version__ = "0.4"
+__version__ = "0.5"
 SELFTEST_SEED = 987654321
 BANNER = "NOT D-LAT EVIDENCE (synthetic self-test)"
 # T6/T7b values observed at step B, per NumPy version; compared to 1e-12 on that version.
@@ -809,7 +812,8 @@ def t15():
             all(m[k]["class"] == ST.C_SELECTIVE for k in m) and res["outcome"]["outcome"] == "A")
     fx.true("end to end: outcome A is confirmed with nothing open; the result names its rules version",
             res["outcome"] == {"outcome": "A", "provisional": False, "open_measures": [], "open_contrasts": {}}
-            and res["rules_version"] == ST.RULES_VERSION and "v0.6.2" in ST.RULES_VERSION)
+            and res["rules_version"] == ST.RULES_VERSION and "v1.0 FROZEN" in ST.RULES_VERSION
+            and "6afa3eda250946548b239df64344974d3c3502d23f6b4e22468ca61e6af97327" in ST.RULES_VERSION)
     fx.true("end to end: seed-consistent, corroborated at fixed epochs, stable, same direction in physical coordinates",
             all(m[k]["seed_tag"] == "seed-consistent" and m[k]["fixed_epoch_tag"] == "corroborated at fixed epochs" for k in m)
             and all(m[k]["stability_summary"] == "stable" for k in ("L2", "L3a", "L3b", "L4"))

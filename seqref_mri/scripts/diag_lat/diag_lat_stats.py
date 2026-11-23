@@ -1,11 +1,12 @@
-# SEQREF-DLAT-STAT v0.3 -- diag_lat_stats.py: D-LAT bootstrap, contrasts, classes, tags, L6, outcome
+# SEQREF-DLAT-STAT v0.4 -- diag_lat_stats.py: D-LAT bootstrap, contrasts, classes, tags, L6, outcome
 # LIFETIME: KEEP
 """
-STATUS: PRE-FREEZE ENGINEERING; NOT ACTIVATED (236 LE19; 238 LE21). Written against the
-mini-spec candidate v0.5.2 (not frozen) and the interpretation clarifications I1-I4 of
-238 LE21; outcome rule, seed tag and fixed-epoch tag follow candidate v0.6.2 (not frozen;
-amendments A14, A16 with its clarification, A19; plan SEQREF-DLAT-P23REV v0.1, 242 LE51).
-Provisional until freeze. Mathematics only: no I/O, no model, no random draw
+STATUS: implements the reading rules of the FROZEN specification SEQREF-MRI-DIAG-LAT v1.0
+(LudWiki 235; 247 LE70, LE71). Written before the freeze against candidate v0.5.2 and the
+clarifications I1-I4 of 238 LE21; outcome rule, seed tag and fixed-epoch tag as in candidate
+v0.6.2 (amendments A14, A16 with its clarification, A19; plan SEQREF-DLAT-P23REV v0.1,
+242 LE51). The freeze changed no rule (246 LE67, LE68). "Candidate" in the comments below
+names the text those rules were first written from. Mathematics only: no I/O, no model, no random draw
 except the single registered bootstrap call.
 
 PORTED from diag_unc_stats.py v0.5 lineage (sha256 b8706513...8f55) and diag_unc_core.py
@@ -25,6 +26,9 @@ measure-level summary "stable" only if S-GAP0 and C-TIME0 are both stable (I4).
 No fallback, placeholder, mock or dummy return. "not computed" is an explicit status.
 
 Changelog
+- v0.4 (2026-11-23): RULES_VERSION names the frozen specification v1.0 with its sha256
+  (246 LE68, W5; 248 LE76); status paragraph of this header updated. No function, rule,
+  constant or return value changed otherwise.
 - v0.3 (2026-11-22): revision SEQREF-DLAT-P23REV v0.1 (242 LE51), candidate v0.6.2.
   outcome(): provisional only if a result not computed could change the letter (A14); new
   argument (class, predicted sign and labels per measure); new field open_contrasts.
@@ -49,7 +53,7 @@ import numpy as np
 
 from diag_lat_core import DiagLatError, NOT_COMPUTED, NONFINITE, INPUT
 
-__version__ = "0.3"
+__version__ = "0.4"
 ABBR = "SEQREF-DLAT-STAT"
 log = logging.getLogger("diag_lat.stats")
 
@@ -61,7 +65,7 @@ STABILITY_SUBSETS = ("pre64", "full", "halfA", "halfB")
 BOOTSTRAP_IDENTITY = "DIAG_LAT_BOOTSTRAP_IDENTITY"
 POPULATION_MISMATCH = "DIAG_LAT_POPULATION_MISMATCH"
 NC = "not computed"
-RULES_VERSION = "SEQREF-MRI-DIAG-LAT v0.6.2 CANDIDATE (A14, A16-CL, A19; not frozen)"
+RULES_VERSION = "SEQREF-MRI-DIAG-LAT v1.0 FROZEN (LudWiki 235; sha256 6afa3eda250946548b239df64344974d3c3502d23f6b4e22468ca61e6af97327)"
 
 # classified measures: id -> (record key, predicted sign on gap contrasts, bank-dependent)
 MEASURES = {

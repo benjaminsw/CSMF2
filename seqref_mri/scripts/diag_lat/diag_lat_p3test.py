@@ -1,12 +1,13 @@
-# SEQREF-DLAT-P3T v0.4 -- diag_lat_p3test.py: P3 fixtures T9-T11, T12b, R1a, R1b, refusal test R5 and report-provenance test R7 (plan SEQREF-DLAT-P3 v0.2; fix plan SEQREF-DLAT-P3FIX v0.1)
+# SEQREF-DLAT-P3T v0.6 -- diag_lat_p3test.py: P3 fixtures T9-T11, T12b, R1a, R1b, refusal test R5 and report-provenance test R7 (plan SEQREF-DLAT-P3 v0.2; fix plan SEQREF-DLAT-P3FIX v0.1)
 # LIFETIME: KEEP
 """Synthetic tests of the D-LAT adapter against the pinned V05LT classes.
 
-PRE-FREEZE ENGINEERING FILE (candidate v0.5.2, not frozen; 238 LE23, LE24). SYNTHETIC TENSORS ONLY:
+ENGINEERING TEST FILE for the frozen specification SEQREF-MRI-DIAG-LAT v1.0 (LudWiki 235); first
+written before the freeze (candidate v0.5.2; 238 LE23, LE24). SYNTHETIC TENSORS ONLY:
 no checkpoint, no MRI file, no stored row, no standardisation file, no registered random array.
 Every output is marked NOT D-LAT EVIDENCE.
 
-Run:  python -I diag_lat_p3test.py --pinned-root <repo root holding seqref_mri/> --out <new folder>
+Run:  python -I -B diag_lat_p3test.py --pinned-root <repo root holding seqref_mri/> --out <new folder>
       [--mode sandbox|host] [--ram-limit-gib 6] [--only T9,T10,...]
 Refused before any other import and before any file is opened by this program (R5):
       --checkpoint, --data-root (also in the --name=value form).
@@ -29,6 +30,22 @@ model state), "component" (one separately timed operation) and "nested_total" (a
 that CONTAINS the components). Adding a nested total to its components counts work twice.
 
 Changelog:
+  v0.6 (2026-11-23) review of v0.5 (248 LE76). (1) No bytecode: the R5 child processes are started
+        with -I -B (they were started with -I only and wrote __pycache__ beside the code); R5 now
+        also checks that this program itself runs with bytecode writing disabled and that no
+        __pycache__ folder beside the code appeared during the fixture. PYTHONDONTWRITEBYTECODE
+        is not used: -I makes the interpreter ignore it, so -B is the effective setting. The check
+        compares the folder (file names and modification times) before and after the children. (2) for
+        diag_lat_stats.py v0.4: R1b expects RULES_VERSION to name the frozen specification v1.0
+        and its sha256, instead of "v0.6.2". No tolerance, parameter or other check was changed.
+  v0.5 (2026-11-23) for diag_lat_adapter.py v0.2 (record schema SEQREF-DLAT-ADPSCH v0.1; 247 LE74,
+        248 LE75). R1a: slice_state_record is called with its four new required arguments (swap
+        shift of R0 in both coordinates, the three sensitivities, a FIXTURE projection matrix that
+        is not the registered array); the finiteness check covers z_proj. R1b: the key-set check
+        expects the 36 schema entries and that every key the statistics read is among them; the
+        type check knows "float[8]"; synthetic records carry z_proj; the population takes the
+        scalar keys (z_proj is not a population column); the key count is 86. Three rejection
+        cases added for z_proj. No tolerance, parameter or other check was changed.
   v0.4 (2026-11-22) revision SEQREF-DLAT-P23REV v0.1 (242 LE51) for diag_lat_stats.py v0.3 and
         candidate v0.6.2 (not frozen). Fixture R1b only: the outcome carries the new field
         open_contrasts and is checked as confirmed with nothing open; the result and
@@ -92,7 +109,7 @@ import diag_lat_core as C  # noqa: E402
 import diag_lat_guard as GD  # noqa: E402
 import diag_lat_stats as ST  # noqa: E402
 
-__version__ = "0.4"
+__version__ = "0.6"
 ABBR = "SEQREF-DLAT-P3T"
 LOG = logging.getLogger("diag_lat.p3test")
 SELFTEST_SEED = 987654321                       # fixtures only; not a registered seed
@@ -360,15 +377,23 @@ def small_flow(s, dtype):
 # ---- R5 -------------------------------------------------------------------------------------
 def r5(fx):
     me = os.path.abspath(__file__)
+    here = os.path.dirname(me)
+    cache_dir = os.path.join(here, "__pycache__")
+    cache_state = lambda: (sorted((n, os.stat(os.path.join(cache_dir, n)).st_mtime_ns) for n in os.listdir(cache_dir))
+                           if os.path.isdir(cache_dir) else None)
+    cache_before = cache_state()
+    fx.true("this program runs with bytecode writing disabled (python -B)", sys.dont_write_bytecode)
     cases = (["--checkpoint", "x.pt"], ["--data-root", "/data"], ["--checkpoint", "x.pt", "--data-root", "/data"],
              ["--checkpoint=x.pt"], ["--data-root=/data"], ["--out", "o", "--data-root=/data", "--pinned-root", "p"])
     for args in cases:
-        r = subprocess.run([sys.executable, "-I", me] + args, capture_output=True, text=True, timeout=120)
+        r = subprocess.run([sys.executable, "-I", "-B", me] + args, capture_output=True, text=True, timeout=120)
         ok = (r.returncode == EXIT_REFUSED and REFUSED in r.stdout and REFUSED in r.stderr
               and "numpy=False seqref_mri=False torch=False" in r.stdout)
         fx.true("refused before any import: %s" % " ".join(args), ok, "exit %d; %s" % (r.returncode, r.stdout.strip().replace("\n", " | ")))
-    r = subprocess.run([sys.executable, "-I", me, "--help"], capture_output=True, text=True, timeout=120)
+    r = subprocess.run([sys.executable, "-I", "-B", me, "--help"], capture_output=True, text=True, timeout=120)
     fx.true("control: --help is not refused (exit 0)", r.returncode == 0 and REFUSED not in r.stdout)
+    fx.true("no __pycache__ folder beside the code was created or changed by the child processes (-I -B)",
+            cache_state() == cache_before, "a folder was present before the fixture: %s" % (cache_before is not None))
 
 
 # ---- T9 -------------------------------------------------------------------------------------
@@ -542,6 +567,7 @@ def r1a(fx, out_dir, ram_limit):
             ref = s.ffr.pack_scalars(states[0]["u_true"].real, states[0]["u_true"].imag)
             fx.close("A4: interleaved scale and mean reproduce the physical coefficients in pack_scalars order (max abs)",
                      float(np.max(np.abs(C.to_physical(t64, sc, mn) - ref))), 0.0, 1e-12 * max(1.0, float(np.max(np.abs(ref)))))
+            proj = C.projection_matrix(rng(3).standard_normal((C.D_FREE, C.M_PROJ)))     # FIXTURE matrix, not the registered array
             per = {}
             for label, seed, amp in SETTINGS:
                 op_name = "build_model (%s)" % label
@@ -570,10 +596,15 @@ def r1a(fx, out_dir, ram_limit):
                     enc_p = A.encode_truth(model, st, cond_p, st["mask"])
                     x0, _u0 = s.EV.r0_image(model, st)
                     r0_psnr = float(s.tg._psnr(x0.abs(), st["x_true_mag"]))
-                    rec, diag = A.slice_state_record(model, st, bank8, subsets=TOY_SUBSETS, p_swap=p_swap, r0_psnr=r0_psnr)
                     r0 = A.decode_r0_std(model, st)
                     sens = C.l5b_sensitivities(r0.astype(np.float64), A.decode_r0_std(model, st, cond_p, st["mask"]).astype(np.float64),
                                                own["z_star"].astype(np.float64), enc_p["z_star"].astype(np.float64), own["NLL"], enc_p["NLL"])
+                    r0_sw = A.decode_r0_std(model, st, sw["cond_swap"], sw["mask"]).astype(np.float64)
+                    rec, diag = A.slice_state_record(
+                        model, st, bank8, subsets=TOY_SUBSETS, p_swap=p_swap, r0_psnr=r0_psnr,
+                        swap_shift_r0=C.shift_norm(r0_sw, r0.astype(np.float64)),
+                        phys_swap_shift_r0=C.shift_norm(C.to_physical(r0_sw, sc, mn), C.to_physical(r0.astype(np.float64), sc, mn)),
+                        sensitivities=sens, proj=proj)
                     res["sens"].append(sens)
                     res["rt"] = max(res["rt"], diag["roundtrip_max_abs"])
                     u_b = A.decode_bank_std(model, st, bank8)
@@ -583,7 +614,7 @@ def r1a(fx, out_dir, ram_limit):
                         A.validate_record(rec, TOY_SUBSETS.keys())
                     except C.DiagLatError:
                         res["keys"] = False
-                    flat = [rec[k["name"]] for k in A.RECORD_KEYS if not k["bank"]] + \
+                    flat = [rec[k["name"]] for k in A.RECORD_KEYS if not k["bank"] and k["type"] != "float[8]"] + list(rec["z_proj"]) + \
                            [v for lab in rec[A.BANK_FIELD].values() for v in lab.values() if v is not C.NOT_COMPUTED]
                     res["finite"] &= all(isinstance(v, float) and math.isfinite(v) for v in flat)
                     payload = {"banner": CTX["banner"], "toy_subsets": True, "setting": label, "slice": i,
@@ -640,15 +671,18 @@ def r1a(fx, out_dir, ram_limit):
                 C.bank_measures(A.target_std(st)[0], r0.astype(np.float64), enc["z_star"].astype(np.float64),
                                 u_b.astype(np.float64), bank.astype(np.float64), j_b, [])
             with timed("slice_state_record_complete"):
-                rec, diag = A.slice_state_record(model, st, bank, subsets=C.STABILITY_SUBSETS, p_swap=0.0, r0_psnr=0.0)
+                rec, diag = A.slice_state_record(model, st, bank, subsets=C.STABILITY_SUBSETS, p_swap=0.0, r0_psnr=0.0,
+                                                 swap_shift_r0=0.0, phys_swap_shift_r0=0.0,
+                                                 sensitivities={k: 0.0 for k in A.SENSITIVITY_KEYS}, proj=proj)
             fx.true("K = 128: record carries exactly RECORD_KEYS for the four registered subset labels",
                     A.validate_record(rec, C.STABILITY_SUBSETS.keys()) and set(rec[A.BANK_FIELD]) == set(ST.STABILITY_SUBSETS))
             fx.close("K = 128: round trip max abs over 128 samples (pinned float32 tolerance)", diag["roundtrip_max_abs"], 0.0, 1e-5)
             fx.true("K = 128: pre64 and halfA give identical values (same subset)", rec[A.BANK_FIELD]["pre64"] == rec[A.BANK_FIELD]["halfA"])
-            fx.true("K = 128: P_swap and R0_PSNR passed through unchanged (0.0 placeholders of this case only, labelled)",
-                    rec["P_swap"] == 0.0 and rec["R0_PSNR"] == 0.0, "this case tests the subset path; values are fixture inputs")
+            fx.true("K = 128: P_swap, R0_PSNR and the L5 values passed through unchanged (0.0 placeholders of this case only, labelled)",
+                    rec["P_swap"] == 0.0 and rec["R0_PSNR"] == 0.0 and rec["swap_shift_r0"] == 0.0 and rec["phys_swap_shift_r0"] == 0.0
+                    and all(rec[k] == 0.0 for k in A.SENSITIVITY_KEYS), "this case tests the subset path; values are fixture inputs")
             data = json.dumps({"banner": CTX["banner"], "registered_subsets": True, "setting": "S2", "slice": 0,
-                               "note": "P_swap and R0_PSNR are fixture inputs (0.0) in this case", "record": rec,
+                               "note": "P_swap, R0_PSNR and the L5 values are fixture inputs (0.0) in this case", "record": rec,
                                "diagnostics": {k: v for k, v in diag.items() if k != "events"}}, indent=1, sort_keys=True).encode()
             guard.write("r1a/records/S2_slice0_K128.json", data)
             fx.true("K = 128: record written through the write guard and read back", guard.read("r1a/records/S2_slice0_K128.json") == data)
@@ -680,7 +714,8 @@ def synthetic_record(role, si, v, labels):
         if name == "R0_PSNR":
             return float(30.0 - 3.0 * lv + 0.5 * base + wig)
         return float((-1.0 if name == "P_swap" else 1.0) * lv + base + wig)
-    rec = {k["name"]: val(k["name"]) for k in A.RECORD_KEYS if not k["bank"]}
+    rec = {k["name"]: ([val("z_proj") + 0.1 * j for j in range(C.M_PROJ)] if k["type"] == "float[8]" else val(k["name"]))
+           for k in A.RECORD_KEYS if not k["bank"]}
     rec[A.BANK_FIELD] = {lab: {k["name"]: val(k["name"]) for k in A.RECORD_KEYS if k["bank"]} for lab in labels}
     return rec
 
@@ -690,6 +725,8 @@ def population_from_records(records, labels, drop=None):
     pop = ST.Population(["v%03d" % i for i in range(N_VOL)])
     for (role, seed), recs in sorted(records.items()):
         for k in A.RECORD_KEYS:
+            if k["type"] == "float[8]":                      # z_proj: per-slice input of E_cov, not a population column
+                continue
             for lab in (labels if k["bank"] else (None,)):
                 if drop == (role, seed, k["name"], lab):
                     continue
@@ -701,12 +738,16 @@ def population_from_records(records, labels, drop=None):
 def r1b(fx, out_dir):
     labels = list(ST.STABILITY_SUBSETS)
     fx.true("the four registered subset labels are the same in core and stats", set(labels) == set(C.STABILITY_SUBSETS))
-    fx.true("RECORD_KEYS covers every key P2 reads (classified keys, physical keys, NLL, R0_PSNR), with bank flags that agree",
-            {k["name"] for k in A.RECORD_KEYS} == {m[0] for m in ST.MEASURES.values()} | set(A.PHYSICAL_NAMES.values()) | {"NLL", "R0_PSNR"}
+    fx.true("RECORD_KEYS covers every key P2 reads (classified keys, physical keys, NLL, R0_PSNR), with bank flags that agree; "
+            "36 schema entries (19 flat, 17 bank; ADPSCH v0.1)",
+            {k["name"] for k in A.RECORD_KEYS} >= {m[0] for m in ST.MEASURES.values()} | set(A.PHYSICAL_NAMES.values()) | {"NLL", "R0_PSNR"}
+            and len(A.RECORD_KEYS) == 36 and sum(1 for k in A.RECORD_KEYS if k["bank"]) == 17
+            and len({k["name"] for k in A.RECORD_KEYS}) == 36
             and all(next(k for k in A.RECORD_KEYS if k["name"] == m[0])["bank"] == m[2] for m in ST.MEASURES.values()))
     fx.true("C3: every schema entry defines name, bank flag, subset requirement and type",
             all(set(k) == {"name", "bank", "subsets", "type"} and k["subsets"] == ("every label" if k["bank"] else "none")
-                and k["type"] in ("float", "float|NOT_COMPUTED") for k in A.RECORD_KEYS))
+                and k["type"] in ("float", "float|NOT_COMPUTED", "float[8]") for k in A.RECORD_KEYS)
+            and [k["name"] for k in A.RECORD_KEYS if k["type"] == "float[8]"] == ["z_proj"])
     records = {(role, seed): [synthetic_record(role, si, v, labels) for v in range(N_VOL)]
                for role in ROLES for si, seed in enumerate(SEEDS)}
     n_ok = sum(A.validate_record(r, labels) for recs in records.values() for r in recs)
@@ -731,7 +772,10 @@ def r1b(fx, out_dir):
              ("an integer value", lambda r: r.update(NLL=2)),
              ("a boolean value", lambda r: r[A.BANK_FIELD]["full"].update(d01=True)),
              ("not-computed status on a key that does not allow it (KS)", lambda r: r.update(KS=C.NOT_COMPUTED)),
-             ("not-computed status on d01", lambda r: r[A.BANK_FIELD]["full"].update(d01=C.NOT_COMPUTED)))
+             ("not-computed status on d01", lambda r: r[A.BANK_FIELD]["full"].update(d01=C.NOT_COMPUTED)),
+             ("z_proj missing", lambda r: r.pop("z_proj")),
+             ("z_proj with 7 values", lambda r: r.update(z_proj=r["z_proj"][:7])),
+             ("z_proj with a non-finite value", lambda r: r.update(z_proj=[float("inf")] + r["z_proj"][1:])))
     for name, edit in cases:
         fx.raises("C3: record rejected -- " + name, A.RECORD_SCHEMA, broken(edit))
     fx.raises("C3: a record that is not a dict is rejected", A.RECORD_SCHEMA, lambda: A.validate_record([good], labels))
@@ -746,12 +790,13 @@ def r1b(fx, out_dir):
         l6 = {str(seed): ST.l6_contrast(pop, "S-GAP0", seed, idx, tau) for seed in SEEDS}
     m = res["measures"]
     fx.true("Population.seal() succeeds on the full structure (10 roles, 3 seeds, every key and label)",
-            pop.sealed and len(pop.roles) == 10 and len(pop.seeds) == 3 and len(pop.keys) == 4 + 7 * 4)
+            pop.sealed and len(pop.roles) == 10 and len(pop.seeds) == 3 and len(pop.keys) == 18 + 17 * 4)
     fx.true("run_registered returns six classes, all tags and an outcome",
             set(m) == set(ST.MEASURES) and all({"class", "seed_tag", "fixed_epoch_tag", "stability_summary", "coordinate_tag"} <= set(m[k]) for k in m)
             and set(res["outcome"]) == {"outcome", "provisional", "open_measures", "open_contrasts"})
-    fx.true("the result names the rules version it was computed under (candidate v0.6.2; new field, P23REV)",
-            res["rules_version"] == ST.RULES_VERSION and "v0.6.2" in res["rules_version"])
+    fx.true("the result names the rules version it was computed under (frozen specification v1.0 with its sha256)",
+            res["rules_version"] == ST.RULES_VERSION and "v1.0 FROZEN" in res["rules_version"]
+            and "6afa3eda250946548b239df64344974d3c3502d23f6b4e22468ca61e6af97327" in res["rules_version"])
     fx.true("the synthetic design (lam0-only rise, L5 mirrored) is classified as constructed: six gap-selective, outcome A",
             all(m[k]["class"] == ST.C_SELECTIVE for k in m) and res["outcome"]["outcome"] == "A",
             "synthetic numbers; shows the interface, not a finding")

@@ -1,9 +1,11 @@
-# SEQREF-DLAT-ADP v0.1 -- diag_lat_adapter.py: D-LAT adapter to the pinned V05LT production seams (plan SEQREF-DLAT-P3 v0.2)
+# SEQREF-DLAT-ADP v0.2.1 -- diag_lat_adapter.py: D-LAT adapter to the pinned V05LT production seams (plan SEQREF-DLAT-P3 v0.2; record schema SEQREF-DLAT-ADPSCH v0.1)
 # LIFETIME: KEEP
 """Adapter between the D-LAT mathematics (diag_lat_core, P1) and the pinned V05LT classes.
 
-PRE-FREEZE ENGINEERING FILE. Written against candidate v0.5.2 (not frozen) and plan
-SEQREF-DLAT-P3 v0.2 with clarifications C2-C4 (LudWiki 238 LE23, LE24). Not D-LAT evidence.
+Implements the frozen specification SEQREF-MRI-DIAG-LAT v1.0 (LudWiki 235, sha256 6afa3eda...7327;
+"235" below). First written before the freeze against candidate v0.5.2 and plan SEQREF-DLAT-P3 v0.2
+with clarifications C2-C4 (LudWiki 238 LE23, LE24). This module computes nothing by being imported;
+its output is D-LAT evidence only in an authorised F1 or G run.
 
 Every model operation is a call into a pinned function, reached through the hash-verified
 D-UNC adapter (diag_unc_adapter.seams()). The pinned tree is imported, never edited.
@@ -16,7 +18,7 @@ Seams used (module -> function):
   diag_lat_core      every measure, check and typed stop
 
 Arithmetic in this file (complete list; everything else is a pinned or core call):
-  (a) J = -ldj / d and NLL = B + J            (encode_truth, reencode_bank; 235-candidate section 3)
+  (a) J = -ldj / d and NLL = B + J            (encode_truth, reencode_bank; 235 section 3)
   (b) cond' = two_channel(A_adjoint(y + n)) / amax, one division (perturbed_input; production _prepare order)
   (c) the interleaved layout of the scale and mean vectors (scale_mean_interleaved; pack_scalars order)
   (d) comparisons of the checks S2, S4 and P1 (maximum absolute differences, one relative L2 norm)
@@ -30,9 +32,18 @@ No fallback, placeholder, mock or dummy return. Every failure is logged and rais
 DiagLatError. No decoded sample and no latent vector is written to disk by this module.
 
 Typed codes added here: DIAG_LAT_ORIGIN, DIAG_LAT_ADAPTER, DIAG_LAT_RECORD_SCHEMA; from the
-candidate: DIAG_LAT_JACOBIAN_FIXTURE, DIAG_LAT_PERTURB_FIXTURE.
+specification: DIAG_LAT_JACOBIAN_FIXTURE, DIAG_LAT_PERTURB_FIXTURE.
 
 Changelog:
+  v0.2.1 (2026-11-23) documentation only (review of v0.2, LudWiki 248 LE75): the header and four
+        comments name the frozen specification v1.0 instead of the candidate. No code changed.
+  v0.2 (2026-11-23) record schema SEQREF-DLAT-ADPSCH v0.1 (LudWiki 247 LE69, LE73, LE74): the record now
+        carries every "also reported" per-slice quantity of the frozen specification 235 v1.0 section 3
+        (35 scalar names, 86 scalars, and z_proj with 8 floats: 94 values). The 11 keys of v0.1 keep
+        name, meaning, type and place. slice_state_record takes four new REQUIRED keyword arguments
+        (swap_shift_r0, phys_swap_shift_r0, sensitivities, proj); none has a default. tau and q_tail
+        moved from the diagnostics into the record. No measure, formula or check changed;
+        diag_lat_core is unchanged. An implementation correction, not a specification amendment.
   v0.1 (2026-11-21) first version: seams, swap and perturbation inputs, per-slice record,
         RECORD_KEYS schema with validate_record (C3), checks S2, S4 and P1.
 """
@@ -46,7 +57,7 @@ import numpy as np
 import diag_lat_core as C
 from diag_lat_core import DiagLatError
 
-__version__ = "0.1"
+__version__ = "0.2.1"
 ABBR = "SEQREF-DLAT-ADP"
 LOG = logging.getLogger("diag_lat.adapter")
 
@@ -54,19 +65,35 @@ DUNC_ADAPTER_SHA256 = "c1715841bf6805568b88f9195acbe27933a7e1fec9acc8bb22a33ff55
 ORIGIN = "DIAG_LAT_ORIGIN"
 ADAPTER = "DIAG_LAT_ADAPTER"
 RECORD_SCHEMA = "DIAG_LAT_RECORD_SCHEMA"
-JACOBIAN_FIXTURE = "DIAG_LAT_JACOBIAN_FIXTURE"      # 235-candidate section 6 (raised by the fixture file)
-PERTURB_FIXTURE = "DIAG_LAT_PERTURB_FIXTURE"        # 235-candidate section 6, P1
-SWAP_REL_TOL = 1e-5                 # S1 / S2 tolerance, provisional until F1 (235-candidate section 6)
+JACOBIAN_FIXTURE = "DIAG_LAT_JACOBIAN_FIXTURE"      # 235 section 6 (raised by the fixture file)
+PERTURB_FIXTURE = "DIAG_LAT_PERTURB_FIXTURE"        # 235 section 6, P1
+SWAP_REL_TOL = 1e-5                 # S1 / S2 tolerance, provisional until F1 (235 section 6)
 
 # ---- record schema (E7 of 238 LE22; C3 of 238 LE23) ---------------------------------
 # name, bank-dependent, subset requirement, expected type.
 #   "float"            : finite Python float
 #   "float|NOT_COMPUTED": finite Python float or the explicit status diag_lat_core.NOT_COMPUTED
+#   "float[8]"         : list of exactly diag_lat_core.M_PROJ finite Python floats (z_proj only)
 RECORD_KEYS = (
     {"name": "KS", "bank": False, "subsets": "none", "type": "float"},
     {"name": "P_swap", "bank": False, "subsets": "none", "type": "float"},
     {"name": "NLL", "bank": False, "subsets": "none", "type": "float"},
     {"name": "R0_PSNR", "bank": False, "subsets": "none", "type": "float"},
+    {"name": "q_z", "bank": False, "subsets": "none", "type": "float"},
+    {"name": "skewness", "bank": False, "subsets": "none", "type": "float"},
+    {"name": "excess_kurtosis", "bank": False, "subsets": "none", "type": "float"},
+    {"name": "tau", "bank": False, "subsets": "none", "type": "float"},
+    {"name": "q_tail", "bank": False, "subsets": "none", "type": "float"},
+    {"name": "log_gamma_truth", "bank": False, "subsets": "none", "type": "float"},
+    {"name": "phys_log_gamma_truth", "bank": False, "subsets": "none", "type": "float"},
+    {"name": "e0_sq", "bank": False, "subsets": "none", "type": "float"},
+    {"name": "phys_e0_sq", "bank": False, "subsets": "none", "type": "float"},
+    {"name": "swap_shift_r0", "bank": False, "subsets": "none", "type": "float"},
+    {"name": "phys_swap_shift_r0", "bank": False, "subsets": "none", "type": "float"},
+    {"name": "dR0_rms_per_eps", "bank": False, "subsets": "none", "type": "float"},
+    {"name": "dz_rms_per_eps", "bank": False, "subsets": "none", "type": "float"},
+    {"name": "dNLL_per_eps", "bank": False, "subsets": "none", "type": "float"},
+    {"name": "z_proj", "bank": False, "subsets": "none", "type": "float[8]"},
     {"name": "log_gamma_ratio", "bank": True, "subsets": "every label", "type": "float"},
     {"name": "d01", "bank": True, "subsets": "every label", "type": "float"},
     {"name": "a01", "bank": True, "subsets": "every label", "type": "float|NOT_COMPUTED"},
@@ -74,9 +101,20 @@ RECORD_KEYS = (
     {"name": "phys_lgr", "bank": True, "subsets": "every label", "type": "float"},
     {"name": "phys_d01", "bank": True, "subsets": "every label", "type": "float"},
     {"name": "phys_a01", "bank": True, "subsets": "every label", "type": "float|NOT_COMPUTED"},
+    {"name": "log_gamma_bank", "bank": True, "subsets": "every label", "type": "float"},
+    {"name": "phys_log_gamma_bank", "bank": True, "subsets": "every label", "type": "float"},
+    {"name": "e1_sq", "bank": True, "subsets": "every label", "type": "float"},
+    {"name": "phys_e1_sq", "bank": True, "subsets": "every label", "type": "float"},
+    {"name": "tr_sigma_per_dim", "bank": True, "subsets": "every label", "type": "float"},
+    {"name": "phys_tr_sigma_per_dim", "bank": True, "subsets": "every label", "type": "float"},
+    {"name": "e0_sq_minus_e1_sq", "bank": True, "subsets": "every label", "type": "float"},
+    {"name": "phys_e0_sq_minus_e1_sq", "bank": True, "subsets": "every label", "type": "float"},
+    {"name": "PR", "bank": True, "subsets": "every label", "type": "float"},
+    {"name": "phys_PR", "bank": True, "subsets": "every label", "type": "float"},
 )
 PHYSICAL_NAMES = {"L2": "phys_lgr", "L3a": "phys_d01", "L3b": "phys_a01"}
 BANK_FIELD = "bank"                 # record[BANK_FIELD][subset label][key name]
+SENSITIVITY_KEYS = ("dR0_rms_per_eps", "dz_rms_per_eps", "dNLL_per_eps")     # diag_lat_core.l5b_sensitivities
 
 _DUA = None
 
@@ -86,6 +124,9 @@ def _stop(code, message):
 
 
 def _value_ok(v, typ):
+    if typ == "float[8]":
+        return (isinstance(v, list) and len(v) == C.M_PROJ
+                and all(isinstance(x, float) and not isinstance(x, bool) and math.isfinite(x) for x in v))
     if typ == "float|NOT_COMPUTED" and v is C.NOT_COMPUTED:
         return True
     return isinstance(v, float) and not isinstance(v, bool) and math.isfinite(v)
@@ -398,15 +439,32 @@ def tail_check(model, st, z_star):
 
 
 # ---- one record per slice and model state ---------------------------------------------------
-def slice_state_record(model, st, bank, *, subsets, p_swap, r0_psnr):
+def _once(name, values):
+    """A bank-independent value must be identical on every subset (it uses truth, R0 and z* only)."""
+    if any(v != values[0] for v in values[1:]):
+        _stop(C.INPUT, "%s differs between stability subsets: %r" % (name, values))
+    return values[0]
+
+
+def slice_state_record(model, st, bank, *, subsets, p_swap, r0_psnr, swap_shift_r0, phys_swap_shift_r0,
+                       sensitivities, proj):
     """One record with exactly RECORD_KEYS, plus diagnostics that are not part of the record.
     subsets: {label: index array} -- an argument; production passes diag_lat_core.STABILITY_SUBSETS
-    and nothing else. p_swap and r0_psnr are passed through (L5 penalty; stored R0 PSNR row).
+    and nothing else. p_swap and r0_psnr are passed through (L5 penalty; stored R0 PSNR row), and so
+    are swap_shift_r0, phys_swap_shift_r0 (L5 (a)) and sensitivities (L5 (b): a dict with exactly
+    SENSITIVITY_KEYS). proj: the orthonormal projection (d x M_PROJ) from
+    diag_lat_core.projection_matrix; z_proj = z* @ proj is the per-slice input of E_cov.
     Returns (record, diagnostics). Nothing is written to disk."""
     if not isinstance(subsets, dict) or not subsets:
         _stop(C.INPUT, "subsets must be a non-empty {label: indices} map")
+    if not isinstance(sensitivities, dict) or set(sensitivities) != set(SENSITIVITY_KEYS):
+        _stop(C.INPUT, "sensitivities must be a dict with exactly %s" % (SENSITIVITY_KEYS,))
     enc = encode_truth(model, st)
     z_star = enc["z_star"]
+    proj = np.asarray(proj)
+    if proj.ndim != 2 or proj.shape != (z_star.size, C.M_PROJ) or proj.dtype.kind != "f":
+        _stop(C.INPUT, "proj has shape %s and dtype %s, expected (%d, %d) float"
+              % (proj.shape, proj.dtype, z_star.size, C.M_PROJ))
     tail = tail_check(model, st, z_star)
     u_true, _t32 = target_std(st)
     bank = np.asarray(bank)
@@ -422,6 +480,7 @@ def slice_state_record(model, st, bank, *, subsets, p_swap, r0_psnr):
     r0_p = C.to_physical(r0.astype(np.float64), scale, mean)
     ub_p = C.to_physical(u_bank.astype(np.float64), scale, mean)
     rec_bank = {}
+    once = {"log_gamma_truth": [], "phys_log_gamma_truth": [], "e0_sq": [], "phys_e0_sq": []}
     for label, idx in subsets.items():
         ev = []
         l2p = C.l2_measures(ut_p, r0_p, z64, ub_p[idx], bank[idx].astype(np.float64))
@@ -433,12 +492,32 @@ def slice_state_record(model, st, bank, *, subsets, p_swap, r0_psnr):
         m = std[label]
         rec_bank[label] = {"log_gamma_ratio": m["log_gamma_ratio"], "d01": m["d01"], "a01": m["a01"],
                            "TC_G": m["TC_G"], "phys_lgr": l2p["log_gamma_ratio"],
-                           "phys_d01": l3p["d01"], "phys_a01": l3p["a01"]}
-    record = {"KS": C.l1_measures(z64)["KS"], "P_swap": p_swap, "NLL": enc["NLL"], "R0_PSNR": r0_psnr,
+                           "phys_d01": l3p["d01"], "phys_a01": l3p["a01"],
+                           "log_gamma_bank": m["log_gamma_bank"], "phys_log_gamma_bank": l2p["log_gamma_bank"],
+                           "e1_sq": m["e1_sq"], "phys_e1_sq": l3p["e1_sq"],
+                           "tr_sigma_per_dim": m["tr_sigma_per_dim"], "phys_tr_sigma_per_dim": l3p["tr_sigma_per_dim"],
+                           "e0_sq_minus_e1_sq": m["e0_sq_minus_e1_sq"],
+                           "phys_e0_sq_minus_e1_sq": l3p["e0_sq_minus_e1_sq"],
+                           "PR": m["PR"], "phys_PR": C.participation_ratio(ub_p[idx])}
+        once["log_gamma_truth"].append(m["log_gamma_truth"]); once["phys_log_gamma_truth"].append(l2p["log_gamma_truth"])
+        once["e0_sq"].append(m["e0_sq"]); once["phys_e0_sq"].append(l3p["e0_sq"])
+    l1 = C.l1_measures(z64)
+    z_proj = z64 @ proj.astype(np.float64)
+    _finite("z_proj", z_proj)
+    record = {"KS": l1["KS"], "P_swap": p_swap, "NLL": enc["NLL"], "R0_PSNR": r0_psnr,
+              "q_z": l1["q_z"], "skewness": l1["skewness"], "excess_kurtosis": l1["excess_kurtosis"],
+              "tau": float(tail["tau"]), "q_tail": float(tail["q_tail"]),
+              "log_gamma_truth": _once("log_gamma_truth", once["log_gamma_truth"]),
+              "phys_log_gamma_truth": _once("phys_log_gamma_truth", once["phys_log_gamma_truth"]),
+              "e0_sq": _once("e0_sq", once["e0_sq"]), "phys_e0_sq": _once("phys_e0_sq", once["phys_e0_sq"]),
+              "swap_shift_r0": swap_shift_r0, "phys_swap_shift_r0": phys_swap_shift_r0,
+              "dR0_rms_per_eps": sensitivities["dR0_rms_per_eps"], "dz_rms_per_eps": sensitivities["dz_rms_per_eps"],
+              "dNLL_per_eps": sensitivities["dNLL_per_eps"],
+              "z_proj": [float(v) for v in z_proj],
               BANK_FIELD: rec_bank}
     validate_record(record, subsets.keys())
     diagnostics = {"B": enc["B"], "J": enc["J"], "ldj": enc["ldj"], "log_pz": enc["log_pz"],
-                   "tau": tail["tau"], "q_tail": tail["q_tail"], "n_tail": tail["n_tail"],
+                   "n_tail": tail["n_tail"],
                    "roundtrip_max_abs": float(np.max(np.abs(z_re - bank))),
                    "mean_J_bank": float(j_bank.mean()), "events": events,
                    "bank_rows": int(bank.shape[0]), "subset_labels": list(subsets.keys())}

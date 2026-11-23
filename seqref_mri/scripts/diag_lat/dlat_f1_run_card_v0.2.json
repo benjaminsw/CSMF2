@@ -1,0 +1,20 @@
+{
+ "schema": "seqref-dlat-f1-runcard/1",
+ "selftest": false,
+ "rules_version": "SEQREF-MRI-DIAG-LAT v1.0 FROZEN (LudWiki 235; sha256 6afa3eda250946548b239df64344974d3c3502d23f6b4e22468ca61e6af97327)",
+ "device": "cpu",
+ "manifest_f2_sha256": "d1956bf370dc6c1cc82caf9804dc9731cbec970c0f8205265c14bdf72e3a6215",
+ "pin": "7455da8027f33a6cca4dbf72f04e72420e938f45",
+ "registered": {"n_states": 28, "n_volumes": 97, "n_boot": 10000, "bank_rows": 128},
+ "tolerances": {
+  "fx1_roundtrip_max_abs": 1e-05,
+  "fx2ii_roundtrip_max_abs": 1e-05,
+  "stored_rows_nats_per_dim": 0.0001,
+  "s1_s2_p1_relative": 1e-05,
+  "fx7_relative": 1e-05,
+  "fx3_l2_identity_abs": 1e-12
+ },
+ "fx7_validity": "1e-5 relative holds with margin while ||u_true - R0|| is at least about 0.14 % of ||x_true|| (LudWiki 249 LE79, LE80); below that the fixture may stop for rounding alone and F1 returns to review",
+ "not_verified_before_run": "The production calls slice_states (D-UNC adapter load_inputs, validation_view, positions_for, build_states), bank (z_bank) and load_state (pinned load_trained_checkpoint) have never been run by D-LAT code: the sandbox has no data and no checkpoint. The bind-only preflight verifies the manifest, the checkpoint and stored-row files by sha256 and the row order only; it loads no tensor and runs no model. These three calls are first exercised in the F1 run itself (criteria A2, A3), where any failure is a typed stop (LudWiki 250 LE84, condition C12)",
+ "ceilings": {"f1_wall_s": 3600, "g_wall_s": 21600, "disk_bytes": 2147483648, "reserve_bytes": 68719476736, "ram_bytes": 17179869184, "vram_bytes": 10737418240}
+}
