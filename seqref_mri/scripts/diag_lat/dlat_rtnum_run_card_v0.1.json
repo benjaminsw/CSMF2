@@ -1,0 +1,20 @@
+{
+ "schema": "seqref-dlat-rtnum-runcard/1",
+ "selftest": false,
+ "plan": "SEQREF-DLAT-RTNUM v0.3 (sha256 529b3b0a73ad292a2069fbfc7f38d58343d1b342205dd1f7e38e1fe25c92180e), core only; LudWiki 252 LE89-LE91. Limits are diagnostic limits of that plan; no F1 tolerance is set or changed by this card",
+ "device": "cpu",
+ "manifest_f2_sha256": "d1956bf370dc6c1cc82caf9804dc9731cbec970c0f8205265c14bdf72e3a6215",
+ "pin": "7455da8027f33a6cca4dbf72f04e72420e938f45",
+ "registered": {"n_states": 28, "n_volumes": 97, "bank_rows": 128},
+ "population": {"development_seeds": [2026], "validation_seeds": [2027, 2028], "n_slices": 3, "n_development_slice_states": 30, "n_validation_slice_states": 54},
+ "limits": {
+  "present_tolerance_max_abs": 1e-05,
+  "f64_roundtrip_max_abs": 1e-09,
+  "nll_f64_vs_stored_nats_per_dim": 0.0001,
+  "nll_f64_vs_f32_nats_per_dim": 1e-05,
+  "j_f32_vs_f64_nats_per_dim": 1e-05,
+  "decoded_bank_f32_vs_f64_max_abs": 0.0001,
+  "tolerance_ceiling_max_abs": 0.0001
+ },
+ "ceilings": {"wall_s": 3600, "disk_bytes": 2147483648, "reserve_bytes": 68719476736, "ram_bytes": 17179869184}
+}
