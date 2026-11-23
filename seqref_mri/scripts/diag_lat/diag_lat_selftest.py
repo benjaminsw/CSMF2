@@ -1,4 +1,4 @@
-# SEQREF-DLAT-TEST v0.3 -- diag_lat_selftest.py: synthetic fixtures for the D-LAT modules
+# SEQREF-DLAT-TEST v0.4 -- diag_lat_selftest.py: synthetic fixtures for the D-LAT modules
 # LIFETIME: KEEP
 """
 STATUS: PRE-FREEZE ENGINEERING; NOT ACTIVATED (236 LE19). Plan SEQREF-DLAT-IMPL v0.2.
@@ -17,6 +17,14 @@ reported NOT RUN and the run FAILS, unless --without-t19 is given explicitly.
 NOT implemented: T9-T11, T12b, R1 (P3, on hold).
 
 Changelog
+- v0.4 (2026-11-22): revision SEQREF-DLAT-P23REV v0.1 (242 LE51) for diag_lat_stats.py v0.3
+  and candidate v0.6.2. T15 only: outcome cases as a table (A14) plus an independent second
+  implementation by enumeration of every completion of the missing labels; seed-tag cases
+  (A16: four values, boundaries, cross-contrast combinations); fixed-epoch tag in its four
+  situations and against an independent rule on all label combinations (A19); the string
+  "not applicable" for L1 and L5 (A17); rules_version and open_contrasts. The case tables
+  are module-level so that the negative control can run them on the v0.2 functions.
+  No other fixture, tolerance or check changed.
 - v0.3 (2026-11-21): T17 regression checks for the L6 cross-seed defect (a state not computed
   in seed 2026 must not suppress L6 for seeds 2027 and 2028 on the SAME contrast); the earlier
   'other seed unaffected' check used a contrast that did not contain the missing state and is
@@ -44,7 +52,7 @@ import diag_lat_core as C
 import diag_lat_guard as GD
 import diag_lat_stats as ST
 
-__version__ = "0.3"
+__version__ = "0.4"
 SELFTEST_SEED = 987654321
 BANNER = "NOT D-LAT EVIDENCE (synthetic self-test)"
 # T6/T7b values observed at step B, per NumPy version; compared to 1e-12 on that version.
@@ -549,6 +557,140 @@ def classify_independent(s, sg, ct, xt, c2):
         c2, "gap-associated (not selective, not shared)")
 
 
+_N = "not computed"
+_LETTER_RANK = {"gap-selective": 2}
+
+
+def letter_independent(classes):
+    """Outcome letter on a list of classes (candidate section 5): A if one is gap-selective,
+    else B if one is gap-associated (label starts with 'gap-associated' or is 'shared'), else C."""
+    if "gap-selective" in classes:
+        return "A"
+    return "B" if any(c == "shared" or c.startswith("gap-associated") for c in classes) else "C"
+
+
+def outcome_independent(ms):
+    """Second implementation of the A14 rule BY ENUMERATION; shares no code with diag_lat_stats.
+    ms: list of (s, S-GAP0, C-TIME0, X-TIME, C-TIME2). The outcome is provisional iff some way of
+    filling in the 'not computed' labels gives another letter than the computed results do.
+    A measure is open iff filling in ITS missing labels alone can change the letter."""
+    done = ("above0", "below0", "unresolved")
+    fills = [list(itertools.product(*[(done if v == _N else (v,)) for v in m[1:]])) for m in ms]
+    now = [classify_independent(*m) for m in ms]
+    letter = letter_independent(now)
+    prov = any(letter_independent([classify_independent(m[0], *f) for m, f in zip(ms, combo)]) != letter
+               for combo in itertools.product(*fills))
+    open_ids = [i for i, m in enumerate(ms)
+                if any(letter_independent(now[:i] + [classify_independent(m[0], *f)] + now[i + 1:]) != letter for f in fills[i])]
+    return letter, prov, open_ids
+
+
+def fixed_epoch_independent(s, sg, ct, ft):
+    """Second implementation of the fixed-epoch tag (candidate v0.6.2 section 5, A19)."""
+    pred, opp = ("above0", "below0") if s > 0 else ("below0", "above0")
+    if sg == pred and ct == pred:
+        return {_N: "not computed", pred: "corroborated at fixed epochs"}.get(ft, "not corroborated at fixed epochs")
+    if any(v in (opp, "unresolved") for v in (sg, ct)):
+        return "not applicable"
+    return "not computed"
+
+
+# Outcome cases (A14): measures as (s, S-GAP0, C-TIME0, X-TIME, C-TIME2); expected letter,
+# provisional flag and the contrasts that keep the outcome open, per measure index.
+_SEL = (1, "above0", "above0", "below0", "above0")
+_SHARED = (1, "above0", "above0", "above0", "above0")
+_PLAIN = (1, "above0", "above0", "unresolved", "unresolved")
+_CON = (1, "below0", "below0", "below0", "above0")
+_UNRES = (1, "above0", "unresolved", "below0", "above0")
+OUTCOME_CASES = [
+    ("A confirmed: one gap-selective, open classes elsewhere do not matter",
+     [_SEL, (1, _N, "above0", _N, "above0"), _UNRES], "A", False, {}),
+    ("B confirmed: shared, plain, case (iii) with only C-TIME2 missing, contradicted",
+     [_SHARED, _PLAIN, (1, "above0", "above0", "unresolved", _N), _CON], "B", False, {}),
+    ("B PROVISIONAL: gap-associated, X-TIME missing",
+     [(1, "above0", "above0", _N, "above0"), _UNRES], "B", True, {0: ["X-TIME"]}),
+    ("B PROVISIONAL: another measure lacks S-GAP0 and has X-TIME on the selective side",
+     [_SHARED, (1, _N, "above0", "below0", "above0")], "B", True, {1: ["S-GAP0"]}),
+    ("B CONFIRMED: the measure lacking S-GAP0 has X-TIME off the selective side (class open, letter fixed)",
+     [_SHARED, (1, _N, "above0", "above0", "above0")], "B", False, {}),
+    ("B CONFIRMED: the measure lacking S-GAP0 has X-TIME unresolved",
+     [_SHARED, (1, _N, "above0", "unresolved", "above0")], "B", False, {}),
+    ("B CONFIRMED: one gap contrast missing, the other on the opposite side (class 'unresolved — measure not computed')",
+     [_SHARED, (1, _N, "below0", _N, _N)], "B", False, {}),
+    ("B PROVISIONAL: only the measure that can still be gap-selective is named",
+     [_SHARED, (1, _N, "above0", "above0", "above0"), (1, "above0", "above0", _N, _N)], "B", True, {2: ["X-TIME"]}),
+    ("C confirmed: nothing gap-associated, nothing missing",
+     [_UNRES, _CON], "C", False, {}),
+    ("C PROVISIONAL: a missing S-GAP0 could give gap association (X-TIME unresolved: B possible, A not)",
+     [_UNRES, (1, _N, "above0", "unresolved", "above0")], "C", True, {1: ["S-GAP0"]}),
+    ("C CONFIRMED: one gap contrast missing, the other on the opposite side",
+     [_UNRES, (1, "below0", _N, "below0", "above0")], "C", False, {}),
+    ("C CONFIRMED: one gap contrast missing, the other unresolved (plain unresolved)",
+     [(1, _N, "unresolved", _N, _N)], "C", False, {}),
+    ("C PROVISIONAL: both gap contrasts and X-TIME missing",
+     [(1, _N, _N, _N, _N)], "C", True, {0: ["S-GAP0", "C-TIME0", "X-TIME"]}),
+    ("C PROVISIONAL: one measure can reach B only, another can reach A; both named with their contrasts",
+     [(1, _N, "above0", "above0", "above0"), (1, "above0", _N, _N, "above0")], "C", True, {0: ["S-GAP0"], 1: ["C-TIME0", "X-TIME"]}),
+    ("L5 (falls): B PROVISIONAL with C-TIME0 missing and X-TIME above 0 (selective side)",
+     [(-1, "below0", "below0", "below0", "below0"), (-1, "below0", _N, "above0", "below0")], "B", True, {1: ["C-TIME0"]}),
+    ("L5 (falls): B CONFIRMED with C-TIME0 missing and X-TIME below 0",
+     [(-1, "below0", "below0", "below0", "below0"), (-1, "below0", _N, "below0", "below0")], "B", False, {}),
+]
+
+# Seed-tag cases (A16): (description, S-GAP0 (pooled, per seed), C-TIME0 (pooled, per seed), expected)
+_OK, _OK2 = (0.2, [0.1, 0.2, 0.3]), (0.1, [0.05, 0.1, 0.15])
+_MIX, _ZSEED, _P0, _NCE, _NCSEED = (0.2, [0.5, 0.3, -0.2]), (0.2, [0.3, 0.3, 0.0]), (0.0, [0.1, -0.1, 0.0]), (None, None), (0.2, [0.3, None, 0.1])
+SEED_CASES = [
+    ("all seeds share the pooled sign on both contrasts", _OK, _OK2, "seed-consistent"),
+    ("negative pooled sign shared by all seeds", (-0.2, [-0.1, -0.2, -0.3]), _OK2, "seed-consistent"),
+    ("one seed of opposite sign", _MIX, _OK2, "mixed-seed"),
+    ("boundary: a per-seed effect of exactly 0 does not share the sign", _ZSEED, _OK2, "mixed-seed"),
+    ("boundary: pooled effect exactly 0", _P0, _OK2, "no pooled direction"),
+    ("boundary: pooled effect and every per-seed effect exactly 0", (0.0, [0.0, 0.0, 0.0]), _OK2, "no pooled direction"),
+    ("a missing value alone: contrast not computed", _NCE, _OK2, "not computed"),
+    ("a missing value alone: one per-seed effect not computed, the others agree", _NCSEED, _OK2, "not computed"),
+    ("a computed disagreement together with a missing value on the same contrast", (0.2, [0.5, None, -0.1]), _OK2, "mixed-seed"),
+    ("across contrasts: S-GAP0 consistent, C-TIME0 mixed", _OK, _MIX, "mixed-seed"),
+    ("across contrasts: S-GAP0 consistent, C-TIME0 per-seed 0", _OK, _ZSEED, "mixed-seed"),
+    ("across contrasts: S-GAP0 not computed, C-TIME0 mixed (first match is mixed-seed)", _NCE, _MIX, "mixed-seed"),
+    ("across contrasts: S-GAP0 mixed, C-TIME0 not computed", _MIX, _NCE, "mixed-seed"),
+    ("across contrasts: S-GAP0 pooled 0, C-TIME0 mixed", _P0, _MIX, "mixed-seed"),
+    ("across contrasts: S-GAP0 mixed, C-TIME0 pooled 0", _MIX, _P0, "mixed-seed"),
+    ("across contrasts: S-GAP0 not computed, C-TIME0 pooled 0", _NCE, _P0, "no pooled direction"),
+    ("across contrasts: S-GAP0 pooled 0, C-TIME0 not computed", _P0, _NCE, "no pooled direction"),
+    ("across contrasts: S-GAP0 pooled 0, C-TIME0 one per-seed effect not computed", _P0, _NCSEED, "no pooled direction"),
+    ("across contrasts: S-GAP0 consistent, C-TIME0 pooled 0", _OK, _P0, "no pooled direction"),
+    ("across contrasts: S-GAP0 consistent, C-TIME0 not computed", _OK, _NCE, "not computed"),
+    ("across contrasts: S-GAP0 consistent, C-TIME0 one per-seed effect not computed", _OK, _NCSEED, "not computed"),
+    ("across contrasts: both not computed", _NCE, _NCE, "not computed"),
+]
+
+# Fixed-epoch cases (A15, A19), the four situations: (description, s, S-GAP0, C-TIME0, X-TIME, C-TIME2, F-TRAJ0(10->30), expected)
+FIXED_CASES = [
+    ("gap-associated, F-TRAJ0 supported", 1, "above0", "above0", "above0", "above0", "above0", "corroborated at fixed epochs"),
+    ("gap-associated (selectivity open), F-TRAJ0 unresolved", 1, "above0", "above0", _N, "above0", "unresolved", "not corroborated at fixed epochs"),
+    ("gap-associated, F-TRAJ0 on the opposite side", 1, "above0", "above0", "below0", "above0", "below0", "not corroborated at fixed epochs"),
+    ("L5 gap-selective, F-TRAJ0 below 0", -1, "below0", "below0", "above0", "unresolved", "below0", "corroborated at fixed epochs"),
+    ("gap-associated, F-TRAJ0 not computed", 1, "above0", "above0", "above0", "above0", _N, "not computed"),
+    ("gap association still possible: S-GAP0 missing, C-TIME0 supported", 1, _N, "above0", "below0", "above0", "above0", "not computed"),
+    ("gap association still possible: both gap contrasts missing", 1, _N, _N, "below0", "above0", "above0", "not computed"),
+    ("gap association still possible, F-TRAJ0 also missing", 1, "above0", _N, "below0", "above0", _N, "not computed"),
+    ("excluded: S-GAP0 missing, C-TIME0 on the opposite side (class stays open)", 1, _N, "below0", "below0", "above0", "above0", "not applicable"),
+    ("excluded: C-TIME0 missing, S-GAP0 unresolved", 1, "unresolved", _N, "below0", "above0", "above0", "not applicable"),
+    ("excluded: unresolved (one supported, one unresolved)", 1, "above0", "unresolved", "below0", "above0", "above0", "not applicable"),
+    ("excluded: contradicted", 1, "below0", "below0", "below0", "above0", "above0", "not applicable"),
+    ("excluded, F-TRAJ0 not computed: still not applicable", 1, "below0", "below0", "below0", "above0", _N, "not applicable"),
+]
+
+
+def _labels(m, ft="unresolved"):
+    return {"S-GAP0": m[1], "C-TIME0": m[2], "X-TIME": m[3], "C-TIME2": m[4], ST.FIXED_EPOCH: ft}
+
+
+def _outcome_input(ms):
+    return {"M%d" % i: {"class": ST.classify(m[0], _labels(m)), "predicted_sign": m[0], "labels": _labels(m)} for i, m in enumerate(ms)}
+
+
 def t15():
     fx = Fx("T15", "class rules, tags, outcome, not-computed propagation")
     L = ("above0", "below0", "unresolved", ST.NC)
@@ -580,38 +722,57 @@ def t15():
     ]
     for desc, s, sg, ct, xt, c2, exp in rows:
         fx.true(desc, cl(s, sg, ct, xt, c2) == exp, cl(s, sg, ct, xt, c2))
-    oc = lambda *c: ST.outcome({"M%d" % i: v for i, v in enumerate(c)})
-    fx.true("outcome A: one gap-selective (confirmed even with open measures elsewhere)",
-            oc(ST.C_SELECTIVE, ST.C_UNRES_NC, ST.C_UNRESOLVED) == {"outcome": "A", "provisional": False, "open_measures": ["M1"]})
-    fx.true("outcome B confirmed: gap-associated, every selectivity decision resolved",
-            oc(ST.C_SHARED, ST.C_GA_PLAIN, ST.C_GA_SHARED_UNRES, ST.C_CONTRADICTED) == {"outcome": "B", "provisional": False, "open_measures": []})
-    fx.true("outcome B PROVISIONAL: selectivity unresolved on a gap-associated measure",
-            oc(ST.C_GA_SEL_UNRES, ST.C_UNRESOLVED) == {"outcome": "B", "provisional": True, "open_measures": ["M0"]})
-    fx.true("outcome B PROVISIONAL: another measure's gap association is not computed",
-            oc(ST.C_SHARED, ST.C_UNRES_NC) == {"outcome": "B", "provisional": True, "open_measures": ["M1"]})
-    fx.true("outcome C confirmed: nothing gap-associated, nothing open",
-            oc(ST.C_UNRESOLVED, ST.C_CONTRADICTED) == {"outcome": "C", "provisional": False, "open_measures": []})
-    fx.true("outcome C PROVISIONAL: a measure not computed could still be gap-associated",
-            oc(ST.C_UNRESOLVED, ST.C_UNRES_NC) == {"outcome": "C", "provisional": True, "open_measures": ["M1"]})
+    # outcome (candidate v0.6.2 section 5, A14)
+    for desc, ms, letter, prov, open_c in OUTCOME_CASES:
+        exp = {"outcome": letter, "provisional": prov, "open_measures": ["M%d" % i for i in sorted(open_c)],
+               "open_contrasts": {"M%d" % i: open_c[i] for i in sorted(open_c)}}
+        got = ST.outcome(_outcome_input(ms))
+        fx.true("outcome " + desc, got == exp, repr(got))
+    n_all = n_ok = 0
+    trip = [(s, sg, cg, xt, "unresolved") for s in (1, -1) for sg in L for cg in L for xt in L]
+    for ms in [[m] for m in trip] + [[a, b2] for a in trip[:64] for b2 in trip[64:]] + [[a, b2] for a in trip[:64:5] for b2 in trip[:64]]:
+        letter, prov, open_ids = outcome_independent(ms)
+        got = ST.outcome(_outcome_input(ms))
+        n_all += 1
+        n_ok += (got["outcome"], got["provisional"], got["open_measures"]) == (letter, prov, ["M%d" % i for i in open_ids])
+    fx.true(f"outcome rule equals the independent enumeration on {n_all} single measures and pairs (letter, provisional, open measures)",
+            n_ok == n_all, f"{n_ok}/{n_all}")
+    n_all = n_ok = 0
+    for s, sg, cg, xt, c2 in itertools.product((1, -1), L, L, L, L):
+        got = ST.outcome(_outcome_input([(s, sg, cg, xt, c2), (1, "above0", "above0", L[n_all % 4], c2)]))
+        letter, prov, open_ids = outcome_independent([(s, sg, cg, xt, c2), (1, "above0", "above0", L[n_all % 4], c2)])
+        n_all += 1
+        n_ok += (got["outcome"], got["provisional"], got["open_measures"]) == (letter, prov, ["M%d" % i for i in open_ids])
+    fx.true(f"outcome rule equals the independent enumeration with C-TIME2 varied ({n_all} pairs with a gap-associated partner)",
+            n_ok == n_all, f"{n_ok}/{n_all}")
+    fx.true("outcome: open_contrasts names only not-computed contrasts among S-GAP0, C-TIME0, X-TIME, and is empty iff confirmed",
+            all((not o["provisional"]) == (o["open_contrasts"] == {}) and all(lab[c] == ST.NC and c in ("S-GAP0", "C-TIME0", "X-TIME") for mid, cs in o["open_contrasts"].items() for lab in [inp[mid]["labels"]] for c in cs)
+                for inp in (_outcome_input(ms) for _, ms, _, _, _ in OUTCOME_CASES) for o in [ST.outcome(inp)]))
+    bad = _outcome_input([_SHARED]); bad["M0"]["class"] = ST.C_UNRESOLVED
+    fx.raises("outcome: a class that disagrees with its labels -> INPUT", C.INPUT, lambda: ST.outcome(bad))
     # tags
-    eff = lambda p, ps: {"point": p, "per_seed": ps}
-    fx.true("seed tag: all seeds share the pooled sign on both contrasts",
-            ST.seed_tag({"S-GAP0": eff(0.2, [0.1, 0.2, 0.3]), "C-TIME0": eff(0.1, [0.05, 0.1, 0.15])}) == "seed-consistent")
-    fx.true("seed tag: one seed of opposite sign -> mixed-seed",
-            ST.seed_tag({"S-GAP0": eff(0.2, [0.5, 0.3, -0.2]), "C-TIME0": eff(0.1, [0.05, 0.1, 0.15])}) == "mixed-seed")
-    fx.true("seed tag: pooled estimate exactly 0 -> mixed-seed",
-            ST.seed_tag({"S-GAP0": eff(0.0, [0.1, -0.1, 0.0]), "C-TIME0": eff(0.1, [0.05, 0.1, 0.15])}) == "mixed-seed")
-    fx.true("seed tag: a contrast not computed -> not computed",
-            ST.seed_tag({"S-GAP0": eff(None, None), "C-TIME0": eff(0.1, [0.05, 0.1, 0.15])}) == ST.NC)
-    fx.true("I3: fixed-epoch tag corroborated / not corroborated only for gap-associated classes",
-            ST.fixed_epoch_tag(ST.C_SHARED, 1, "above0") == "corroborated at fixed epochs"
-            and ST.fixed_epoch_tag(ST.C_GA_SEL_UNRES, 1, "unresolved") == "not corroborated at fixed epochs"
-            and ST.fixed_epoch_tag(ST.C_SELECTIVE, -1, "below0") == "corroborated at fixed epochs"
-            and ST.fixed_epoch_tag(ST.C_SHARED, 1, ST.NC) == ST.NC)
-    fx.true("I3: not applicable when not gap-associated; not determined when gap association is not computed",
-            ST.fixed_epoch_tag(ST.C_UNRESOLVED, 1, "above0") == "not applicable"
-            and ST.fixed_epoch_tag(ST.C_CONTRADICTED, 1, "above0") == "not applicable"
-            and ST.fixed_epoch_tag(ST.C_UNRES_NC, 1, "above0") == "not determined — measure not computed")
+    eff = lambda e: {"point": e[0], "per_seed": e[1]}
+    for desc, sg, cg, exp in SEED_CASES:
+        got = ST.seed_tag({"S-GAP0": eff(sg), "C-TIME0": eff(cg)})
+        fx.true("seed tag: %s -> %s" % (desc, exp), got == exp, repr(got))
+    fx.true("seed tag: exactly the four registered values occur in the cases",
+            {c[3] for c in SEED_CASES} == {"seed-consistent", "mixed-seed", "no pooled direction", "not computed"})
+    fx.raises("seed tag: a non-finite effect -> NONFINITE", C.NONFINITE,
+              lambda: ST.seed_tag({"S-GAP0": eff((0.2, [0.1, float("nan"), 0.3])), "C-TIME0": eff(_OK2)}))
+    for desc, s, sg, cg, xt, c2, ft, exp in FIXED_CASES:
+        lab = _labels((s, sg, cg, xt, c2), ft)
+        got = ST.fixed_epoch_tag(ST.classify(s, lab), s, lab)
+        fx.true("fixed-epoch tag: %s -> %s" % (desc, exp), got == exp, repr(got))
+    n_all = n_ok = 0
+    for s in (1, -1):
+        for sg, cg, xt, c2, ft in itertools.product(L, repeat=5):
+            lab = _labels((s, sg, cg, xt, c2), ft)
+            n_all += 1
+            n_ok += ST.fixed_epoch_tag(ST.classify(s, lab), s, lab) == fixed_epoch_independent(s, sg, cg, ft)
+    fx.true(f"fixed-epoch tag equals the independent rule on all {n_all} label combinations", n_ok == n_all, f"{n_ok}/{n_all}")
+    fx.raises("fixed-epoch tag: a class that disagrees with two supported gap contrasts -> INPUT", C.INPUT,
+              lambda: ST.fixed_epoch_tag(ST.C_UNRESOLVED, 1, _labels(_SHARED, "above0")))
+    fx.raises("fixed-epoch tag: unknown class -> INPUT", C.INPUT, lambda: ST.fixed_epoch_tag("not determined", 1, _labels(_SHARED)))
     ct = lambda a, b: ST.coordinate_tag(1, {"S-GAP0": a, "C-TIME0": b})
     fx.true("coordinate tag: same / opposite / not resolved (including not computed)",
             ct("above0", "above0") == "same direction in physical coordinates" and ct("below0", "below0") == "opposite in physical coordinates"
@@ -646,10 +807,13 @@ def t15():
     m = res["measures"]
     fx.true("end to end: all six measures gap-selective under a lam0-only rise (L5 mirrored); outcome A",
             all(m[k]["class"] == ST.C_SELECTIVE for k in m) and res["outcome"]["outcome"] == "A")
+    fx.true("end to end: outcome A is confirmed with nothing open; the result names its rules version",
+            res["outcome"] == {"outcome": "A", "provisional": False, "open_measures": [], "open_contrasts": {}}
+            and res["rules_version"] == ST.RULES_VERSION and "v0.6.2" in ST.RULES_VERSION)
     fx.true("end to end: seed-consistent, corroborated at fixed epochs, stable, same direction in physical coordinates",
             all(m[k]["seed_tag"] == "seed-consistent" and m[k]["fixed_epoch_tag"] == "corroborated at fixed epochs" for k in m)
             and all(m[k]["stability_summary"] == "stable" for k in ("L2", "L3a", "L3b", "L4"))
-            and all(m[k]["stability_summary"] == "not applicable (no sample subset)" for k in ("L1", "L5"))
+            and all(m[k]["stability_summary"] == "not applicable" and m[k]["stability_per_contrast"] is None for k in ("L1", "L5"))
             and all(m[k]["coordinate_tag"] == "same direction in physical coordinates" for k in phys)
             and all(m[k]["coordinate_tag"] == "not applicable" for k in ("L1", "L4", "L5")))
     res = ST.run_registered(build(flip=-1.0), idx, phys)
@@ -671,6 +835,22 @@ def t15():
     fx.true("propagation: lam0/fin not computed for every measure -> all classes 'unresolved — measure not computed'; outcome C PROVISIONAL",
             all(r["class"] == ST.C_UNRES_NC for r in res["measures"].values())
             and res["outcome"]["outcome"] == "C" and res["outcome"]["provisional"] is True and len(res["outcome"]["open_measures"]) == 6)
+    fx.true("propagation: the same case names S-GAP0, C-TIME0 and X-TIME as open for each measure; seed and fixed-epoch tags 'not computed'",
+            all(v == ["S-GAP0", "C-TIME0", "X-TIME"] for v in res["outcome"]["open_contrasts"].values()) and len(res["outcome"]["open_contrasts"]) == 6
+            and all(r["seed_tag"] == ST.NC and r["fixed_epoch_tag"] == ST.NC for r in res["measures"].values()))
+    miss_sel = {("lam0/sel", 2026, n, "full"): 1 for n in ("log_gamma_ratio", "d01", "a01", "TC_G")}
+    miss_sel.update({("lam0/sel", 2026, "KS", None): 1, ("lam0/sel", 2026, "P_swap", None): 1})
+    r2 = ST.run_registered(build(missing=miss_sel), idx, phys)
+    fx.true("propagation: lam0/sel not computed -> only S-GAP0 missing; C-TIME0 supported, X-TIME selective: outcome C PROVISIONAL, S-GAP0 named, fixed-epoch tag 'not computed'",
+            all(r["class"] == ST.C_UNRES_NC and r["fixed_epoch_tag"] == ST.NC and r["seed_tag"] == ST.NC for r in r2["measures"].values())
+            and r2["outcome"] == {"outcome": "C", "provisional": True, "open_measures": sorted(ST.MEASURES),
+                                  "open_contrasts": {k: ["S-GAP0"] for k in sorted(ST.MEASURES)}}, repr(r2["outcome"]))
+    miss_30 = {("lam0/e30", 2028, n, "full"): 1 for n in ("log_gamma_ratio", "d01", "a01", "TC_G")}
+    miss_30.update({("lam0/e30", 2028, "KS", None): 1, ("lam0/e30", 2028, "P_swap", None): 1})
+    r3 = ST.run_registered(build(missing=miss_30), idx, phys)
+    fx.true("propagation: lam0/e30 not computed -> classes and outcome A unchanged; fixed-epoch tag 'not computed' (A15)",
+            all(r["class"] == ST.C_SELECTIVE and r["fixed_epoch_tag"] == ST.NC and r["seed_tag"] == "seed-consistent" for r in r3["measures"].values())
+            and r3["outcome"]["outcome"] == "A" and r3["outcome"]["provisional"] is False)
     fx.true("'not computed' is never a number: point, per_seed and ci are None",
             res["measures"]["L1"]["effects"]["S-GAP0"] == {"point": None, "per_seed": None, "ci": None, "label": ST.NC, "undefined_draws": 0})
     fx.raises("population: wrong number of volumes -> POPULATION_MISMATCH", ST.POPULATION_MISMATCH,

@@ -1,4 +1,4 @@
-# SEQREF-DLAT-P3T v0.3 -- diag_lat_p3test.py: P3 fixtures T9-T11, T12b, R1a, R1b, refusal test R5 and report-provenance test R7 (plan SEQREF-DLAT-P3 v0.2; fix plan SEQREF-DLAT-P3FIX v0.1)
+# SEQREF-DLAT-P3T v0.4 -- diag_lat_p3test.py: P3 fixtures T9-T11, T12b, R1a, R1b, refusal test R5 and report-provenance test R7 (plan SEQREF-DLAT-P3 v0.2; fix plan SEQREF-DLAT-P3FIX v0.1)
 # LIFETIME: KEEP
 """Synthetic tests of the D-LAT adapter against the pinned V05LT classes.
 
@@ -29,6 +29,12 @@ model state), "component" (one separately timed operation) and "nested_total" (a
 that CONTAINS the components). Adding a nested total to its components counts work twice.
 
 Changelog:
+  v0.4 (2026-11-22) revision SEQREF-DLAT-P23REV v0.1 (242 LE51) for diag_lat_stats.py v0.3 and
+        candidate v0.6.2 (not frozen). Fixture R1b only: the outcome carries the new field
+        open_contrasts and is checked as confirmed with nothing open; the result and
+        r1b/tables/classes.json carry rules_version (a new field; the tables had no schema
+        label); the stability summary of L1 and L5 is checked as the exact string
+        "not applicable". No other fixture, tolerance, parameter or check was changed.
   v0.3 (2026-11-21) fix plan SEQREF-DLAT-P3FIX v0.1 after the failed host run (239 LE29), where an
         uncaught FileNotFoundError in the report step discarded every fixture result: (1) the
         module listing takes only modules whose __file__ is an absolute path of an existing file
@@ -86,7 +92,7 @@ import diag_lat_core as C  # noqa: E402
 import diag_lat_guard as GD  # noqa: E402
 import diag_lat_stats as ST  # noqa: E402
 
-__version__ = "0.3"
+__version__ = "0.4"
 ABBR = "SEQREF-DLAT-P3T"
 LOG = logging.getLogger("diag_lat.p3test")
 SELFTEST_SEED = 987654321                       # fixtures only; not a registered seed
@@ -743,14 +749,20 @@ def r1b(fx, out_dir):
             pop.sealed and len(pop.roles) == 10 and len(pop.seeds) == 3 and len(pop.keys) == 4 + 7 * 4)
     fx.true("run_registered returns six classes, all tags and an outcome",
             set(m) == set(ST.MEASURES) and all({"class", "seed_tag", "fixed_epoch_tag", "stability_summary", "coordinate_tag"} <= set(m[k]) for k in m)
-            and set(res["outcome"]) == {"outcome", "provisional", "open_measures"})
+            and set(res["outcome"]) == {"outcome", "provisional", "open_measures", "open_contrasts"})
+    fx.true("the result names the rules version it was computed under (candidate v0.6.2; new field, P23REV)",
+            res["rules_version"] == ST.RULES_VERSION and "v0.6.2" in res["rules_version"])
     fx.true("the synthetic design (lam0-only rise, L5 mirrored) is classified as constructed: six gap-selective, outcome A",
             all(m[k]["class"] == ST.C_SELECTIVE for k in m) and res["outcome"]["outcome"] == "A",
             "synthetic numbers; shows the interface, not a finding")
+    fx.true("outcome A is confirmed with nothing open; L1 and L5 carry the stability summary 'not applicable' (A14, A17)",
+            res["outcome"] == {"outcome": "A", "provisional": False, "open_measures": [], "open_contrasts": {}}
+            and all(m[k]["stability_summary"] == "not applicable" for k in ("L1", "L5")))
     fx.true("L6 runs for the read contrast S-GAP0 and each of the three seeds",
             all(set(l6[str(sd)]["measures"]) == set(ST.MEASURES) and "share" in l6[str(sd)]["share_nll_lower_psnr_lower"] for sd in SEEDS))
     guard = CTX["guard"]
     tables = {"r1b/tables/classes.json": {"banner": CTX["banner"], "synthetic_population": True, "outcome": res["outcome"],
+                                      "rules_version": res["rules_version"],
                                       "classes": {k: {"class": m[k]["class"], "seed_tag": m[k]["seed_tag"], "fixed_epoch_tag": m[k]["fixed_epoch_tag"],
                                                       "stability_summary": m[k]["stability_summary"], "coordinate_tag": m[k]["coordinate_tag"]} for k in m}},
               "r1b/tables/l6_S-GAP0.json": {"banner": CTX["banner"], "synthetic_population": True, "l6": l6}}
