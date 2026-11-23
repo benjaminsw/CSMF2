@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# SEQREF-DLAT-F1RUN v0.2 -- dlat_f1_run.sh: launcher of the D-LAT F1 preparation run and of its bind-only preflight (plan SEQREF-DLAT-F1 v0.2, criteria A1, A4, A12; driver diag_lat_f1.py v0.3)
+# SEQREF-DLAT-F1RUN v0.3 -- dlat_f1_run.sh: launcher of the D-LAT F1 preparation run and of its bind-only preflight (plan SEQREF-DLAT-F1 v0.2 with amendment AM-F1-1, criteria A1, A4, A12; driver diag_lat_f1.py v0.3)
 # LIFETIME: KEEP
 #
-# DRAFT FOR REVIEW. DO NOT RUN 'bind' or 'run' before the complete F1 package is reviewed, the
-# code is registered in Git (V12) and the owner has authorised the step: 'bind' needs its own
-# authorisation, 'run' needs V13 (LudWiki 250). F1 writes NO measure, contrast, class or figure.
+# DRAFT FOR REVIEW. DO NOT RUN 'bind' or 'run' before the amendment AM-F1-1 and run card v0.3 are
+# reviewed, both are registered in Git and the owner has authorised the step: 'run' needs V15
+# (LudWiki 253). The first F1 run (V13, run card v0.2) FAILED and stays a failure; this launcher
+# starts a NEW run with the amended card. F1 writes NO measure, contrast, class or figure.
 #
 # What it does:
 #   preflight -> refuses root; pinned checkout at the pin, no modified tracked file, no unexpected
@@ -45,6 +46,10 @@
 #         bash dlat_f1_run.sh run           # preflight, snapshot, the F1 run (needs V13)
 #
 # Changelog:
+#   v0.3 (2026-11-23) F1 amendment AM-F1-1 (SEQREF-DLAT-F1AM v0.1; LudWiki 253): the run card is
+#        dlat_f1_run_card_v0.3.json with its sha256 (two round-trip tolerances changed in the card;
+#        nothing in the code); the version line of the run context. No check, gate, file list,
+#        time limit or exit code changed. The seven code files are those of commit 9db28992.
 #   v0.2 (2026-11-23) review of v0.1 and the owner's decision (LudWiki 250 LE86): TIMEOUT_S 4500 -> 5400
 #        ("timeout can set to 90 minutes"), described as a termination allowance and separated from
 #        the 3,600 s F1 ceiling in the header and in the terminal message; sha256 of driver v0.3;
@@ -75,7 +80,7 @@ TOP_LEVEL=(':(glob)*' ':(glob)seqref_mri/*')
 PINNED_PATHS=(seqref_mri/src seqref_mri/tdiag seqref_mri/scripts)
 DUNC_SHA="c1715841bf6805568b88f9195acbe27933a7e1fec9acc8bb22a33ff555a8505e"
 MANIFEST_SHA="d1956bf370dc6c1cc82caf9804dc9731cbec970c0f8205265c14bdf72e3a6215"   # registered D-UNC manifest_f2.json
-CARD="dlat_f1_run_card_v0.2.json"
+CARD="dlat_f1_run_card_v0.3.json"
 # The files the F1 run executes or reads, each at its reviewed sha256, all from ONE ch2-diag commit.
 FILES=(diag_lat_f1.py diag_lat_bind.py diag_lat_adapter.py diag_lat_core.py diag_lat_guard.py diag_lat_population.py diag_lat_stats.py)
 declare -A SHA=(
@@ -86,7 +91,7 @@ declare -A SHA=(
   [diag_lat_guard.py]=4c78796aa3185c54d53e73ac251fc0a8c7e59fd45509dfea490cf9221d3b76f3
   [diag_lat_population.py]=f695272d834feb8801dde769fa7d7d7e62edd27cd230f32bd96037df791085f9
   [diag_lat_stats.py]=47f3c0358cd16fb179868fbebe6d68cd1d0c7370c098a71ae36fdd17d7ece831
-  [$CARD]=c4325b7d9543ee5836a9c101e37c1e74b76ac3d5b21b68576ff4c78a930729eb
+  [$CARD]=45142fac001e5d428523c8d7faf4f2540e7ce918f357ea09ac11e0ee93ad849c
 )
 
 # Rehearsal overrides (author's sandbox only). Ignored unless DLAT_REHEARSAL=1; announced loudly.
@@ -190,7 +195,7 @@ preflight() {
   ARCH_COMMIT=$(git -C "$WT" rev-parse HEAD)
   for f in "${FILES[@]}" "$CARD"; do
     if git -C "$WT" cat-file -e "$ARCH_COMMIT:$DIR/$f" 2>/dev/null; then got=$(git -C "$WT" show "$ARCH_COMMIT:$DIR/$f" | sha256sum | cut -d' ' -f1); else got="(not in that commit)"; fi
-    [ "$got" = "${SHA[$f]}" ] || die "archived $f at $ARCH_COMMIT has sha256 $got, reviewed ${SHA[$f]} (is the F1 code registered in Git, V12?)"
+    [ "$got" = "${SHA[$f]}" ] || die "archived $f at $ARCH_COMMIT has sha256 $got, reviewed ${SHA[$f]} (are the F1 code and run card v0.3 registered in Git?)"
   done
   echo "archive: the ONE ch2-diag commit $ARCH_COMMIT holds the ${#FILES[@]} reviewed code files and the run card, each at its reviewed sha256"
   DUNC_PATH=$(find_by_sha diag_unc_adapter.py "$DUNC_SHA")
@@ -245,7 +250,7 @@ execute() {   # $1 = bind | run
   chmod -R a-w "$RUN/code" "$RUN/card" "$RUN/dunc" "$RUN/input"
   for d in code card dunc input; do must_not_write "$RUN/$d"; done
   no_bytecode "$RUN" "before the run" || exit $?
-  { echo "launcher SEQREF-DLAT-F1RUN v0.2, step $kind"; echo "F1 wall ceiling 3600 s (driver); timeout backstop $TIMEOUT_S s (termination allowance, not run time)"; echo "launcher sha256 $(sha256sum "$SELF" | cut -d' ' -f1)"; echo "mode $MODE"; echo "pin $PIN";
+  { echo "launcher SEQREF-DLAT-F1RUN v0.3, step $kind"; echo "F1 wall ceiling 3600 s (driver); timeout backstop $TIMEOUT_S s (termination allowance, not run time)"; echo "launcher sha256 $(sha256sum "$SELF" | cut -d' ' -f1)"; echo "mode $MODE"; echo "pin $PIN";
     echo "archive commit $ARCH_COMMIT"; echo "interpreter $PY"; echo "versions $vers"; echo "started $(date -u +%Y-%m-%dT%H:%M:%SZ)"; } > "$RUN/logs/run_context.txt"
   [ "$kind" = "bind" ] || extra=(--dunc-dir "$RUN/dunc")
   set +e

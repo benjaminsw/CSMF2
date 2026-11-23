@@ -1,0 +1,20 @@
+{
+ "schema": "seqref-dlat-f1-runcard/1",
+ "selftest": false,
+ "rules_version": "SEQREF-MRI-DIAG-LAT v1.0 FROZEN (LudWiki 235; sha256 6afa3eda250946548b239df64344974d3c3502d23f6b4e22468ca61e6af97327)",
+ "device": "cpu",
+ "manifest_f2_sha256": "d1956bf370dc6c1cc82caf9804dc9731cbec970c0f8205265c14bdf72e3a6215",
+ "pin": "7455da8027f33a6cca4dbf72f04e72420e938f45",
+ "registered": {"n_states": 28, "n_volumes": 97, "n_boot": 10000, "bank_rows": 128},
+ "tolerances": {
+  "fx1_roundtrip_max_abs": 5e-05,
+  "fx2ii_roundtrip_max_abs": 0.0001,
+  "stored_rows_nats_per_dim": 0.0001,
+  "s1_s2_p1_relative": 1e-05,
+  "fx7_relative": 1e-05,
+  "fx3_l2_identity_abs": 1e-12
+ },
+ "fx7_validity": "1e-5 relative holds with margin while ||u_true - R0|| is at least about 0.14 % of ||x_true|| (LudWiki 249 LE79, LE80); below that the fixture may stop for rounding alone and F1 returns to review",
+ "not_verified_before_run": "F1 amendment AM-F1-1 (SEQREF-DLAT-F1AM v0.1): fx1_roundtrip_max_abs 1e-5 -> 5e-5 and fx2ii_roundtrip_max_abs 1e-5 -> 1e-4; nothing else differs from run card v0.2. The production calls slice_states, bank and load_state ran in V13 (to state index 13, where it stopped) and in the diagnostic V14 (all 28 states). NOT verified before this run: every stage of F1 after the V13 stop (state indices 14 to 27 on all 97 slices, the probe records of lam2/e3 and lam2/fin, the population timing stage D8, the projection, criteria A7 and A9 to A12); the target round trip on the 94 slices of each state that V14 did not measure; the new tolerances on any slice-state outside the 84 of V14. A failure is a typed stop and is not followed by another widening (LudWiki 253)",
+ "ceilings": {"f1_wall_s": 3600, "g_wall_s": 21600, "disk_bytes": 2147483648, "reserve_bytes": 68719476736, "ram_bytes": 17179869184, "vram_bytes": 10737418240}
+}
