@@ -1,4 +1,4 @@
-# SEQREF-DLAT-GREN v0.1 -- D-LAT step G: render figures, Table 1 and S1-S7 from the hashed result files
+# SEQREF-DLAT-GREN v0.2 -- D-LAT step G: render figures, Table 1 and S1-S7 from the hashed result files
 # LIFETIME: KEEP
 """Presentation only (SEQREF-DLAT-G-REPORT-PLAN v0.1, steps C1-C5).
 
@@ -10,6 +10,13 @@ Computes no D-LAT measure, effect, interval, class or tag. The only arithmetic i
   * S4: histogram bin counts of the stored tau and q_tail values.
 Both are listed in render_report.json under "derived_at_rendering".
 No fallback, no placeholder: any error is logged and ends the run with RENDER: FAIL.
+
+Changelog:
+  v0.2 (2026-11-24) presentation only, for three readability defects of the first rendering (LudWiki 258 LE109):
+       Figure 1 (a) draws NLL, B and J on three stacked axes instead of one; every legend is one legend
+       below the figure instead of legends inside the axes; Figure 5 uses larger text and draws panel (c)
+       with one row of axes per seed. No value read, no value derived, no table and no caption changed.
+  v0.1 (2026-11-24) first version.
 """
 import argparse
 import hashlib
@@ -20,7 +27,7 @@ import os
 import sys
 import traceback
 
-VERSION = "SEQREF-DLAT-GREN v0.1"
+VERSION = "SEQREF-DLAT-GREN v0.2"
 LOG = logging.getLogger("dlat.render")
 
 MEASURES = ["L1", "L2", "L3a", "L3b", "L4", "L5"]  # fixed row order (figure plan rule 11)
@@ -227,11 +234,28 @@ def traj_panel(sub, p, roles_map, chk, where, letter, extra=None):
                   "(%s) %s\n%s" % (letter, k, tag(p)), compact=len(keys) > 2)
         if extra:
             extra(ax, k)
-    axs[0].legend(fontsize=6, ncol=2, loc="best")
     foot = "checkpoint role (descriptive; interpretation rests on the registered contrasts only)"
     if len(keys) > 2:
         foot += "\n" + epochs_text(roles_map)
     sub.supxlabel(foot, fontsize=7)
+
+
+def fig_legend(fig, kinds, extra=()):
+    """One legend below the figure (v0.2): nothing is drawn over the data."""
+    from matplotlib.lines import Line2D
+    h = []
+    if "arms" in kinds:
+        for _, sym, col, ls in ARMS:
+            h.append(Line2D([], [], color=col, ls=ls, lw=1.8, label="%s pooled over seeds" % sym))
+    if "seeds" in kinds:
+        for seed, mk in SEEDS:
+            h.append(Line2D([], [], color="0.35", marker=mk, mfc="none", ls="", ms=6,
+                            label="seed %s%s" % (seed, " (in the colour of its arm)" if "arms" in kinds and seed == "2026" else "")))
+    if "pooled" in kinds:
+        h.append(Line2D([], [], color="black", marker="D", ls="-", lw=1.2, ms=5,
+                        label="pooled effect with 95 % interval"))
+    h.extend(extra)
+    fig.legend(handles=h, loc="outside lower center", ncol=min(len(h), 7), fontsize=8, frameon=False)
 
 
 def save(fig, out, name, written):
@@ -247,10 +271,15 @@ def fig1(plt, d, out, chk, written):
     doc = d["figdata/fig1.json"]
     roles_map = doc["checkpoint_roles"]
     specs = [("a", ["NLL", "B", "J"]), ("b", ["R0_PSNR"]), ("c", ["R1_PSNR"])]
-    fig, axs = plt.subplots(1, 3, figsize=(15, 5.2), constrained_layout=True)
-    for ax, (letter, keys) in zip(axs, specs):
+    fig = plt.figure(figsize=(15, 6.4), constrained_layout=True)
+    subs = fig.subfigures(1, 3)
+    for sub, (letter, keys) in zip(subs, specs):
         p = panel(doc, letter)
-        for k in keys:
+        if len(keys) > 1:  # v0.2: one axis per quantity; B and J stay thin lines beside NLL
+            axs = sub.subplots(len(keys), 1, sharex=True, height_ratios=[3] + [1] * (len(keys) - 1))
+        else:
+            axs = [sub.subplots()]
+        for ax, k in zip(axs, keys):
             thin = k in ("B", "J")
             for arm, sym, col, ls in ARMS:
                 pooled = []
@@ -266,26 +295,29 @@ def fig1(plt, d, out, chk, written):
                 chk.note_derived("fig1 (%s) %s %s" % (letter, k, arm),
                                  "mean over the stored per-slice values of each state; pooled = mean of the three seed means",
                                  {"roles": ROLES, "pooled": pooled, "per_seed": per_seed})
-                ax.plot(range(len(ROLES)), pooled, ls, color=col, lw=0.8 if thin else 1.8,
-                        alpha=0.6 if thin else 1.0, label="%s %s pooled" % (sym, k))
+                ax.plot(range(len(ROLES)), pooled, ls, color=col, lw=0.9 if thin else 1.8)
                 if not thin:
                     for s, (seed, mk) in enumerate(SEEDS):
                         ax.plot([i + (s - 1) * 0.08 for i in range(len(ROLES))], per_seed[seed], mk, mfc="none",
-                                color=col, ms=4, label="%s seed %s" % (sym, seed))
-                else:
-                    ax.annotate(k, (len(ROLES) - 1, pooled[-1]), fontsize=7, color=col,
-                                xytext=(3, 0), textcoords="offset points")
-        role_ticks(ax, roles_map)
-        ax.set_ylabel("%s (%s)" % (", ".join(keys), p["units"][keys[0]]), fontsize=8)
-        ax.set_title("(%s) %s %s" % (letter, keys[0].replace("_", " "), tag(p)), fontsize=9, loc="left")
-        ax.legend(fontsize=6, ncol=2)
-        ax.tick_params(axis="y", labelsize=8)
+                                color=col, ms=4)
+            if thin:
+                ax.set_ylabel(k, fontsize=8)
+            elif len(keys) > 1:
+                ax.set_ylabel("%s (%s; %s in the same unit)" % (k, p["units"][k], " and ".join(keys[1:])), fontsize=8)
+            else:
+                ax.set_ylabel("%s (%s)" % (k.replace("_", " "), p["units"][k]), fontsize=8)
+            ax.tick_params(axis="y", labelsize=8)
+            if ax is axs[0]:
+                ax.set_title("(%s) %s %s" % (letter, ", ".join(x.replace("_", " ") for x in keys), tag(p)),
+                             fontsize=9, loc="left")
+        role_ticks(axs[-1], roles_map)
     fig.suptitle("Figure 1. %s" % doc["title"], fontsize=10)
+    fig_legend(fig, ("arms", "seeds"))
     save(fig, out, "fig1", written)
     plt.close(fig)
 
 
-def contrast_and_traj_figure(plt, doc, number, layout, out, chk, written, flags=None):
+def contrast_and_traj_figure(plt, doc, number, layout, out, chk, written, flags=None, legend_extra=()):
     fig = plt.figure(figsize=(15, 5.0 * len(layout)), constrained_layout=True)
     subs = fig.subfigures(len(layout), 1, squeeze=False)
     roles_map = doc["checkpoint_roles"]
@@ -301,13 +333,13 @@ def contrast_and_traj_figure(plt, doc, number, layout, out, chk, written, flags=
                 if p.get("label"):
                     title += "\n" + p["label"]
                 contrast_axes(ax, p["data"], chk, where, title, p["unit"], fl)
-                ax.legend(fontsize=6, loc="best")
                 if fl is not None:
                     sub.supxlabel("%s %s (rule E-G1): the annotation changes no class, tag or label" % (DAGGER, FLAG),
                                   fontsize=7)
             else:
                 traj_panel(sub, p, roles_map, chk, where, letter, extra)
     fig.suptitle("Figure %d. %s" % (number, doc["title"]), fontsize=10)
+    fig_legend(fig, ("arms", "seeds", "pooled"), legend_extra)
     save(fig, out, "fig%d" % number, written)
     plt.close(fig)
 
@@ -341,45 +373,46 @@ def forest_rows(sub, pdata, contrasts, units, chk, where, title, eg1):
             f = m == "L4" and eg1["contrasts"][c]["label"] == FLAG
             labs.append(c + (" " + DAGGER if f else ""))
         ax.set_yticks(range(len(contrasts)))
-        ax.set_yticklabels(list(reversed(labs)), fontsize=7)
+        ax.set_yticklabels(list(reversed(labs)), fontsize=9)
         ax.set_ylim(-0.6, len(contrasts) - 0.4)
-        ax.set_ylabel(m, fontsize=9, rotation=0, labelpad=16)
-        ax.tick_params(axis="x", labelsize=7)
+        ax.set_ylabel(m, fontsize=10, rotation=0, labelpad=18)
+        ax.tick_params(axis="x", labelsize=9)
         if units:
-            ax.set_xlabel("effect (%s)" % units[m], fontsize=6)
-    sub.suptitle(title, fontsize=9, x=0.02, ha="left")
-    sub.supxlabel("own axis per measure, fixed row order, no common scale (rule 11); markers: pooled with 95 %% "
-                  "interval, seeds 2026 o, 2027 s, 2028 ^; %s %s (E-G1)" % (DAGGER, FLAG), fontsize=6)
+            ax.set_xlabel("effect (%s)" % units[m], fontsize=8)
+    sub.suptitle(title, fontsize=10, x=0.02, ha="left")
+    sub.supxlabel("own axis per measure, fixed row order, no common scale (rule 11); %s %s (E-G1)" % (DAGGER, FLAG),
+                  fontsize=9)
 
 
 def fig5(plt, d, out, chk, written):
     doc, eg1 = d["figdata/fig5.json"], d["g_eg1.json"]
-    fig = plt.figure(figsize=(16, 26), constrained_layout=True)
-    top, mid, bot = fig.subfigures(3, 1, height_ratios=[1.25, 1.0, 1.25])
+    fig = plt.figure(figsize=(17, 34), constrained_layout=True)
+    top, mid, bot = fig.subfigures(3, 1, height_ratios=[1.3, 1.0, 1.3])
     sa, sb = top.subfigures(1, 2)
     pa, pb, pc, pd = (panel(doc, x) for x in "abcd")
     forest_rows(sa, pa["data"], pa["contrasts"], pa.get("units"), chk, "fig5 (a)",
                 "(a) six classified measures on the gap contrasts %s" % tag(pa), eg1)
     forest_rows(sb, pb["data"], pb["contrasts"], pa.get("units"), chk, "fig5 (b)",
                 "(b) X-TIME with X-FIX(10→30), same axis per measure %s" % tag(pb), eg1)
-    axs = mid.subplots(2, 4, squeeze=False).ravel()
-    for ax, c in zip(axs, READ):
-        for (seed, mk), grey in zip(SEEDS, ("0.15", "0.45", "0.65")):
+    axc = mid.subplots(len(SEEDS), len(READ), squeeze=False)
+    for r, (seed, mk) in enumerate(SEEDS):
+        for k, c in enumerate(READ):
+            ax = axc[r][k]
             e = pc["data"][c][seed]
-            ln, = ax.plot(e["d_R0_PSNR"], e["d_NLL"], mk, mfc="none", color=grey, ms=3, label="seed %s" % seed)
+            ln, = ax.plot(e["d_R0_PSNR"], e["d_NLL"], mk, mfc="none", color="0.25", ms=3)
             chk.same("fig5 (c) %s seed %s d_NLL" % (c, seed), ln.get_ydata(), e["d_NLL"])
             chk.same("fig5 (c) %s seed %s d_R0_PSNR" % (c, seed), ln.get_xdata(), e["d_R0_PSNR"])
-        ax.axhline(0, color="0.6", lw=0.6)
-        ax.axvline(0, color="0.6", lw=0.6)
-        ax.set_title(c, fontsize=8)
-        ax.tick_params(labelsize=7)
-    axs[0].legend(fontsize=6)
-    for ax in axs[len(READ):]:
-        ax.set_axis_off()
+            ax.axhline(0, color="0.6", lw=0.6)
+            ax.axvline(0, color="0.6", lw=0.6)
+            ax.tick_params(labelsize=7)
+            if r == 0:
+                ax.set_title(c, fontsize=9)
+            if k == 0:
+                ax.set_ylabel("seed %s" % seed, fontsize=9)
     mid.suptitle("(c) per-volume change of NLL against change of R0 PSNR, per read contrast and seed %s" % tag(pc),
-                 fontsize=9, x=0.02, ha="left")
-    mid.supxlabel("change of R0 PSNR (%s)" % pc["units"]["d_R0_PSNR"], fontsize=8)
-    mid.supylabel("change of NLL (%s)" % pc["units"]["d_NLL"], fontsize=8)
+                 fontsize=10, x=0.02, ha="left")
+    mid.supxlabel("change of R0 PSNR (%s)" % pc["units"]["d_R0_PSNR"], fontsize=9)
+    mid.supylabel("change of NLL (%s)" % pc["units"]["d_NLL"], fontsize=9)
     axd = bot.subplots(len(MEASURES), 2, squeeze=False, sharex=True)
     for i, m in enumerate(MEASURES):
         for j, (vs, name) in enumerate((("vs_nll", "change of NLL"), ("vs_psnr", "change of R0 PSNR"))):
@@ -405,17 +438,17 @@ def fig5(plt, d, out, chk, written):
                                        label="seed %s" % seed)
                     chk.same("fig5 (d) %s %s seed %s" % (m, vs, seed), cont.lines[0].get_ydata(), rho)
             ax.set_ylim(-1, 1)
-            ax.set_ylabel("%s\nρ" % m, fontsize=8)
-            ax.tick_params(labelsize=7)
+            ax.set_ylabel("%s\nρ" % m, fontsize=10)
+            ax.tick_params(labelsize=8)
             if i == 0:
-                ax.set_title("Spearman ρ with the %s" % name, fontsize=8)
+                ax.set_title("Spearman ρ with the %s" % name, fontsize=10)
             if i == len(MEASURES) - 1:
                 ax.set_xticks(range(len(READ)))
-                ax.set_xticklabels(READ, rotation=30, ha="right", fontsize=7)
-    axd[0][0].legend(fontsize=6, ncol=3)
-    bot.suptitle("(d) L6 Spearman ρ with intervals (descriptive; no class) %s" % tag(pd), fontsize=9, x=0.02,
+                ax.set_xticklabels(READ, rotation=30, ha="right", fontsize=9)
+    bot.suptitle("(d) L6 Spearman ρ with intervals (descriptive; no class) %s" % tag(pd), fontsize=10, x=0.02,
                  ha="left")
-    fig.suptitle("Figure 5. %s" % doc["title"], fontsize=10)
+    fig.suptitle("Figure 5. %s" % doc["title"], fontsize=11)
+    fig_legend(fig, ("seeds", "pooled"))
     save(fig, out, "fig5", written)
     plt.close(fig)
 
@@ -635,6 +668,7 @@ def run(args):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
     import numpy
     chk, written = Checks(), []
     flags = panel(d["figdata/fig4.json"], "a")["numerical_annotation"]["contrasts"]
@@ -647,12 +681,12 @@ def run(args):
     ref = panel(d["figdata/fig4.json"], "c")["isotropic_reference"]
 
     def pr_ref(ax, k):
-        ax.axhline(ref, color="green", lw=1.0, ls=":", label="isotropic reference")
-        ax.legend(fontsize=6, ncol=2, loc="best")
+        ax.axhline(ref, color="green", lw=1.0, ls=":")
 
     contrast_and_traj_figure(plt, d["figdata/fig4.json"], 4, [[("a", "contrast", None), ("b", "contrast", None)],
                                                                [("c", "traj", pr_ref), ("d", "traj", None)]],
-                             args.out, chk, written, flags)
+                             args.out, chk, written, flags,
+                             legend_extra=(Line2D([], [], color="green", lw=1.0, ls=":", label="panel (c): isotropic reference"),))
     fig5(plt, d, args.out, chk, written)
     table1(d, hashes, args.out, written)
     supp(plt, d, hashes, args.out, chk, written)
