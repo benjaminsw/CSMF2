@@ -1,0 +1,78 @@
+{
+ "schema": "seqref-dlat-g-manifest/1",
+ "selftest": false,
+ "rules_version": "SEQREF-MRI-DIAG-LAT v1.0 FROZEN (LudWiki 235; sha256 6afa3eda250946548b239df64344974d3c3502d23f6b4e22468ca61e6af97327)",
+ "specification": {
+  "article": 235,
+  "version": "v1.0 FROZEN",
+  "sha256": "6afa3eda250946548b239df64344974d3c3502d23f6b4e22468ca61e6af97327"
+ },
+ "device": "cpu",
+ "manifest_f2_sha256": "d1956bf370dc6c1cc82caf9804dc9731cbec970c0f8205265c14bdf72e3a6215",
+ "pin": "7455da8027f33a6cca4dbf72f04e72420e938f45",
+ "registered": {
+  "n_states": 28,
+  "n_volumes": 97,
+  "n_boot": 10000,
+  "bank_rows": 128
+ },
+ "arrays": {
+  "bootstrap_sha256": "718ece159e2cb81c995e616883a40db6adcfba90c0eb79cfccffa9c7a89de471",
+  "noise_sha256": "8059e9cbc4516e4c08de2a7a50a681cc623ace2a3fe77944d8f3ef2d9ec5b24f",
+  "projection_sha256": "dcfb9fbde82c9a1839006551491f885b4bf673ad9c5be2c599bacdd40ec64ea2"
+ },
+ "tolerances": {
+  "stored_rows_nats_per_dim": 0.0001,
+  "s1_s2_p1_relative": 1e-05
+ },
+ "e_g1": {
+  "rule": "E-G1",
+  "bank_roundtrip_flag_above": 0.0001,
+  "statement": "Bank round-trip residuals above 1e-4 are recorded and flagged. No value is replaced or discarded. All affected L4 outputs are identified as having unresolved numerical adequacy. Any effect on the frozen interpretation or classification rules must be resolved through protocol review before final G authorisation.",
+  "provenance": "Execution-level numerical check introduced for G at F2 (SEQREF-DLAT-F2-PLAN v0.3 section 4), after the runs V13 to V15. It is not part of the frozen specification 235. The bank round trip was measured before G on 96 of the 2,716 slice-states (maximum 5.651e-5). Its reading against 235 section 5 was approved at gate F2.4: the annotation withdraws no class, tag, stability label or description and does not make an outcome provisional."
+ },
+ "limits": {
+  "L_s": 9210.59234748222,
+  "D_bytes": 825533754,
+  "t_stat_s": 24.774574849754572,
+  "g_wall_ceiling_s": 21600,
+  "disk_ceiling_bytes": 2147483648,
+  "ram_bytes": 17179869184,
+  "reserve_bytes": 68719476736
+ },
+ "environment": {
+  "python": "3.12.3",
+  "torch": "2.5.1+cu121",
+  "numpy": "1.26.4",
+  "torch_threads": 12
+ },
+ "f1_evidence": {
+  "run": "V15, run folder f1_20261123T184217Z, F1: PASS under run card v0.3 and amendment AM-F1-1 (LudWiki 254 LE97)",
+  "report_sha256": "f75a009fccb48e00fe66e18e706b27a9e4eeb5f879906a24b54a02d64b0930d6",
+  "run_card_sha256": "45142fac001e5d428523c8d7faf4f2540e7ce918f357ea09ac11e0ee93ad849c",
+  "commit": "01c9f3baf6d8791c65c158add6f4d3c76d3e9dec",
+  "target_roundtrip_max_abs": 1.0132789611816406e-05,
+  "target_roundtrip_n": 2716,
+  "target_roundtrip_tolerance": 5e-05,
+  "peak_rss_bytes": 2887680000
+ },
+ "figure_plan": {
+  "name": "SEQREF-DLAT-FIGURE-PLAN",
+  "version": "v0.2",
+  "sha256": "83ad15029858171d8f3a6bb6a37cca25b5469e9d6fdebd782bb28033df3aded1",
+  "status": "VERIFIED BY HASH: the author's copy of SEQREF-DLAT-FIGURE-PLAN-v0.2.md has the sha256 named here, the one registered in 235 section 5.1. Output schema v0.3 writes one data file per main figure and per supplementary output (figdata/fig1..fig5, s1..s7) and Table 1 (g_main_table.json); Figure 1 (c) and S6 hold existing results copied from the sources named in this manifest. Figures are rendered after G from these files. The plan itself is archived neither in Git nor in LudWiki (B7 waived)."
+ },
+ "review_status": "The D-LAT protocol was not independently reviewed: the independent scientific review was waived by the project owner (LudWiki 241 LE47). The reviews on record were made by a reviewer who took part in the design. The figure plan is archived neither in Git nor in LudWiki (preservation B7 waived, 246 LE66).",
+ "not_verified_before_run": "No test has run the G driver on the production binding: the host's checkpoints, slices, bank and stored rows enter for the first time in G. The population stage has never seen real records. The bank round trip is known on 96 of the 2,716 slice-states. The time of the population stage (t_stat) is the F1 figure, measured on synthetic records. A record costs 264 flow passes (132 encode, 132 decode), two more than the 262 counted in 235 section 7; the F1 times were measured on the same 264.",
+ "sources": {
+  "dunc_g_out": "/home/benjamin/CSMFII/v06lt_evidence/DIAG_UNC/g_20261119T102151Z/out",
+  "dunc_g_manifest_sha256": "3b21b4ed27e6c4f6f7a0ef349a98ea298eb5eb1a2cb885b9e56393c0e4102348",
+  "f1_report": "/home/benjamin/CSMFII/v06lt_evidence/DIAG_LAT/f1_20261123T184217Z/out/f1_report.json",
+  "f1_report_sha256": "f75a009fccb48e00fe66e18e706b27a9e4eeb5f879906a24b54a02d64b0930d6",
+  "selftest_report": "/home/benjamin/CSMFII/seqref_mri/results/diag_lat/synev_20261124T125700Z/selftest/selftest_report.json",
+  "selftest_report_sha256": "0a346b2398edc65250c66cb926314336ab5501185126cc78e3a924eaa9d9843e",
+  "p3_report": "/home/benjamin/CSMFII/seqref_mri/results/diag_lat/synev_20261124T125700Z/out/p3_report.json",
+  "p3_report_sha256": "8df65249ce934ad92082703c2e5784286cdd02ad9cd108bdb7e5ea15e6b1984d",
+  "note": "Existing results, read-only, copied and never recomputed. D-UNC G run g_20261119T102151Z (manifest hash recorded in LudWiki 236): R1 PSNR for Figure 1 (c). F1 run V15: convention fixtures. Self-test and P3 reports: made on the host on 2026-11-24 by dlat_synev_run.sh (SEQREF-DLAT-SYNEV v0.1) with the code of Git commit 9db28992, synthetic tensors only, NOT D-LAT evidence; hashes as printed by that run and reported by the owner, not verified by the author. Kept outside Git by the owner's decision."
+ }
+}
